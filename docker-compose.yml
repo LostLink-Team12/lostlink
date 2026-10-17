@@ -1,0 +1,20 @@
+# Local dependencies for development. Start with: docker compose up -d
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: lostlink
+      POSTGRES_PASSWORD: lostlink
+      POSTGRES_DB: lostlink
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+  localstack:
+    image: localstack/localstack:3
+    environment:
+      SERVICES: s3,sqs,sns
+    ports: ["4566:4566"]
+volumes:
+  pgdata:
