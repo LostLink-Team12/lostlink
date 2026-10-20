@@ -7,7 +7,7 @@ Owner: JIANG YIBAI. Installable Python 3.12 package shared by LostLink services.
 | `config` | Validated environment configuration; secrets masked in representations |
 | `auth` | Cognito RS256 access tokens, JWKS rotation, client allowlist, roles, scopes, tenant context |
 | `db` | PostgreSQL sessions, transaction-local tenant ID, RLS migration helper, runtime-role checks |
-| `event_schemas` | Version-one payload registry: five initial events plus `venue.membership_changed` |
+| `event_schemas` | Eight version-one events: initial five, membership changes, item catalogue snapshots and embedding failures |
 | `events` | Validated envelope, SNS/SQS publishers, raw and SNS-wrapped message decoding |
 | `observability` | JSON application/access logs, request IDs, route-based Prometheus metrics |
 | `errors` | Uniform API errors without SQL, token, or request-body disclosure |

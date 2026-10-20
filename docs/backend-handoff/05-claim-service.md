@@ -1,5 +1,7 @@
 # Claim Service 设计与实施任务
 
+接入进度：UC2 已提供真实 Item 预留、查询、释放墓碑及交接提交接口，可据 [UC2 运行说明](../../services/item-service/README.md)开展联调。Claim 本任务仍待实施，不能把 Item 的接口测试视为 UC5 已完成。
+
 任务：T3。目录：`services/claim-service/`。覆盖 UC5，并提供 Seed 2 的用户授权基础。依赖：[统一契约](01-contracts-and-access.md)、[可靠消息](02-reliable-messaging.md)、[Item 内部接口](04-item-service.md)。
 
 ## 1. 数据模型与隐私

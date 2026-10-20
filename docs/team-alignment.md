@@ -2,7 +2,15 @@
 
 更新时间：2026-10-20。维护人：JIANG YIBAI。
 
-这是当前分支采用的实施约定和待团队接入事项，并非队友已经确认或已收到通知的记录。本轮实现 UC1 并记录接入要求，没有向任何成员发送消息。
+这是当前分支采用的实施约定和待团队接入事项，并非队友已经确认或已收到通知的记录。当前已实现 UC1/UC2 并记录接入要求，没有向任何成员发送消息。
+
+## UC2 已实现后的接入要求
+
+- Yang Dongwei：Item 已产生 item.registered 和完整 item.catalog_changed；Embedding 的成功/失败需要回传原 correlation_id 与 item_version。Matching 仅公开 available 并保留其他状态的 revision 墓碑；不能以旧向量重新公开已预留/撤销物品。新失败事件 item.embedding_failed 已注册，数据不带原始堆栈。
+- Claim 后续 Agent：预留、释放墓碑、查询和固定 handover_id 交接已提供；使用 items.context/items.reserve 专用 scope 和稳定幂等 key。持有超过五分钟的预留只报警，不自动释放，由认领协调器恢复。
+- Lu Jingxing：配置 Item 三类数据库身份、私有 S3、sealed 前缀条件写策略、前端 POST CORS、SNS 过滤、Item 结果队列与 DLQ，以及 tasks/outbox/consume/cleanup 四类独立进程。默认 API 构建不运行迁移；CI 已启用 LocalStack S3。
+- Zhang Ji：上传确认返回持久 operation_id，轮询完成后才显示 processing；列表不带参考答案，详情仅当前场馆员工可见。批量导入带稳定 batch_reference，可逐行修复并分批上传，运行脚本不等待 CLIP 完成。
+- 具体决定、运行命令和真实联调缺口见 [UC2 执行记录](uc2-implementation.md)。5,000 条规模测试验证的是数据库登记与批次恢复，不代表已完成云端 5,000 张图片 CLIP 吞吐演示。
 
 ## UC1 已实现后的接入要求
 

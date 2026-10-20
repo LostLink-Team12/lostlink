@@ -30,6 +30,10 @@ Presentation is on **Mon 26 Oct, 9:00 to 9:40am** (Team 12), so Phase 2 (22 to 2
 | P1 | Progress report 1 (template from the briefing) | YANG DONGWEI | Check Canvas deadline | Submitted |
 | E1 | Integration session and Phase 1 demo on dev | Everyone | Wed 21 Oct, 8pm | Seed 1 end to end on AWS |
 
+## 后端执行进度（2026-10-20）
+
+B2 的 UC1/Venue 和 UC2/Item 已完成 API 实现及本地验证，详见 [UC1 记录](uc1-implementation.md)和 [UC2 记录](uc2-implementation.md)。UC2 已核验 5,000 条分批登记和本地对象/消息链路；实际 CLIP 搜索及云端部署仍属于 A2/A3/C 组联调。B1 不因两个服务接入而视为“所有服务使用”已完成；后续继续 B3 的 Claim/Notification。
+
 ## Daily rhythm
 
 - 10-minute stand-up at 10pm each day: done, next, blocked.

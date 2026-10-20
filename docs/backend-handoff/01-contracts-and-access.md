@@ -2,7 +2,7 @@
 
 状态：待实施设计。实施任务：T0。依赖：[现有基础能力](../backend-foundation.md)。
 
-UC1 更新：Venue 已在服务内实现显式事务上下文、幂等和任务处理，共享库已有成员检查客户端；这些不代表本章全部通用能力已完成。实际边界见 [UC1 记录](../uc1-implementation.md)。
+实施更新：Venue 和 Item 已在各自服务中实现显式事务上下文、幂等和任务处理，Item 另有事务 inbox；共享库已有成员检查客户端。这不代表本章全部通用能力已完成，见 [UC1 记录](../uc1-implementation.md)和 [UC2 记录](../uc2-implementation.md)。
 
 ## 1. 服务边界与部署名
 
@@ -79,7 +79,7 @@ Cognito M2M 客户端使用 client credentials，客户端密钥从部署环境�
 | --- | --- | --- |
 | `lostlink/members.check` | Item、Claim | 校验当前员工成员关系 |
 | `lostlink/identity.resolve` | 令牌触发器适配 | 生成可信场馆身份 |
-| `lostlink/items.context` | Claim、Matching | 取得指定物品的许可字段 |
+| `lostlink/items.context` | Claim | 取得指定物品的认领问题及许可字段 |
 | `lostlink/items.reserve` | Claim | 预留、取消预留、提交交接 |
 | `lostlink/items.index` | Embedding、Matching | 当前版本检查及公开索引快照 |
 | `lostlink/matches.notify` | Notification | 查询匹配通知上下文，核验归属及当前有效性 |
@@ -88,7 +88,7 @@ Cognito M2M 客户端使用 client credentials，客户端密钥从部署环境�
 | `lostlink/deliveries.read` | 已登记合作方 | 仅读取分配给自己的交付 |
 | `lostlink/deliveries.update` | 已登记合作方 | 更新分配给自己的运输阶段 |
 
-Venue 已实现 members.check 和可选 identity.resolve 内部 API、客户端白名单；共享库已有 ClientCredentials 和 MembershipClient。其余 scope 是后续接入配置要求，对应业务接口及完整通用内部客户端尚待实现。默认 Cognito 触发器直接用独立只读数据库身份，不调用 identity.resolve。
+Venue 已实现 members.check 和可选 identity.resolve 内部 API；Item 已实现 items.context/items.reserve/items.index，各自检查客户端白名单。Matching 和 Embedding 使用 items.index，不读取认领参考答案。共享库已有 ClientCredentials 和 MembershipClient，其余业务 scope 与完整通用内部客户端仍待实现。默认 Cognito 触发器直接用独立只读数据库身份，不调用 identity.resolve。
 
 ## 6. 私人信息与身份目录
 

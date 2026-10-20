@@ -63,6 +63,11 @@ onboarding, tenant-isolated staff management, current membership checks, durable
 identity tasks and a Cognito pre-token adapter. Follow its setup for separate
 database roles, migrations and client allowlists.
 
+UC2 is implemented in [Item Service](services/item-service/README.md): item CRUD,
+private verification questions, immutable photo uploads, resumable bulk imports,
+embedding-result consumption and Claim reservation contracts. Use
+[the import script](scripts/import_items.py) to register and upload local photo manifests.
+
 Backend design and next steps:
 [foundation](docs/backend-foundation.md), [roadmap](docs/backend-roadmap.md),
 [team alignment](docs/team-alignment.md).

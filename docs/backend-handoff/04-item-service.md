@@ -2,6 +2,8 @@
 
 任务：T2。目录：`services/item-service/`。覆盖 UC2，并为 UC3、UC5、UC6 提供受保护的接口。前置：T0；Venue 检查可在早期使用明确的契约替身。
 
+实施状态：UC2 服务及本地验证已完成，见 [执行记录](../uc2-implementation.md)和[运行说明](../../services/item-service/README.md)。确认上传采用持久操作并可轮询，批量接口增加稳定 batch_reference 及失败行修复入口；这些补充语义以执行记录为准。CLIP/Matching 由其他服务接入。
+
 ## 1. 数据所有权
 
 Item 是物品当前状态、照片版本、核验资料及预留状态的唯一权威。Embedding 拥有向量计算结果，Matching 拥有公开检索读模型。其他服务不能直接更新 Item 表。

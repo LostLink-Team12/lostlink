@@ -3,7 +3,9 @@
 One FastAPI microservice per bounded context. Start every new service by copying `service-template/`.
 
 [Venue Service](venue-service/README.md) implements UC1 onboarding, staff roles,
-current membership checks, and the Cognito token-trigger adapter. Other business
+current membership checks, and the Cognito token-trigger adapter.
+[Item Service](item-service/README.md) implements UC2 registration, immutable photos,
+bulk imports and the reservation API for Claim. Other business
 services in the table remain planned unless their implementation directories exist.
 
 | Service | Bounded context | Use cases | Owner | Phase |

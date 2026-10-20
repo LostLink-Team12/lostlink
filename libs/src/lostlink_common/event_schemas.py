@@ -53,6 +53,34 @@ class VenueMembershipChanged(Payload):
     status: Literal["active", "suspended"]
 
 
+class ItemCatalogChanged(Payload):
+    item_id: UUID
+    item_version: int = Field(ge=1)
+    revision: int = Field(ge=1)
+    state: Literal[
+        "awaiting_upload",
+        "processing",
+        "processing_failed",
+        "available",
+        "reserved",
+        "handed_over",
+        "withdrawn",
+    ]
+    title: str = Field(min_length=1, max_length=120)
+    description: str = Field(min_length=1, max_length=2000)
+    category: str = Field(min_length=1, max_length=100)
+    found_at: AwareDatetime
+    venue_id: UUID
+    photo_bucket: str | None = Field(max_length=63)
+    photo_key: str | None = Field(max_length=1024)
+
+
+class ItemEmbeddingFailed(Payload):
+    item_id: UUID
+    item_version: int = Field(ge=1)
+    error_code: Literal["invalid_image", "model_failure", "retry_exhausted"]
+
+
 EVENT_SCHEMAS: dict[str, tuple[type[Payload], str, bool]] = {
     "item.registered": (ItemRegistered, "item-service", True),
     "item.embedded": (ItemEmbedded, "embedding-worker", True),
@@ -60,4 +88,6 @@ EVENT_SCHEMAS: dict[str, tuple[type[Payload], str, bool]] = {
     "match.found": (MatchFound, "matching-service", True),
     "claim.approved": (ClaimApproved, "claim-service", True),
     "venue.membership_changed": (VenueMembershipChanged, "venue-service", True),
+    "item.catalog_changed": (ItemCatalogChanged, "item-service", True),
+    "item.embedding_failed": (ItemEmbeddingFailed, "embedding-worker", True),
 }

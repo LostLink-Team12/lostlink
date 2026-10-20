@@ -13,7 +13,7 @@
 
 本目录细化并在明确注明时修订[原后续计划](../backend-roadmap.md)。旧文档中的简化状态图以本目录的完整状态及失败恢复语义为准。基础阶段五种版本一事件是兼容性基线；实施进度以本文状态和各任务执行记录为准，未标为已实现的接口与事件仍是设计。
 
-2026-10-20 进度：T1/UC1 已实现并通过本地验证，见 [UC1 执行记录](../uc1-implementation.md)。Cognito/Lambda/IAM 云端接入及与真实 Item/Claim 的联调仍待完成。T0 仅完成 UC1 必需部分，T2—T6 仍待实施。
+2026-10-20 进度：T1/UC1 和 T2/UC2 已实现并通过本地验证，见 [UC1 记录](../uc1-implementation.md)和 [UC2 记录](../uc2-implementation.md)。Item 已通过真实 Venue 接口验证权限，并通过本地消息/对象存储测试；Cognito/IAM、CLIP/Matching 和真实 Claim 联调仍待接入。T0 仅完成这两个任务必需部分，T3—T6 仍待实施。
 
 | 文档 | 内容 |
 | --- | --- |
@@ -62,7 +62,7 @@ T0 完成后，T1、T2、T4 可以分开交给不同 Agent；T3 可先用 T2 的
 
 - 已存在 `lostlink-common`、模板迁移、JWT/RLS/事件传输和基础 CI。
 - 当前 `Database.session` 只接受租户 UUID；尚不能直接承接无租户失主、全局运营或跨租户后台任务。
-- 事件注册表现有六种事件：基础五种加 `venue.membership_changed`，载荷禁止多余字段；其他新状态事件仍需先注册和测试。
-- Venue 已有自己的发件箱、幂等表、后台租约和四类访问角色；共享库新增了成员检查与 M2M 令牌客户端。通用 inbox、owner 会话及其他服务的可靠性实现仍待补齐。
-- 根测试入口已包含模板、共享库与 Venue；新增服务时仍须检查测试收集、同名 `app` 导入、CI、构建上下文及依赖锁。
+- 事件注册表现有八种事件：基础五种、venue.membership_changed、item.catalog_changed、item.embedding_failed，均禁止多余载荷字段；Claim 扩展事件仍待注册。
+- Venue 和 Item 各有自己的发件箱、幂等表、后台租约及受限访问角色，Item 还有事务 inbox；共享库已有成员检查与 M2M 令牌客户端。通用 owner 会话、加密及其他服务的可靠性实现仍待补齐。
+- 根测试入口已包含模板、共享库、Venue 和 Item；新增服务时仍须检查测试收集、同名 app 导入、CI、构建上下文及依赖锁。
 - 71 项测试通过是基础阶段的历史记录。接手 Agent 应运行与自己改动相关的测试，记录本轮结果，不直接复用旧结果作为完成证据。
