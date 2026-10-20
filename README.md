@@ -46,12 +46,21 @@ docker-compose.yml  local dependencies (Postgres+pgvector, Redis, LocalStack)
 git clone https://github.com/LostLink-Team12/lostlink.git
 cd lostlink
 docker compose up -d                 # Postgres+pgvector :5432, Redis :6379, LocalStack :4566
-cd services/service-template
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-pytest
-uvicorn app.main:app --reload        # http://localhost:8000/health
+pip install -r requirements-dev.lock -e ./libs
+python -m pytest -q -m "not integration"
+cd services/service-template
+uvicorn app.main:app --reload --no-access-log      # http://localhost:8000/health
 ```
+
+The template now includes protected example APIs and shared backend foundations.
+Follow [the template setup](services/service-template/README.md) to initialize
+the restricted database role, apply migrations, and configure Cognito.
+Without those settings `/health` is 200 and `/ready` is intentionally 503.
+
+Backend design and next steps:
+[foundation](docs/backend-foundation.md), [roadmap](docs/backend-roadmap.md),
+[team alignment](docs/team-alignment.md).
 
 ## How we work
 
