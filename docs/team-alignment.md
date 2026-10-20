@@ -2,7 +2,14 @@
 
 更新时间：2026-10-20。维护人：JIANG YIBAI。
 
-这是当前分支采用的实施约定和待团队接入事项，并非队友已经确认或已收到通知的记录。当前已实现 UC1/UC2/UC3/UC5 及 Claim 前置共享能力并记录接入要求，没有向任何成员发送消息。
+这是当前分支采用的实施约定和待团队接入事项，并非队友已经确认或已收到通知的记录。当前已实现 UC1—UC5 及 Claim 前置共享能力并记录接入要求，没有向任何成员发送消息。
+
+## UC4 已实现后的接入要求（2026-10-20）
+
+- Lu Jingxing：新增 Notification API/admin/worker 三个数据库角色与 `notification` schema；部署 API、`consume`、`tasks` 三个进程。`consume` 队列只订阅 `match.found`（SNS 过滤）并配置 DLQ（maxReceiveCount=5）。`tasks` 需要：Notification M2M 客户端（`lostlink/matches.notify`，并加入 Matching 的 `NOTIFICATION_CLIENT_IDS`）、用户池 `ListUsers`、`ses:SendEmail`（限定已验证发件身份）、`OWNER_APP_BASE_URL`。SES 需验证发件域/地址；沙箱期间只能发给已验证测试收件人。运营客户端加入 `OPERATOR_CLIENT_IDS`，运营人员属于 `platform_admin` 组。
+- Zhang Ji：Owner App 需提供 `/matches/{match_id}` 页面（邮件链接固定为 `OWNER_APP_BASE_URL/matches/{id}`）；可选显示 `GET /v1/notifications` 的状态。
+- Yang Dongwei：Notification 每次发送前调用通知上下文接口复核；如需在邮件显示场馆名称，需 Matching 在 Venue 提供公开目录后填充 `venue_name`。
+- 详见 [UC4 记录](uc4-implementation.md)；本轮未发送真实邮件。
 
 ## UC5 已实现后的接入要求（2026-10-20）
 

@@ -19,7 +19,9 @@ UC3 后续更新：用户要求继续实施，现已补齐 Matching、真实 CLI
 
 T0 Claim 前置更新（2026-10-20）：共享库已补齐失主/场馆/系统会话、失主或场馆 RLS、字段加密、身份目录及 `claim.handed_over`/`claim.cancelled` 注册，见 [01 第 8 节](01-contracts-and-access.md)。通用幂等与 `ServiceClient` 仍在服务内实现。
 
-T3/UC5 更新（2026-10-20）：Claim Service 已实现并通过真实 Venue/Item 本地集成验证，见 [UC5 记录](../uc5-implementation.md)。下一步 T4 Notification；T5 在其后。
+T3/UC5 更新（2026-10-20）：Claim Service 已实现并通过真实 Venue/Item 本地集成验证，见 [UC5 记录](../uc5-implementation.md)。
+
+T4/UC4 更新（2026-10-20）：Notification Service 邮件能力已实现，并以 Matching 真实产生的 `match.found` 完成本地验证，见 [UC4 记录](../uc4-implementation.md)。Phase 1 后端服务均已落地；剩余为 T6 联合验收/部署交接，T5 属于第二阶段。
 
 | 文档 | 内容 |
 | --- | --- |

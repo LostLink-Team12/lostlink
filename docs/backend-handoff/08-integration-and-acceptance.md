@@ -4,7 +4,7 @@
 
 UC3 本地验收补充：Matching/Embedding 已有真实 CLIP、pgvector、实际 Item API 和 LocalStack 消息测试；运行配置与证据见 [UC3 记录](../uc3-implementation.md)。下表中的原责任人仍为团队分工，不能再将 Matching 视为仅有固定数据替身，也不能据此认为 Cognito、真实 AWS、SES 或 5,000 张照片吞吐已验收。
 
-UC5 本地验收补充：第 4 节演示步骤 4—6 及第 8 步的“重启后恢复、无双重审批”已有 Claim 集成测试对应（真实 Venue/Item/PostgreSQL，进程内调用），见 [UC5 记录](../uc5-implementation.md)。步骤 7 依赖尚未实现的 Notification。
+UC5 本地验收补充：第 4 节演示步骤 4—6 及第 8 步的“重启后恢复、无双重审批”已有 Claim 集成测试对应（真实 Venue/Item/PostgreSQL，进程内调用），见 [UC5 记录](../uc5-implementation.md)。步骤 7 已有 Notification 集成测试对应（Matching 真实产生 `match.found`，捕获发送器代替 SES），见 [UC4 记录](../uc4-implementation.md)；真实邮件需 SES 配置后单独验证。
 
 ## 1. 开发顺序与外部依赖
 

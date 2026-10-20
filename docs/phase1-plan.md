@@ -36,7 +36,9 @@ B2 的 UC1/Venue 和 UC2/Item 已完成 API 实现及本地验证，详见 [UC1 
 
 B3 前置（2026-10-20）：Claim/Notification 所需的共享会话、加密、身份目录及 Claim 事件已补齐并通过本地回归，见[移交文档 01 第 8 节](backend-handoff/01-contracts-and-access.md)。
 
-B3/UC5（2026-10-20）：Claim Service 已实现审批、QR、交接主流程及恢复、竞态处理，通过真实 Venue/Item/PostgreSQL 本地集成验证，见 [UC5 记录](uc5-implementation.md)。Notification Service（UC4 邮件）仍未实现；云端部署与真实 Cognito 联调仍待 C 组。
+B3/UC5（2026-10-20）：Claim Service 已实现审批、QR、交接主流程及恢复、竞态处理，通过真实 Venue/Item/PostgreSQL 本地集成验证，见 [UC5 记录](uc5-implementation.md)。
+
+B3/UC4（2026-10-20）：Notification Service 已实现 `match.found` 消费、发送前复核、已验证邮箱解析、SES 发送及未知结果处理，见 [UC4 记录](uc4-implementation.md)。B3 代码已全部落地；真实 SES、Cognito 与云端部署仍待 C 组配置后联调，合入 `main` 前需通过 CI。
 
 ## Daily rhythm
 

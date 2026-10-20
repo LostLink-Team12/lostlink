@@ -112,7 +112,7 @@ consume、tasks、outbox 是不同进程。任务/事件使用 SKIP LOCKED、300
 
 以下工作保持后续任务状态：
 
-- UC4：Notification inbox、身份邮箱解析、SES、发送去重与真实收件验收；本轮没有发信。
+- UC4：Notification inbox、身份邮箱解析、SES、发送去重与真实收件验收；本轮没有发信。（2026-10-20 更新：除真实 SES 收件验收外均已在 notification-service 实现，见 [UC4 记录](../uc4-implementation.md)。）
 - Claim：根据搜索结果重新取得 items.context 并走预留流程，不能相信旧的搜索状态。
 - 部署：真实 Cognito M2M、网关、RDS 扩展/IAM、EKS/KEDA、告警与备份验证。
 - 质量：实际失物数据集上的跨模态/多语言效果、阈值与召回率；5,000 张照片吞吐和端到端时延。

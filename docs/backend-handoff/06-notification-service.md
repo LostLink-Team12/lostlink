@@ -2,6 +2,8 @@
 
 任务：T4。目录：`services/notification-service/`。覆盖 UC4 的通知部分。匹配算法属于 Matching，本服务只消费匹配结果。Webhook 是同服务后续 T5 模块。
 
+实施状态（2026-10-20）：T4 已实现并通过真实 Item/Matching/PostgreSQL 与 LocalStack 本地验证，见 [UC4 执行记录](../uc4-implementation.md)。补充或调整的决定以执行记录为准：增加 admin 数据库角色承载运营接口；SES SDK 内部重试关闭；重试 `delivery_unknown` 必须显式确认重复风险；身份失败记为 `failed`、上下文无效记为 `suppressed`。真实 SES 未联调。
+
 ## 1. 数据模型
 
 | 表 | 字段与约束 |

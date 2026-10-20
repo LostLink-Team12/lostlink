@@ -8,7 +8,7 @@
 
 UC1/Venue 与 UC2/Item 已完成服务实现及本地验证，见 [UC1 记录](uc1-implementation.md)和 [UC2 记录](uc2-implementation.md)。Item 已验证实际 Venue 权限调用、S3/SNS/SQS 流程及 5,000 条分批登记。下一步可以推进 Claim，同时补齐所需通用 T0；云端与实际 CLIP/Matching 联调继续由接入记录跟踪。
 
-2026-10-20 更新：UC3 Matching/Embedding 已实现（见 [UC3 记录](uc3-implementation.md)）；Claim 所需的通用 T0 已补齐，见[移交文档 01 第 8 节](backend-handoff/01-contracts-and-access.md)；UC5 Claim 已实现，见 [UC5 记录](uc5-implementation.md)。下一步实施 Notification。
+2026-10-20 更新：UC3 Matching/Embedding 已实现（见 [UC3 记录](uc3-implementation.md)）；Claim 所需的通用 T0 已补齐，见[移交文档 01 第 8 节](backend-handoff/01-contracts-and-access.md)；UC5 Claim 与 UC4 Notification 已实现，见 [UC5 记录](uc5-implementation.md)和 [UC4 记录](uc4-implementation.md)。下一步为 T6 联合验收与部署交接，T5 Partner 属于第二阶段。
 
 本轮交付 B1 的公共基础设施：共享库、服务模板、鉴权、租户会话、事件传输、日志指标、模板迁移及测试。B1 中“所有业务服务使用共享库”和“业务数据模型及迁移”需要随各业务服务完成，不能因模板已完成就把整个 B1 标记为全部完成。
 

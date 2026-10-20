@@ -17,6 +17,10 @@ The worker shares the Matching bounded context and schema; it is packaged in
 answers, venue approval coordinated with Item reservations, encrypted contact
 disclosure and single-use QR handover.
 
+[Notification Service](notification-service/README.md) implements the UC4 email
+alert: it consumes match.found, revalidates the match with Matching, resolves the
+owner's verified email and sends through SES with explicit unknown-outcome handling.
+
 | Service | Bounded context | Use cases | Owner | Phase |
 | --- | --- | --- | --- | --- |
 | venue-service | Venue and Tenant | UC1 | JIANG YIBAI | 1 |
