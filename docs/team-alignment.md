@@ -2,7 +2,15 @@
 
 更新时间：2026-10-20。维护人：JIANG YIBAI。
 
-这是当前分支采用的实施约定和待团队接入事项，并非队友已经确认或已收到通知的记录。当前已实现 UC1/UC2/UC3 及 Claim 前置共享能力并记录接入要求，没有向任何成员发送消息。
+这是当前分支采用的实施约定和待团队接入事项，并非队友已经确认或已收到通知的记录。当前已实现 UC1/UC2/UC3/UC5 及 Claim 前置共享能力并记录接入要求，没有向任何成员发送消息。
+
+## UC5 已实现后的接入要求（2026-10-20）
+
+- Lu Jingxing：新增 Claim API/worker 两个数据库角色、迁移凭据与 `claim` schema；Claim M2M 客户端需 `lostlink/members.check`、`lostlink/items.context`、`lostlink/items.reserve`，并加入 Venue 的 `MEMBER_CHECK_CLIENT_IDS` 与 Item 的 `CLAIM_CLIENT_IDS`。秘密：字段加密 keyring、`HANDOVER_TOKEN_KEY`（≥32 字节 base64）、机器客户端密钥。部署 API、`tasks`、`outbox` 三个进程；`tasks` 需访问 Item 内网地址。API 工作负载需用户池 `ListUsers`。
+- Lu Jingxing / Item 维护者：Item 的 5 分钟预留观察会对“已批准、等待现场交接”的认领持续报 `needs_attention`。这是预期持有而非故障，告警需按 Claim 操作状态过滤，或后续增加 Claim 批准确认接口后停止观察。详见 [UC5 记录](uc5-implementation.md)。
+- Zhang Ji：失主端先 `GET /v1/claim-questions`，提交需幂等 key；取消、审批、拒绝、扫码需 If-Match。审批、获批后取消、扫码返回 202 和 `operation_id`，须轮询 `/v1/claim-operations/{id}` 直到 `claim_state` 为终态，202 不能作为交接完成。QR 显示 `qr_payload` 原文，同 key 只在 10 分钟内可重放。员工审批同一物品第二个认领得到 409 `item_claim_in_progress`；员工不能审批或交接自己的认领（403）。联系人仅在 approved/handover_pending 可读。
+- Yang Dongwei：Claim 已发布 `claim.approved`、`claim.cancelled`、`claim.handed_over`（当前 `mode=counter`）；Seed 2 的交付授权（T5）尚未实现，Delivery 不能凭 `claim.approved` 读取联系人。
+- Notification 后续 Agent：Claim 事件不含邮箱；如需在认领状态变化时发信，必须通过身份目录按 `owner_id` 解析，不从 Claim 联系人读取。
 
 ## Claim 前置共享能力的接入要求（2026-10-20）
 

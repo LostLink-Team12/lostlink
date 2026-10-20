@@ -17,7 +17,9 @@
 
 UC3 后续更新：用户要求继续实施，现已补齐 Matching、真实 CLIP 适配和独立 Embedding 任务进程，并通过真实模型、PostgreSQL/pgvector、Item API 与 LocalStack 的本地验证。原范围说明中的“匹配算法及 embedding 由原负责人负责”保留为团队分工背景，不再表示代码缺失；接手者先读 [09：Matching/Embedding](09-matching-and-embedding.md)和 [UC3 记录](../uc3-implementation.md)，避免重复实现。Cognito/IAM/SES、真实 Claim 和云端容量验收仍未完成。
 
-T0 Claim 前置更新（2026-10-20）：共享库已补齐失主/场馆/系统会话、失主或场馆 RLS、字段加密、身份目录及 `claim.handed_over`/`claim.cancelled` 注册，见 [01 第 8 节](01-contracts-and-access.md)。T3 Claim 可直接开始；通用幂等与 `ServiceClient` 仍在服务内实现。
+T0 Claim 前置更新（2026-10-20）：共享库已补齐失主/场馆/系统会话、失主或场馆 RLS、字段加密、身份目录及 `claim.handed_over`/`claim.cancelled` 注册，见 [01 第 8 节](01-contracts-and-access.md)。通用幂等与 `ServiceClient` 仍在服务内实现。
+
+T3/UC5 更新（2026-10-20）：Claim Service 已实现并通过真实 Venue/Item 本地集成验证，见 [UC5 记录](../uc5-implementation.md)。下一步 T4 Notification；T5 在其后。
 
 | 文档 | 内容 |
 | --- | --- |

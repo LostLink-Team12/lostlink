@@ -1,6 +1,8 @@
 # Claim Service 设计与实施任务
 
-接入进度：UC2 已提供真实 Item 预留、查询、释放墓碑及交接提交接口，可据 [UC2 运行说明](../../services/item-service/README.md)开展联调。Claim 本任务仍待实施，不能把 Item 的接口测试视为 UC5 已完成。
+接入进度：UC2 已提供真实 Item 预留、查询、释放墓碑及交接提交接口，可据 [UC2 运行说明](../../services/item-service/README.md)开展联调。
+
+实施状态（2026-10-20）：T3 已在 `services/claim-service` 实现并通过真实 Venue/Item/PostgreSQL 本地集成验证，见 [UC5 执行记录](../uc5-implementation.md)。与本文设计不同或补充的决定以执行记录第“本轮确定的实现决定”节为准，主要是：同一物品第二个审批返回 409 而非直接拒绝；审批中取消复用同一协调操作；拒绝原因枚举；QR 格式与重放；仅 API/worker 两个数据库角色。交接后 30 天清理联系人和 courier 模式仍待实施。
 
 共享前置（2026-10-20 已实现，见 [01 第 8 节](01-contracts-and-access.md)）：失主请求用 `actor_session(principal, venue_scope=False)` 或 `get_owner_session`，员工请求用 `venue_scope=True` 并另行调用 `MembershipClient.require_current`；主表可用 `enable_owner_or_tenant_rls`，联系方式表自写策略；联系人快照与 QR 重放值用 `FieldCipher` 加密，AAD 绑定 `claim-service`、表、列和记录 ID；已验证邮箱用 `IdentityDirectory.resolve_verified_email`；`claim.handed_over`、`claim.cancelled` 已注册可直接写入 outbox。
 
