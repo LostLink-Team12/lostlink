@@ -2,6 +2,8 @@
 
 任务：T1。目录：`services/venue-service/`。覆盖 UC1。前置：[统一访问契约](01-contracts-and-access.md)、[可靠消息](02-reliable-messaging.md)。
 
+实施状态：UC1 服务及本地验证已完成，详见 [执行记录](../uc1-implementation.md)和[运行说明](../../services/venue-service/README.md)。采用直接数据库身份触发器、版本化会话撤销任务；真实云端身份与其他业务服务接入仍待联调。
+
 ## 1. 范围
 
 负责场馆入驻、当前成员关系和场馆内角色。Cognito 承担用户登录；Venue 不保存用户密码，也不自行签发替代 Cognito 的访问令牌。
@@ -28,6 +30,8 @@
 | 方法与路径 | 身份 | 请求核心字段 | 结果 |
 | --- | --- | --- | --- |
 | `POST /v1/admin/venues` | 运营 | `name,slug,initial_admin_sub` | 201，场馆和首位成员；身份同步状态 |
+| `GET /v1/admin/venues` | 运营 | 分页 | 全局最小场馆目录 |
+| `GET /v1/admin/venues/{id}` | 运营 | 无 | 场馆详情与 ETag，供状态管理 |
 | `GET /v1/venues/current` | 当前员工 | 无 | 自己场馆 ID、名称、状态、版本 |
 | `GET /v1/venues/current/members` | 场馆管理员 | 分页 | 成员 ID、sub、角色、状态、版本 |
 | `POST /v1/venues/current/members` | 场馆管理员 | `user_sub,role` | 201，成员记录 |

@@ -2,6 +2,8 @@
 
 状态：待实施设计。实施任务：T0。依赖：[现有基础能力](../backend-foundation.md)。
 
+UC1 更新：Venue 已在服务内实现显式事务上下文、幂等和任务处理，共享库已有成员检查客户端；这些不代表本章全部通用能力已完成。实际边界见 [UC1 记录](../uc1-implementation.md)。
+
 ## 1. 服务边界与部署名
 
 | 服务 | schema | 建议 Python 包名 | 负责数据 |
@@ -86,7 +88,7 @@ Cognito M2M 客户端使用 client credentials，客户端密钥从部署环境�
 | `lostlink/deliveries.read` | 已登记合作方 | 仅读取分配给自己的交付 |
 | `lostlink/deliveries.update` | 已登记合作方 | 更新分配给自己的运输阶段 |
 
-上表是接入配置要求，目前代码只有通用 scope 检查，尚未建立 M2M 客户端映射、令牌获取器或这些内部 API。
+Venue 已实现 members.check 和可选 identity.resolve 内部 API、客户端白名单；共享库已有 ClientCredentials 和 MembershipClient。其余 scope 是后续接入配置要求，对应业务接口及完整通用内部客户端尚待实现。默认 Cognito 触发器直接用独立只读数据库身份，不调用 identity.resolve。
 
 ## 6. 私人信息与身份目录
 

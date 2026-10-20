@@ -61,7 +61,7 @@ inbox 保存期默认 30 天，必须覆盖源队列、DLQ 及允许人工重放
 
 现有五种版本一事件保持字段、发布方及含义，见 `libs/src/lostlink_common/event_schemas.py`。尤其不能直接给 `item.registered` 增加字段，因为现有载荷禁止 extra。
 
-以下新事件需由 T0 注册并加入契约测试，之后生产者才能发送。均使用 `schema_version=1`，不修改旧事件版本。
+以下扩展事件均使用 `schema_version=1`，不修改旧事件版本。UC1 已注册并验证 `venue.membership_changed`；其余事件需后续任务先注册并加入契约测试，之后生产者才能发送。
 
 | 新事件 | 发布服务 | `data` 必需字段 |
 | --- | --- | --- |

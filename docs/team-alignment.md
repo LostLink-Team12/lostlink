@@ -2,7 +2,15 @@
 
 更新时间：2026-10-20。维护人：JIANG YIBAI。
 
-这是当前分支采用的实施约定和待团队接入事项，并非队友已经确认或已收到通知的记录。本轮只写文档，没有向任何成员发送消息。
+这是当前分支采用的实施约定和待团队接入事项，并非队友已经确认或已收到通知的记录。本轮实现 UC1 并记录接入要求，没有向任何成员发送消息。
+
+## UC1 已实现后的接入要求
+
+- Lu Jingxing：Venue 已提供独立 API、outbox、identity worker 和 Cognito Lambda 入口；按 [UC1 执行记录](uc1-implementation.md)配置四类数据库角色、秘密及用户池范围的 IAM。触发器选择 V2，直接按 sub 读取受 RLS 保护的目录，不回调鉴权接口；默认无需为触发器申请 M2M 令牌。运营组由可信部署引导，普通成员 API 不能授予。
+- Yang Dongwei：共享注册表增加 venue.membership_changed，原五种载荷保持兼容。其他服务不能因事件到达较慢而继续允许停用成员敏感写入；需要时复用共享成员客户端。通用其他状态事件尚未注册。
+- Zhang Ji：Venue 入驻绑定已有 Cognito 账号；新增成员后可查询身份任务。写入需幂等 key，PATCH 需 If-Match，角色提升后刷新 access token。API 契约见新服务 /docs。
+- Item/Claim 实施 Agent：MembershipClient.require_current 已可调用 Venue 的成员检查契约，配置专用客户端和 lostlink/members.check。每次敏感写入实时核验，依赖故障返回 503，不使用允许旧权限的回退逻辑。
+- 本轮真实 PostgreSQL/LocalStack 验证已完成；真实 Cognito、Lambda、网关/IAM 和 Item/Claim 联调仍待进行，详情与命令见执行记录。没有向成员发送实际消息。
 
 ## 后续移交设计补充
 

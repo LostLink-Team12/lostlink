@@ -46,10 +46,18 @@ class ClaimApproved(Payload):
     owner_id: str = Field(min_length=1, max_length=128)
 
 
+class VenueMembershipChanged(Payload):
+    membership_id: UUID
+    user_sub: str = Field(min_length=1, max_length=128)
+    version: int = Field(ge=1)
+    status: Literal["active", "suspended"]
+
+
 EVENT_SCHEMAS: dict[str, tuple[type[Payload], str, bool]] = {
     "item.registered": (ItemRegistered, "item-service", True),
     "item.embedded": (ItemEmbedded, "embedding-worker", True),
     "lost_report.created": (LostReportCreated, "matching-service", False),
     "match.found": (MatchFound, "matching-service", True),
     "claim.approved": (ClaimApproved, "claim-service", True),
+    "venue.membership_changed": (VenueMembershipChanged, "venue-service", True),
 }

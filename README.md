@@ -58,6 +58,11 @@ Follow [the template setup](services/service-template/README.md) to initialize
 the restricted database role, apply migrations, and configure Cognito.
 Without those settings `/health` is 200 and `/ready` is intentionally 503.
 
+UC1 is implemented in [Venue Service](services/venue-service/README.md), including
+onboarding, tenant-isolated staff management, current membership checks, durable
+identity tasks and a Cognito pre-token adapter. Follow its setup for separate
+database roles, migrations and client allowlists.
+
 Backend design and next steps:
 [foundation](docs/backend-foundation.md), [roadmap](docs/backend-roadmap.md),
 [team alignment](docs/team-alignment.md).
