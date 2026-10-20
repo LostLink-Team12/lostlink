@@ -69,6 +69,64 @@ def test_large_payload_is_rejected(event):
         oversized.to_message()
 
 
+def claim_event(event_type, **data):
+    base = {"claim_id": str(uuid4()), "item_id": str(uuid4()), "owner_id": "owner-sub"}
+    return {
+        "event_type": event_type,
+        "source": "claim-service",
+        "tenant_id": str(uuid4()),
+        "data": {**base, **data},
+    }
+
+
+@pytest.mark.parametrize(
+    "envelope",
+    [
+        claim_event(
+            "claim.handed_over", mode="counter", handed_over_at=datetime.now(UTC).isoformat()
+        ),
+        claim_event(
+            "claim.handed_over", mode="courier", handed_over_at=datetime.now(UTC).isoformat()
+        ),
+        claim_event("claim.cancelled", reason_code="found_elsewhere"),
+        claim_event("claim.cancelled", reason_code="other"),
+    ],
+)
+def test_claim_lifecycle_events_roundtrip(envelope):
+    event = DomainEvent.model_validate(envelope)
+    assert decode_message(event.to_message()) == event
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"source": "item-service"},
+        {"tenant_id": None},
+        {"data_update": {"mode": "drone"}},
+        {"data_update": {"handed_over_at": "2026-10-20T09:00:00"}},
+        {"data_update": {"contact_email": "owner@example.com"}},
+        {"data_update": {"owner_id": ""}},
+    ],
+)
+def test_claim_handover_event_rejects_invalid_or_private_fields(changes):
+    envelope = claim_event(
+        "claim.handed_over", mode="counter", handed_over_at=datetime.now(UTC).isoformat()
+    )
+    envelope["data"].update(changes.pop("data_update", {}))
+    with pytest.raises(ValidationError):
+        DomainEvent.model_validate({**envelope, **changes})
+
+
+@pytest.mark.parametrize(
+    "data", [{"reason_code": "I changed my mind"}, {}, {"reason_code": "other", "note": "free"}]
+)
+def test_claim_cancellation_uses_controlled_reason_codes_only(data):
+    envelope = claim_event("claim.cancelled")
+    envelope["data"].update(data)
+    with pytest.raises(ValidationError):
+        DomainEvent.model_validate(envelope)
+
+
 def test_sns_preserves_event_identity_and_adds_filter_attributes(event):
     sns = client("sns")
     topic = "arn:aws:sns:ap-southeast-1:123456789012:events"

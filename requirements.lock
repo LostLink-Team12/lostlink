@@ -21,7 +21,9 @@ cffi==2.1.1 ; platform_python_implementation != 'PyPy'
 click==8.5.0
     # via uvicorn
 cryptography==50.0.2
-    # via pyjwt
+    # via
+    #   lostlink-common (libs/pyproject.toml)
+    #   pyjwt
 fastapi==0.151.0
     # via lostlink-common (libs/pyproject.toml)
 h11==0.16.0

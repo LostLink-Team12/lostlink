@@ -61,7 +61,7 @@ inbox 保存期默认 30 天，必须覆盖源队列、DLQ 及允许人工重放
 
 现有五种版本一事件保持字段、发布方及含义，见 `libs/src/lostlink_common/event_schemas.py`。尤其不能直接给 `item.registered` 增加字段，因为现有载荷禁止 extra。
 
-以下扩展事件均使用 schema_version=1，不修改旧事件版本。UC1 已注册 venue.membership_changed，UC2 已注册 item.catalog_changed 和 item.embedding_failed，并验证发件箱与结果消费；Claim 两种扩展仍需后续任务先注册和测试。
+以下扩展事件均使用 schema_version=1，不修改旧事件版本。UC1 已注册 venue.membership_changed，UC2 已注册 item.catalog_changed 和 item.embedding_failed，并验证发件箱与结果消费；2026-10-20 已注册 Claim 的 claim.handed_over 与 claim.cancelled，并完成契约测试（往返、发布方、租户必需、多余字段及枚举拒绝），Claim 生产者与消费者尚未实现。
 
 | 新事件 | 发布服务 | `data` 必需字段 |
 | --- | --- | --- |
@@ -73,7 +73,7 @@ inbox 保存期默认 30 天，必须覆盖源队列、DLQ 及允许人工重放
 
 上述事件都要求信封 `tenant_id`。`item.catalog_changed` 是完整的公开目录状态快照，只有 `state=available` 时可以在搜索结果中展示；其他状态应保留版本墓碑而非直接遗忘版本，防止旧事件重新加入索引。
 
-`item.embedding_failed` 的错误码限定 `invalid_image`、`model_failure`、`retry_exhausted`，不携带堆栈或对象内容。瞬时失败先重试，不立即发布终态失败。`claim.cancelled` 的原因使用受控枚举，不包含用户自由文本。
+`item.embedding_failed` 的错误码限定 `invalid_image`、`model_failure`、`retry_exhausted`，不携带堆栈或对象内容。瞬时失败先重试，不立即发布终态失败。`claim.cancelled` 的原因使用受控枚举，不包含用户自由文本：`found_elsewhere`、`no_longer_needed`、`submitted_in_error`、`other`。`claim.handed_over` 的 `handed_over_at` 必须带时区。
 
 物品处理时序：
 

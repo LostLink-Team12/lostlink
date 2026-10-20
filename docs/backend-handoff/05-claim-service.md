@@ -2,6 +2,8 @@
 
 接入进度：UC2 已提供真实 Item 预留、查询、释放墓碑及交接提交接口，可据 [UC2 运行说明](../../services/item-service/README.md)开展联调。Claim 本任务仍待实施，不能把 Item 的接口测试视为 UC5 已完成。
 
+共享前置（2026-10-20 已实现，见 [01 第 8 节](01-contracts-and-access.md)）：失主请求用 `actor_session(principal, venue_scope=False)` 或 `get_owner_session`，员工请求用 `venue_scope=True` 并另行调用 `MembershipClient.require_current`；主表可用 `enable_owner_or_tenant_rls`，联系方式表自写策略；联系人快照与 QR 重放值用 `FieldCipher` 加密，AAD 绑定 `claim-service`、表、列和记录 ID；已验证邮箱用 `IdentityDirectory.resolve_verified_email`；`claim.handed_over`、`claim.cancelled` 已注册可直接写入 outbox。
+
 任务：T3。目录：`services/claim-service/`。覆盖 UC5，并提供 Seed 2 的用户授权基础。依赖：[统一契约](01-contracts-and-access.md)、[可靠消息](02-reliable-messaging.md)、[Item 内部接口](04-item-service.md)。
 
 ## 1. 数据模型与隐私
@@ -42,7 +44,7 @@
 | `GET /v1/venue/claims/{id}` | staff/admin | 问答及许可的审核信息 |
 | `POST /v1/venue/claims/{id}/approve` | staff/admin | `If-Match`；202，审批操作 ID |
 | `POST /v1/venue/claims/{id}/reject` | staff/admin | `reason_code,If-Match`；200 |
-| `POST /v1/claims/{id}/cancel` | owner | `reason_code,If-Match`；同步完成 200 或需要释放 202 |
+| `POST /v1/claims/{id}/cancel` | owner | `reason_code,If-Match`；同步完成 200 或需要释放 202。`reason_code` 取值同 `claim.cancelled` 事件枚举：`found_elsewhere/no_longer_needed/submitted_in_error/other` |
 | `GET /v1/claim-operations/{operation_id}` | 本人或所属场馆员工 | 阶段、状态、可重试错误码；不暴露内部凭据 |
 | `POST /v1/claims/{id}/handover-token` | owner | 已批准且无活动快递授权时签发 QR，201 |
 | `POST /v1/venue/claims/{id}/handover` | staff/admin | `token,If-Match`；202，交接操作 ID |

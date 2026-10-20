@@ -35,6 +35,8 @@ UC3 实施更新：该接口已在 Matching 实现并验证 Item 当前状态、
 
 使用共享 `IdentityDirectory.resolve_verified_email(owner_sub)` 获取当前用户已验证邮箱。没有用户或没有已验证邮箱时标记明确原因，不回退到事件或请求中任意邮箱。
 
+共享接口已实现（见 [01 第 6、8 节](01-contracts-and-access.md)）：`IdentityNotFound`、`EmailNotVerified` 对应终态抑制/失败原因，`IdentityDirectoryUnavailable` 对应可重试；错误 `code` 可直接作为通知的原因码，不记录邮箱。
+
 初版模板 `match-found-v1` 内容包括物品公开标题、场馆名称和平台详情链接。链接由固定 `OWNER_APP_BASE_URL` 和 match ID 拼接，不能使用消息提供的任意域名。邮件不附隐藏核验细节，不承诺已经证明物品归属。
 
 HTML 插值必须转义；同时提供纯文本部分。邮件标题和模板在代码中采用英文。默认不附图片，不发送手机号、QR 或认领答案。

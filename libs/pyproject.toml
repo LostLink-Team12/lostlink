@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.14,<2",
     "boto3>=1.35,<2",
+    "cryptography>=44,<51",
     "fastapi>=0.121,<1",
     "prometheus-client>=0.21,<1",
     "psycopg[binary]>=3.2,<4",

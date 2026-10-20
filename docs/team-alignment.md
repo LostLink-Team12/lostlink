@@ -2,7 +2,14 @@
 
 更新时间：2026-10-20。维护人：JIANG YIBAI。
 
-这是当前分支采用的实施约定和待团队接入事项，并非队友已经确认或已收到通知的记录。当前已实现 UC1/UC2/UC3 并记录接入要求，没有向任何成员发送消息。
+这是当前分支采用的实施约定和待团队接入事项，并非队友已经确认或已收到通知的记录。当前已实现 UC1/UC2/UC3 及 Claim 前置共享能力并记录接入要求，没有向任何成员发送消息。
+
+## Claim 前置共享能力的接入要求（2026-10-20）
+
+- Lu Jingxing：Claim 与 Notification 需各自的字段加密密钥，以秘密注入 JSON `{"key-id": "base64 的 32 字节"}` 和当前 key ID 两项；轮换时新增 key 并切换当前 ID，旧 key 保留到重加密完成。两服务的工作负载 IAM 只需目标用户池的 `cognito-idp:ListUsers`，不授予其他 Cognito 管理权限。Claim 迁移将使用“失主或场馆”双策略，API 角色不得获得 `tenant_id`、`owner_sub` 的 UPDATE 权限。
+- Yang Dongwei：共享注册表新增 `claim.handed_over`（`mode` 为 counter/courier，`handed_over_at` 带时区）和 `claim.cancelled`（受控 `reason_code`），来源均为 claim-service 且要求租户。Delivery 以 `mode=courier` 的交接事件作为 picked_up 依据；载荷不含联系方式。
+- Zhang Ji：认领取消原因只能选 `found_elsewhere`、`no_longer_needed`、`submitted_in_error`、`other`，不提交自由文本。
+- 详情见 [01 第 8 节](backend-handoff/01-contracts-and-access.md)；本轮未发送消息、未变更云资源、未自动 commit。
 
 ## UC3 已实现后的接入要求
 

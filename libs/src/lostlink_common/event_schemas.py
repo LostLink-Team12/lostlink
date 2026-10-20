@@ -81,6 +81,26 @@ class ItemEmbeddingFailed(Payload):
     error_code: Literal["invalid_image", "model_failure", "retry_exhausted"]
 
 
+class ClaimHandedOver(Payload):
+    claim_id: UUID
+    item_id: UUID
+    owner_id: str = Field(min_length=1, max_length=128)
+    mode: Literal["counter", "courier"]
+    handed_over_at: AwareDatetime
+
+
+ClaimCancellationReason = Literal[
+    "found_elsewhere", "no_longer_needed", "submitted_in_error", "other"
+]
+
+
+class ClaimCancelled(Payload):
+    claim_id: UUID
+    item_id: UUID
+    owner_id: str = Field(min_length=1, max_length=128)
+    reason_code: ClaimCancellationReason
+
+
 EVENT_SCHEMAS: dict[str, tuple[type[Payload], str, bool]] = {
     "item.registered": (ItemRegistered, "item-service", True),
     "item.embedded": (ItemEmbedded, "embedding-worker", True),
@@ -90,4 +110,6 @@ EVENT_SCHEMAS: dict[str, tuple[type[Payload], str, bool]] = {
     "venue.membership_changed": (VenueMembershipChanged, "venue-service", True),
     "item.catalog_changed": (ItemCatalogChanged, "item-service", True),
     "item.embedding_failed": (ItemEmbeddingFailed, "embedding-worker", True),
+    "claim.handed_over": (ClaimHandedOver, "claim-service", True),
+    "claim.cancelled": (ClaimCancelled, "claim-service", True),
 }

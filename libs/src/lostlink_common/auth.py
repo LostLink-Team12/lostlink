@@ -12,6 +12,19 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from lostlink_common.config import Settings
 
+SUBJECT_MAX_LENGTH = 128
+
+
+def validate_subject(subject: str, *, allow_empty: bool = False) -> str:
+    """Reject values that cannot be a Cognito subject before they reach SQL or filters."""
+    if not isinstance(subject, str) or len(subject) > SUBJECT_MAX_LENGTH:
+        raise ValueError("Subject must be a string of at most 128 characters")
+    if not subject and not allow_empty:
+        raise ValueError("Subject must not be empty")
+    if any(ord(character) < 32 or ord(character) == 127 for character in subject):
+        raise ValueError("Subject must not contain control characters")
+    return subject
+
 
 class InvalidToken(Exception):
     """The caller did not present a valid access token."""

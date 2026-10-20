@@ -62,7 +62,7 @@ def decode_message(body: str) -> DomainEvent:
     return DomainEvent.model_validate(payload)
 
 
-def aws_client(service: Literal["sns", "sqs"], settings: Settings):
+def aws_client(service: Literal["sns", "sqs", "cognito-idp"], settings: Settings):
     options: dict[str, Any] = {}
     if settings.aws_endpoint_url:
         options.update(

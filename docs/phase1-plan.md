@@ -34,6 +34,8 @@ Presentation is on **Mon 26 Oct, 9:00 to 9:40am** (Team 12), so Phase 2 (22 to 2
 
 B2 的 UC1/Venue 和 UC2/Item 已完成 API 实现及本地验证，详见 [UC1 记录](uc1-implementation.md)和 [UC2 记录](uc2-implementation.md)。UC2 已核验 5,000 条分批登记和本地对象/消息链路；实际 CLIP 搜索及云端部署仍属于 A2/A3/C 组联调。B1 不因两个服务接入而视为“所有服务使用”已完成；后续继续 B3 的 Claim/Notification。
 
+B3 前置（2026-10-20）：Claim/Notification 所需的共享会话、加密、身份目录及 Claim 事件已补齐并通过本地回归，见[移交文档 01 第 8 节](backend-handoff/01-contracts-and-access.md)。Claim Service（UC5）与 Notification Service（UC4 邮件）本身仍未实现。
+
 ## Daily rhythm
 
 - 10-minute stand-up at 10pm each day: done, next, blocked.

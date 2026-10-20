@@ -17,6 +17,8 @@
 
 UC3 后续更新：用户要求继续实施，现已补齐 Matching、真实 CLIP 适配和独立 Embedding 任务进程，并通过真实模型、PostgreSQL/pgvector、Item API 与 LocalStack 的本地验证。原范围说明中的“匹配算法及 embedding 由原负责人负责”保留为团队分工背景，不再表示代码缺失；接手者先读 [09：Matching/Embedding](09-matching-and-embedding.md)和 [UC3 记录](../uc3-implementation.md)，避免重复实现。Cognito/IAM/SES、真实 Claim 和云端容量验收仍未完成。
 
+T0 Claim 前置更新（2026-10-20）：共享库已补齐失主/场馆/系统会话、失主或场馆 RLS、字段加密、身份目录及 `claim.handed_over`/`claim.cancelled` 注册，见 [01 第 8 节](01-contracts-and-access.md)。T3 Claim 可直接开始；通用幂等与 `ServiceClient` 仍在服务内实现。
+
 | 文档 | 内容 |
 | --- | --- |
 | [01：统一契约与权限](01-contracts-and-access.md) | 身份、数据库访问模式、接口通则、内部调用、隐私、共享包缺口 |
@@ -64,8 +66,8 @@ T0 完成后，T1、T2、T4 可以分开交给不同 Agent；T3 可先用 T2 的
 ## 交接基线
 
 - 已存在 `lostlink-common`、模板迁移、JWT/RLS/事件传输和基础 CI。
-- 当前 `Database.session` 只接受租户 UUID；尚不能直接承接无租户失主、全局运营或跨租户后台任务。
-- 事件注册表现有八种事件：基础五种、venue.membership_changed、item.catalog_changed、item.embedding_failed，均禁止多余载荷字段；Claim 扩展事件仍待注册。
-- Venue 和 Item 各有自己的发件箱、幂等表、后台租约及受限访问角色，Item 还有事务 inbox；共享库已有成员检查与 M2M 令牌客户端。通用 owner 会话、加密及其他服务的可靠性实现仍待补齐。
+- `Database.session` 仍只接受租户 UUID；失主、场馆和后台入口改用 `actor_session(principal, venue_scope=...)`、`scoped_session` 与 `system_session`，不得调用 `session(None)`。
+- 事件注册表现有十种事件：基础五种、venue.membership_changed、item.catalog_changed、item.embedding_failed、claim.handed_over、claim.cancelled，均禁止多余载荷字段；T5 的交付授权事件仍待注册。
+- Venue 和 Item 各有自己的发件箱、幂等表、后台租约及受限访问角色，Item 还有事务 inbox；共享库已有成员检查、M2M 令牌客户端、字段加密与身份目录。通用幂等工具及其他服务的可靠性实现仍待补齐。
 - 根测试入口已包含模板、共享库、Venue 和 Item；新增服务时仍须检查测试收集、同名 app 导入、CI、构建上下文及依赖锁。
 - 71 项测试通过是基础阶段的历史记录。接手 Agent 应运行与自己改动相关的测试，记录本轮结果，不直接复用旧结果作为完成证据。

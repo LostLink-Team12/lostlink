@@ -1,8 +1,10 @@
 # 统一契约、数据访问与共享能力补齐
 
-状态：待实施设计。实施任务：T0。依赖：[现有基础能力](../backend-foundation.md)。
+状态：部分实施。实施任务：T0。依赖：[现有基础能力](../backend-foundation.md)。
 
 实施更新：Venue 和 Item 已在各自服务中实现显式事务上下文、幂等和任务处理，Item 另有事务 inbox；共享库已有成员检查客户端。这不代表本章全部通用能力已完成，见 [UC1 记录](../uc1-implementation.md)和 [UC2 记录](../uc2-implementation.md)。
+
+2026-10-20 Claim 前置更新：共享库已补齐失主/场馆/系统三类会话、失主或场馆 RLS 辅助函数、字段加密、身份目录和 Claim 两种扩展事件，见本文第 8 节。通用幂等工具和完整 `ServiceClient` 仍未抽取到共享库。
 
 ## 1. 服务边界与部署名
 
@@ -57,7 +59,22 @@ PATCH、撤销、角色修改等基于已有资源的操作同时要求 `If-Matc
 
 新增 `actor_session` 概念：事务内设置 `app.user_sub` 及可选 `app.tenant_id`，来源仅为认证后的主体。现有 `Database.session(UUID)` 继续支持原租户模式。使用独立的方法及依赖，不根据未验证请求头或 body 自动选择模式。
 
+已实现（共享库 `db` 模块）：
+
+| 入口 | 设置的上下文 | 用途 |
+| --- | --- | --- |
+| `session(tenant_id)` | 仅 `app.tenant_id` | 原租户模式，行为不变；传入非 UUID 仍拒绝 |
+| `actor_session(principal, venue_scope=False)` | 仅 `app.user_sub` | 失主访问；不设置租户，即使令牌带场馆 claim |
+| `actor_session(principal, venue_scope=True)` | `app.user_sub` + 已验证 `app.tenant_id` | 场馆员工访问；令牌无租户时拒绝 |
+| `scoped_session(subject, tenant_id, resource_id)` | 显式三项 | 可信资源定位或可信事件；值经格式校验 |
+| `system_session()` | 全部为空 | 后台 operational 表；RLS 表返回空，权限由数据库角色授权决定 |
+| `get_owner_session` | 依赖 `owner` 角色 | FastAPI 依赖；M2M 令牌无 owner 组，因此返回 403 |
+
+`venue_scope` 为必填关键字参数，调用方必须明确选择模式。上下文仍采用事务内 `set_config(..., true)`，连接复用不残留。现有 Venue/Item/Matching 的 `context()` 保持各自实现，未强制迁移。
+
 认领主表需要“失主本人可见，或者所属场馆的当前员工可见”的 RLS；联系方式单独建表，额外要求认领已获批，不能照搬主表策略。为不同角色明确设置策略及 SQL 权限，注意多条允许策略叠加后的实际可见范围；集成测试必须验证最终效果。
+
+共享 `enable_owner_or_tenant_rls(connection, schema, table, owner_column="owner_sub")` 为主表建立 `owner_access` 与 `tenant_access` 两条允许策略。真实 PostgreSQL 验证表明：员工若同时是其他场馆认领的 owner，会同时看到两组记录，因此 Claim 必须在业务层拒绝自审；两条策略的 WITH CHECK 也是“或”关系，失主可写任意租户的本人行、员工可写本场馆任意 owner 的行，必须用列级授权限制可写字段，`tenant_id`、`owner_sub` 不能对 API 角色开放 UPDATE。联系方式表不使用此辅助函数，须由 Claim 迁移单独编写策略。
 
 后台发件箱、消费记录、租约等 operational 表不作为普通租户 CRUD 表开放：API 角色仅有必需的写入/自身幂等查询权限，工作者可认领任务。其载荷禁止包含隐藏答案、联系方式和访问令牌。后台数据库角色仍不是超级用户，不能绕过领域表 RLS。
 
@@ -98,6 +115,12 @@ T0 提供 `IdentityDirectory.resolve_verified_email(subject)` 接口、测试替
 
 Claim 保存的联系人快照和 Webhook 签名密钥需要加密。共享加密适配使用经审查库的认证加密，包含 key ID/nonce，AAD 绑定服务、表、记录 ID；密钥由秘密管理配置注入，不硬编码、不自制密码算法。测试使用固定测试密钥，生产密钥缺失时相关功能拒绝启动或保持未就绪。
 
+已实现：
+
+- `identity` 模块：`CognitoIdentityDirectory` 在固定用户池按 `sub = "..."` 精确过滤（转义引号），仅请求 `sub,email,email_verified`，最多三页；结果须唯一、账号未停用、`email_verified="true"` 且邮箱格式有效。失败分为 `IdentityNotFound`（无、多个或停用）、`EmailNotVerified`、`IdentityDirectoryUnavailable`（AWS 错误、超时、分页超限，可重试），各有稳定 `code`。`VerifiedEmail` 的 repr 不含邮箱。`StaticIdentityDirectory` 仅供测试/本地。所需 IAM 只有该用户池的 `cognito-idp:ListUsers`。
+- `crypto` 模块：`FieldCipher` 使用 `cryptography` 的 AES-256-GCM，每值随机 96 位 nonce；存储格式为版本字节 + nonce + 密文/标签，key ID 另列保存。AAD 采用长度前缀编码，绑定固定域标签、服务、表、列、记录 UUID 和 key ID，因此密文被移到其他行/列或改标 key ID 都会解密失败。密钥配置为 JSON 对象 `{"key-id": "base64 的 32 字节"}` 加当前 key ID，最多 16 个；仅当前 key 加密，旧 key 可解密，`needs_rotation` 用于重加密。`from_settings` 两项都缺省时返回 None（功能未就绪），只配一项或格式错误抛 `EncryptionUnavailable`。单值上限 64 KiB。
+- 依赖：`cryptography` 原已通过 `PyJWT[crypto]` 锁定为 50.0.2，现显式声明于共享包；两份锁文件版本未变化。
+
 ## 7. T0 交付清单
 
 - 新增用户上下文会话及明确的系统操作入口，并用真实 PostgreSQL 验证 owner、tenant、worker 三类边界。
@@ -106,3 +129,38 @@ Claim 保存的联系人快照和 Webhook 签名密钥需要加密。共享加�
 - 为未来状态事件扩展注册表和契约测试；保留现有五种载荷兼容性。
 - 根 pytest 支持新增服务且不混淆同名模块；服务能独立测试。
 - 更新依赖锁、模板使用说明和中文接入记录。依赖变动必须说明，不能因为不同 Agent 工作就各自锁一套冲突版本。
+
+## 8. Claim 前置共享能力实施记录（2026-10-20）
+
+范围：为 T3 Claim 和 T4 Notification 补齐共享库，不改动 Venue/Item/Matching 业务代码。
+
+| 交付 | 位置 | 状态 |
+| --- | --- | --- |
+| 失主/场馆/系统会话、`get_owner_session` | `libs/src/lostlink_common/db.py` | 已实现，真实 PostgreSQL 验证 |
+| 失主或场馆 RLS 辅助函数 | 同上 | 已实现，验证叠加可见范围 |
+| 主体格式校验 `validate_subject` | `auth.py` | 已实现，会话与身份目录共用 |
+| 字段加密 `FieldCipher` | `crypto.py` | 已实现 |
+| 身份目录 | `identity.py` | 已实现 Cognito 适配与测试替身；真实用户池未联调 |
+| `claim.handed_over`、`claim.cancelled` | `event_schemas.py` | 已注册，见 [02 第 6 节](02-reliable-messaging.md) |
+| `aws_client` 支持 `cognito-idp` | `events.py` | 已实现 |
+
+验证（仓库根目录，Docker PostgreSQL/pgvector 与 LocalStack）：
+
+```powershell
+$env:LOSTLINK_TEST_ADMIN_URL='postgresql+psycopg://lostlink:lostlink@localhost:5432/lostlink'
+$env:LOSTLINK_TEST_AWS_ENDPOINT='http://localhost:4566'
+$env:LOSTLINK_TEST_SCALE='1'
+$env:CLIP_CHECKPOINT='C:\Workspace\GitHub\lostlink\.models\ViT-B-32.pt'
+$env:CLIP_SHA256='40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af'
+.\.venv\Scripts\python.exe -m pytest -q --tb=short -rs
+.\.venv\Scripts\ruff.exe check .
+.\.venv\Scripts\ruff.exe format --check .
+```
+
+结果：共享库 119 项通过；全仓回归 234 项通过（原 178 项 + 本轮新增 56 项），无 skip，6 条警告仍为 UC3 已知的 TorchScript 兼容提示；Ruff 检查与格式检查通过。新增测试覆盖：失主跨场馆只见本人记录且不能代他人写入、员工只见本场馆且不能跨场馆写入、员工兼 owner 的叠加可见、系统会话不可见 RLS 行但保留角色授权、连接复用不残留上下文、M2M/员工令牌不能取得失主会话；加密的随机 nonce、位置绑定、篡改与改标、轮换和错误配置；身份目录的转义、唯一性、停用、未验证、分页上限及 AWS 故障。
+
+仍待后续：
+
+- 通用幂等工具与完整 `ServiceClient` 未抽取。Claim 首版可参照 Item 的服务内实现，在 `claim` schema 自建表；是否抽取共享实现另行决定，不阻塞 T3。
+- `claim.delivery_authorized`、`claim.delivery_revoked` 属于 T5，尚未注册。
+- 真实 Cognito 用户池、IAM 与密钥存储由云端负责人配置，接入要求见[团队清单](../team-alignment.md)。
