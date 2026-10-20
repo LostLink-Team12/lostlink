@@ -86,4 +86,4 @@ Integration tests run the real Item and Matching applications with a determinist
 encoder so match.found comes from Matching's own outbox. A capture sender replaces
 SES (EMAIL_SENDER=capture is refused in dev/prod). Real SES identity verification and
 test recipients remain deployment work. See
-[the UC4 implementation record](../../docs/uc4-implementation.md).
+[the backend integration guide](../../docs/team-alignment.md).

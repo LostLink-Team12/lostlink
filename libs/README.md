@@ -73,6 +73,6 @@ named test database, role, SNS topic, and SQS queue. It does not migrate or clea
 the database named in the administrator URL. Tests are skipped when the respective
 integration environment variable is absent; CI configures both.
 
-Architecture and handoff decisions are recorded in
-[the backend foundation](../docs/backend-foundation.md) and
-[team alignment](../docs/team-alignment.md).
+Integration conventions and per-member requirements are in
+[the backend integration guide](../docs/team-alignment.md); generated contracts,
+including the event schemas, are in [docs/api](../docs/api/README.md).

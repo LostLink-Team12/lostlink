@@ -154,5 +154,5 @@ The integration suite creates and cleans only randomly named test databases,
 four login roles, topics and queues. Real Cognito/IAM/Lambda deployment is a
 separate cloud integration check; unit tests use injected identity adapters.
 
-Business rules, handoff details and verification evidence are recorded in
-[the UC1 implementation note](../../docs/uc1-implementation.md).
+Deployment and team integration requirements are in
+[the backend integration guide](../../docs/team-alignment.md).

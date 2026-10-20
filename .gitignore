@@ -21,3 +21,5 @@ build/
 .vscode/
 .DS_Store
 .models/
+# Local-only backend handoff and implementation records.
+docs/local/

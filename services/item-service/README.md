@@ -184,5 +184,5 @@ limited to the Venue Portal. Only the sealing workload may write sealed/; enforc
 conditional creation there, and restrict embedding workers to sealed-object reads.
 
 Cloud Cognito/IAM/S3 policy and actual CLIP/Matching integrations remain team deployment
-work. Decisions, test evidence and handoff boundaries are in
-[the UC2 implementation record](../../docs/uc2-implementation.md).
+work. Deployment requirements are in
+[the backend integration guide](../../docs/team-alignment.md).

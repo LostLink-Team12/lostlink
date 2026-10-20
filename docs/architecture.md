@@ -2,9 +2,9 @@
 
 Source: Team 12 project proposal (4 Oct 2026).
 
-2026-10-20 后端实施补充：具体身份、租户和事件契约以[后端基础设计](backend-foundation.md)为准。`item.registered` 在照片上传确认后发布；失物报告由 matching 服务拥有；跨场馆搜索使用公开读模型。后续实现与协作事项见[实施计划](backend-roadmap.md)和[对齐清单](team-alignment.md)。
+2026-10-20 后端实施补充：身份、租户、事件与服务间契约以[后端接入指南](team-alignment.md)和[API 契约](api/README.md)为准。`item.registered` 在照片上传确认后发布；失物报告由 matching 服务拥有；跨场馆搜索使用公开读模型。
 
-UC3 落地修订：Embedding 计算能力与 Matching 同属 `matching` schema、不同进程，不跨 schema 写向量。SQS 消费先持久化任务再确认；任务进程完成 CLIP、向量/outbox 原子写入。Item 接受结果后才发布 available 目录；向量完成及 available 快照两种触发均会重新匹配，不能仅凭 item.embedded 公开物品。API 展示与通知发送前再核验 Item。当前实现及部署伸缩约束以 [09 文档](backend-handoff/09-matching-and-embedding.md)为准，下方原始流程保留为 proposal 概览。
+UC3 落地修订：Embedding 计算能力与 Matching 同属 `matching` schema、不同进程，不跨 schema 写向量。SQS 消费先持久化任务再确认；任务进程完成 CLIP、向量/outbox 原子写入。Item 接受结果后才发布 available 目录；向量完成及 available 快照两种触发均会重新匹配，不能仅凭 item.embedded 公开物品。API 展示与通知发送前再核验 Item。部署伸缩约束见 [Matching README](../services/matching-service/README.md)，下方原始流程保留为 proposal 概览。
 
 ## Platform roles
 

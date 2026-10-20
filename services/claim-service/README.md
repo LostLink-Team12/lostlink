@@ -112,5 +112,5 @@ mode=counter after Item commits the handover. Event payloads contain no contact 
 
 Integration tests run the real Venue and Item applications in-process against one
 disposable database with nine restricted roles. Cognito identity lookups use the
-static double; real Cognito, SES and cloud IAM remain deployment work. Decisions and
-evidence are in [the UC5 implementation record](../../docs/uc5-implementation.md).
+static double; real Cognito, SES and cloud IAM remain deployment work. Deployment
+requirements are in [the backend integration guide](../../docs/team-alignment.md).

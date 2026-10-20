@@ -72,11 +72,20 @@ UC3 is implemented in [Matching Service](services/matching-service/README.md): o
 reports, cross-venue text/photo search, real CLIP inference, pgvector HNSW retrieval,
 durable indexing and rematching. Install its separate ML lock and prepare the pinned
 checkpoint before running inference. Setup, recovery and integration boundaries are
-recorded in the service README and [UC3 handoff](docs/backend-handoff/09-matching-and-embedding.md).
+recorded in the service README.
 
-Backend design and next steps:
-[foundation](docs/backend-foundation.md), [roadmap](docs/backend-roadmap.md),
-[team alignment](docs/team-alignment.md).
+UC5 is implemented in [Claim Service](services/claim-service/README.md): claims with
+verification answers, venue approval coordinated with Item reservations, encrypted
+contact disclosure and single-use QR handover.
+
+UC4 is implemented by Matching (match.found) and
+[Notification Service](services/notification-service/README.md): revalidated,
+deduplicated email alerts through SES with explicit unknown-outcome handling.
+
+Run `psql` with [scripts/init-local.sql](scripts/init-local.sql) once to create every
+local service role. API contracts generated from the code are in [docs/api](docs/api/README.md);
+integration requirements for each team member are in the
+[backend integration guide](docs/team-alignment.md).
 
 ## How we work
 
