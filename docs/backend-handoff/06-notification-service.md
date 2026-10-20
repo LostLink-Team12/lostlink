@@ -27,6 +27,8 @@
 
 调用者为 Notification 专用 M2M 客户端，scope 为新增 `lostlink/matches.notify`。响应仅含 `match_id,owner_id,report_id,item_id,tenant_id,active,item_title,venue_name`。这些 ID 必须与事件一致。Matching 还需检查当前 Item 可用性；失物报告已关闭、匹配撤销、物品已交接时返回 `active=false`。
 
+UC3 实施更新：该接口已在 Matching 实现并验证 Item 当前状态、版本及轮次。现有 Venue 尚无机器可读的公开名称目录，因此 `venue_name` 明确允许 null；首版邮件使用通用场馆标签或省略名称，不能展示 UUID 冒充名称。后续增加经过授权的 Venue 目录后再补值，见 [09：Matching/Embedding](09-matching-and-embedding.md)。Notification 仍需独立实现，不能把此接口完成视为邮件已发送。
+
 未就绪接口可用契约替身验证，但不得在真实发送路径跳过检查。校验失败或资源不再相关时标 `suppressed`，依赖超时则重试。
 
 ## 3. 邮件内容与地址来源

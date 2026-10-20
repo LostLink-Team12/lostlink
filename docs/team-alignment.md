@@ -2,7 +2,17 @@
 
 更新时间：2026-10-20。维护人：JIANG YIBAI。
 
-这是当前分支采用的实施约定和待团队接入事项，并非队友已经确认或已收到通知的记录。当前已实现 UC1/UC2 并记录接入要求，没有向任何成员发送消息。
+这是当前分支采用的实施约定和待团队接入事项，并非队友已经确认或已收到通知的记录。当前已实现 UC1/UC2/UC3 并记录接入要求，没有向任何成员发送消息。
+
+## UC3 已实现后的接入要求
+
+- Yang Dongwei：按用户要求，Matching 与 Embedding 已在本分支实现；代码统一位于 matching-service，不另建重复向量库。真实 CLIP 固定 512 维和 checkpoint digest；API/worker 必须同模型。完整业务、乱序处理及后续边界见 [09：Matching/Embedding](backend-handoff/09-matching-and-embedding.md)。
+- Lu Jingxing：新增 matching API/internal/worker 三类数据库角色；安装 vector 扩展、配置 items.index M2M 和 matches.notify 客户端、sealed 桶只读权限、队列过滤及 DLQ。consume 在数据库入队后确认 SQS，tasks 需常驻或按 PostgreSQL 积压伸缩；不能单靠 SQS 深度缩到零。推理镜像需 INSTALL_ML=true 和只读权重挂载。
+- Zhang Ji：UC3 接口接受 owner 用户，报告需幂等 key，关闭需 If-Match。搜索支持 text/photo_base64 和分类/场馆/拾得时间过滤，照片 5 MiB、无 data URL 前缀；分值是余弦相似度，不能展示为概率。候选窗口与实时过滤会导致短页，详情见服务 OpenAPI 和 09 文档。
+- Notification 后续 Agent：matches.notify 接口已实现，必须发送前核对事件 ID 归属及 active；venue_name 可为 null，暂无公开 Venue 名称目录，使用通用标签。邮箱解析、SES、发送去重与真实外发仍待 UC4。
+- Claim 后续 Agent：搜索结果已经实时校验，但认领仍须重新取得上下文并预留；不能将搜索匹配看作归属证明。
+- 本轮只进行本地测试和模型下载，没有向成员发送实际消息、创建云资源、发邮件或自动 commit。实际验证与限制见 [UC3 执行记录](uc3-implementation.md)。
+
 
 ## UC2 已实现后的接入要求
 

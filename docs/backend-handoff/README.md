@@ -15,6 +15,8 @@
 
 2026-10-20 进度：T1/UC1 和 T2/UC2 已实现并通过本地验证，见 [UC1 记录](../uc1-implementation.md)和 [UC2 记录](../uc2-implementation.md)。Item 已通过真实 Venue 接口验证权限，并通过本地消息/对象存储测试；Cognito/IAM、CLIP/Matching 和真实 Claim 联调仍待接入。T0 仅完成这两个任务必需部分，T3—T6 仍待实施。
 
+UC3 后续更新：用户要求继续实施，现已补齐 Matching、真实 CLIP 适配和独立 Embedding 任务进程，并通过真实模型、PostgreSQL/pgvector、Item API 与 LocalStack 的本地验证。原范围说明中的“匹配算法及 embedding 由原负责人负责”保留为团队分工背景，不再表示代码缺失；接手者先读 [09：Matching/Embedding](09-matching-and-embedding.md)和 [UC3 记录](../uc3-implementation.md)，避免重复实现。Cognito/IAM/SES、真实 Claim 和云端容量验收仍未完成。
+
 | 文档 | 内容 |
 | --- | --- |
 | [01：统一契约与权限](01-contracts-and-access.md) | 身份、数据库访问模式、接口通则、内部调用、隐私、共享包缺口 |
@@ -25,6 +27,7 @@
 | [06：Notification](06-notification-service.md) | 匹配通知、身份目录、SES、发送幂等与恢复 |
 | [07：Partner](07-partner-api-and-webhooks.md) | 合作方授权、交付范围、Webhook、Seed 2 接口 |
 | [08：联合验收](08-integration-and-acceptance.md) | 依赖矩阵、迁移、测试、演示步骤、交付清单 |
+| [09：Matching/Embedding](09-matching-and-embedding.md) | UC3 已实现契约、模型/索引边界、报告与搜索、乱序与重试、UC4 接入 |
 
 ## 不需要重新询问的工作规则
 

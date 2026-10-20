@@ -8,6 +8,11 @@ current membership checks, and the Cognito token-trigger adapter.
 bulk imports and the reservation API for Claim. Other business
 services in the table remain planned unless their implementation directories exist.
 
+[Matching Service](matching-service/README.md) implements UC3 owner reports,
+cross-venue text/photo retrieval, and an independently running Embedding worker.
+The worker shares the Matching bounded context and schema; it is packaged in
+`matching-service`, rather than a second service directory.
+
 | Service | Bounded context | Use cases | Owner | Phase |
 | --- | --- | --- | --- | --- |
 | venue-service | Venue and Tenant | UC1 | JIANG YIBAI | 1 |

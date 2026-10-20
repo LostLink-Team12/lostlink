@@ -1,8 +1,9 @@
 [tool.pytest.ini_options]
-testpaths = ["libs/tests", "services/service-template/tests", "services/venue-service/tests", "services/item-service/tests"]
-pythonpath = ["libs/src", "services/service-template", "services/venue-service", "services/item-service"]
+testpaths = ["libs/tests", "services/service-template/tests", "services/venue-service/tests", "services/item-service/tests", "services/matching-service/tests"]
+pythonpath = ["libs/src", "services/service-template", "services/venue-service", "services/item-service", "services/matching-service"]
 markers = [
     "integration: requires a disposable PostgreSQL or LocalStack environment",
+    "model: requires a pinned CLIP checkpoint and ML dependencies",
     "scale: optional 5000-record database exercise; set LOSTLINK_TEST_SCALE=1",
 ]
 

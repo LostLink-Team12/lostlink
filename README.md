@@ -68,6 +68,12 @@ private verification questions, immutable photo uploads, resumable bulk imports,
 embedding-result consumption and Claim reservation contracts. Use
 [the import script](scripts/import_items.py) to register and upload local photo manifests.
 
+UC3 is implemented in [Matching Service](services/matching-service/README.md): owner
+reports, cross-venue text/photo search, real CLIP inference, pgvector HNSW retrieval,
+durable indexing and rematching. Install its separate ML lock and prepare the pinned
+checkpoint before running inference. Setup, recovery and integration boundaries are
+recorded in the service README and [UC3 handoff](docs/backend-handoff/09-matching-and-embedding.md).
+
 Backend design and next steps:
 [foundation](docs/backend-foundation.md), [roadmap](docs/backend-roadmap.md),
 [team alignment](docs/team-alignment.md).

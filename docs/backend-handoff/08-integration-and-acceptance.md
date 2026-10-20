@@ -2,6 +2,8 @@
 
 任务：T6；各服务实施 Agent 也应据此准备测试和交付。
 
+UC3 本地验收补充：Matching/Embedding 已有真实 CLIP、pgvector、实际 Item API 和 LocalStack 消息测试；运行配置与证据见 [UC3 记录](../uc3-implementation.md)。下表中的原责任人仍为团队分工，不能再将 Matching 视为仅有固定数据替身，也不能据此认为 Cognito、真实 AWS、SES 或 5,000 张照片吞吐已验收。
+
 ## 1. 开发顺序与外部依赖
 
 ```mermaid
