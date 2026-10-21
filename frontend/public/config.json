@@ -1,0 +1,4 @@
+{
+  "api": { "venue": "", "item": "", "matching": "", "claim": "" },
+  "auth": { "domain": "", "ownerClientId": "", "venueClientId": "" }
+}

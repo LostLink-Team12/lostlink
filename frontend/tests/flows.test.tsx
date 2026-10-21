@@ -1,0 +1,58 @@
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { it, expect, vi } from 'vitest';
+import { OwnerApp, VenueApp } from '../src/App';
+
+it('owner searches, answers public verification questions and submits a claim', async () => {
+  const api = vi.fn(async (_service, path, options) => {
+    if (path === '/v1/search') return { items: [{ item_id: 'item-1', title: 'Blue bag', description: 'Backpack', category: 'bag', score: 0.62 }], potentially_truncated: false };
+    if (path.startsWith('/v1/claim-questions')) return { item_id: 'item-1', title: 'Blue bag', questions: [{ id: 'q1', version: 2, prompt: 'What is inside?' }] };
+    if (path === '/v1/claims' && options?.body) return { id: 'c1', item_title: 'Blue bag', state: 'submitted', version: 1 };
+    return { items: [] };
+  });
+  render(<OwnerApp api={api} />);
+  fireEvent.change(screen.getByLabelText('Describe your lost item'), { target: { value: 'blue bag' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Search items' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Claim Blue bag' }));
+  fireEvent.change(await screen.findByLabelText('What is inside?'), { target: { value: 'A red notebook' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Submit claim' }));
+  await screen.findByText('Claim submitted. The venue will review your answers.');
+  expect(api).toHaveBeenCalledWith('claim', '/v1/claims', expect.objectContaining({ body: { item_id: 'item-1', answers: [{ question_id: 'q1', version: 2, answer: 'A red notebook' }] } }));
+  expect(screen.getByText('Similarity 0.620')).toBeInTheDocument();
+});
+
+it('venue loads private answers, sends If-Match and waits for approval completion', async () => {
+  const api = vi.fn(async (_service, path) => {
+    if (path === '/v1/venues/current') return { name: 'Campus' };
+    if (path.startsWith('/v1/items?')) return { items: [] };
+    if (path.startsWith('/v1/venue/claims?')) return { items: [{ id: 'c1', item_title: 'Blue bag', state: 'submitted' }] };
+    if (path === '/v1/venue/claims/c1') return { id: 'c1', item_title: 'Blue bag', state: 'submitted', version: 4, answers: [{ question_id: 'q1', prompt: 'Inside?', answer: 'Notebook' }] };
+    if (path.endsWith('/approve')) return { operation_id: 'op1' };
+    if (path === '/v1/claim-operations/op1') return { state: 'completed', claim_state: 'approved' };
+    return { items: [] };
+  });
+  render(<VenueApp api={api} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Review Blue bag' }));
+  await screen.findByText('Notebook');
+  fireEvent.click(screen.getByRole('button', { name: 'Approve claim' }));
+  await waitFor(() => expect(api).toHaveBeenCalledWith('claim', '/v1/claim-operations/op1'));
+  expect(api).toHaveBeenCalledWith('claim', '/v1/venue/claims/c1/approve', expect.objectContaining({ version: 4 }));
+  await screen.findByText('Claim approved.');
+});
+
+it('reports API errors visibly and keeps the action retryable', async () => {
+  render(<OwnerApp api={async (_s, path) => { if (path === '/v1/search') throw Error('Search unavailable'); return { items: [] }; }} />);
+  fireEvent.change(screen.getByLabelText('Describe your lost item'), { target: { value: 'bag' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Search items' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Search unavailable');
+  expect(screen.getByRole('button', { name: 'Search items' })).toBeEnabled();
+});
+
+it('saves a lost report using description instead of the search-only text field', async () => {
+  const api = vi.fn(async () => ({ items: [] }));
+  render(<OwnerApp api={api} />);
+  fireEvent.change(screen.getByLabelText('Describe your lost item'), { target: { value: 'Black umbrella' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save lost report' }));
+  await screen.findByText('Lost report saved. New matches will appear below.');
+  expect(api).toHaveBeenCalledWith('matching', '/v1/lost-reports', { body: { description: 'Black umbrella' } });
+});
