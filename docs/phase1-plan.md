@@ -30,6 +30,12 @@ Presentation is on **Mon 26 Oct, 9:00 to 9:40am** (Team 12), so Phase 2 (22 to 2
 | P1 | Progress report 1 (template from the briefing) | YANG DONGWEI | Check Canvas deadline | Submitted |
 | E1 | Integration session and Phase 1 demo on dev | Everyone | Wed 21 Oct, 8pm | Seed 1 end to end on AWS |
 
+## 后端执行进度（2026-10-21）
+
+B1/B2/B3（2026-10-21）：JIANG YIBAI 负责的 Phase 1 后端已全部实现并通过本地验证，包括共享库、Venue（UC1）、Item（UC2）、Claim（UC5）和 Notification（UC4 邮件）；Matching/Embedding（UC3、UC4 匹配产生）也已在后端分支实现。全部服务都使用 `libs/`。每个服务均有独立迁移、受限数据库角色、Dockerfile 与 README，全仓本地回归 266 项通过（真实 PostgreSQL/pgvector、LocalStack、真实 CLIP）。A1 契约已由代码生成到 [docs/api](api/README.md)，请 YANG DONGWEI 审阅。
+
+仍需团队完成：合入 `main` 并通过 CI；C 组配置 Cognito（V2 触发器、M2M scope）、SES、SNS/SQS 订阅与 DLQ、各服务数据库角色和秘密后部署 dev；前端按接口接入。具体要求见[后端接入指南](team-alignment.md)。Partner API 与 Webhooks 属于 Phase 2。
+
 ## Daily rhythm
 
 - 10-minute stand-up at 10pm each day: done, next, blocked.

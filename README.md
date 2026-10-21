@@ -46,12 +46,46 @@ docker-compose.yml  local dependencies (Postgres+pgvector, Redis, LocalStack)
 git clone https://github.com/LostLink-Team12/lostlink.git
 cd lostlink
 docker compose up -d                 # Postgres+pgvector :5432, Redis :6379, LocalStack :4566
-cd services/service-template
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-pytest
-uvicorn app.main:app --reload        # http://localhost:8000/health
+pip install -r requirements-dev.lock -e ./libs
+python -m pytest -q -m "not integration"
+cd services/service-template
+uvicorn app.main:app --reload --no-access-log      # http://localhost:8000/health
 ```
+
+The template now includes protected example APIs and shared backend foundations.
+Follow [the template setup](services/service-template/README.md) to initialize
+the restricted database role, apply migrations, and configure Cognito.
+Without those settings `/health` is 200 and `/ready` is intentionally 503.
+
+UC1 is implemented in [Venue Service](services/venue-service/README.md), including
+onboarding, tenant-isolated staff management, current membership checks, durable
+identity tasks and a Cognito pre-token adapter. Follow its setup for separate
+database roles, migrations and client allowlists.
+
+UC2 is implemented in [Item Service](services/item-service/README.md): item CRUD,
+private verification questions, immutable photo uploads, resumable bulk imports,
+embedding-result consumption and Claim reservation contracts. Use
+[the import script](scripts/import_items.py) to register and upload local photo manifests.
+
+UC3 is implemented in [Matching Service](services/matching-service/README.md): owner
+reports, cross-venue text/photo search, real CLIP inference, pgvector HNSW retrieval,
+durable indexing and rematching. Install its separate ML lock and prepare the pinned
+checkpoint before running inference. Setup, recovery and integration boundaries are
+recorded in the service README.
+
+UC5 is implemented in [Claim Service](services/claim-service/README.md): claims with
+verification answers, venue approval coordinated with Item reservations, encrypted
+contact disclosure and single-use QR handover.
+
+UC4 is implemented by Matching (match.found) and
+[Notification Service](services/notification-service/README.md): revalidated,
+deduplicated email alerts through SES with explicit unknown-outcome handling.
+
+Run `psql` with [scripts/init-local.sql](scripts/init-local.sql) once to create every
+local service role. API contracts generated from the code are in [docs/api](docs/api/README.md);
+integration requirements for each team member are in the
+[backend integration guide](docs/team-alignment.md).
 
 ## How we work
 

@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lostlink-common"
+version = "0.1.0"
+description = "Shared backend foundations for LostLink services"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.14,<2",
+    "boto3>=1.35,<2",
+    "cryptography>=44,<51",
+    "fastapi>=0.121,<1",
+    "prometheus-client>=0.21,<1",
+    "psycopg[binary]>=3.2,<4",
+    "pydantic-settings>=2.6,<3",
+    "PyJWT[crypto]>=2.10,<3",
+    "SQLAlchemy>=2.0.36,<3",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

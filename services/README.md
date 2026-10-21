@@ -2,6 +2,25 @@
 
 One FastAPI microservice per bounded context. Start every new service by copying `service-template/`.
 
+[Venue Service](venue-service/README.md) implements UC1 onboarding, staff roles,
+current membership checks, and the Cognito token-trigger adapter.
+[Item Service](item-service/README.md) implements UC2 registration, immutable photos,
+bulk imports and the reservation API for Claim. Other business
+services in the table remain planned unless their implementation directories exist.
+
+[Matching Service](matching-service/README.md) implements UC3 owner reports,
+cross-venue text/photo retrieval, and an independently running Embedding worker.
+The worker shares the Matching bounded context and schema; it is packaged in
+`matching-service`, rather than a second service directory.
+
+[Claim Service](claim-service/README.md) implements UC5 claims with verification
+answers, venue approval coordinated with Item reservations, encrypted contact
+disclosure and single-use QR handover.
+
+[Notification Service](notification-service/README.md) implements the UC4 email
+alert: it consumes match.found, revalidates the match with Matching, resolves the
+owner's verified email and sends through SES with explicit unknown-outcome handling.
+
 | Service | Bounded context | Use cases | Owner | Phase |
 | --- | --- | --- | --- | --- |
 | venue-service | Venue and Tenant | UC1 | JIANG YIBAI | 1 |
