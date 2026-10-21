@@ -1,5 +1,12 @@
 mock_provider "aws" {}
 
+# The tracked adoption block must also be testable without importing from AWS.
+override_resource {
+  target          = aws_ecr_repository.services["service-template"]
+  override_during = plan
+  values          = { id = "lostlink/service-template" }
+}
+
 # Distinct IDs at plan time let assertions verify public/private node routing.
 override_resource {
   target          = aws_subnet.public[0]

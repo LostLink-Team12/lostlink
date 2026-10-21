@@ -12,6 +12,8 @@ Both roots have been applied to account `152174417545` in `ap-southeast-1` using
 the `lu-jingxing` IAM user. Bootstrap created 8 resources. Dev imported the
 existing C2 ECR repository, created 112 resources, updated its scanning/tags, and
 deleted none. These counts include IAM/network configuration, not 112 servers.
+A follow-up added the `delivery-service` ECR repository and lifecycle policy
+after rebasing onto current main, so every current CI service has a registry.
 
 - `lostlink-dev`: EKS 1.36, one `t3.large` CPU node Ready, managed CNI/CoreDNS/
   kube-proxy healthy; no GPU or NAT gateway.
@@ -27,6 +29,13 @@ deleted none. These counts include IAM/network configuration, not 112 servers.
   HIGH/CRITICAL findings. This does not verify C2 image delivery or C3 workloads.
 
 C3 application deployment, ALB ingress, KEDA and monitoring have not been applied.
+The latest backend contracts also require C3 to reconcile the original Phase 1
+queue/topic and IRSA baseline below with [team alignment](../../docs/team-alignment.md)
+and the [Matching runtime contract](../../services/matching-service/README.md):
+additional catalog/result events, durable PostgreSQL task scaling, Cognito V2
+claims/M2M scopes, signed POST upload CORS, and per-service SQL credentials are
+not yet wired by this stack. Provisioned resources do not mean the application
+is ready to accept real user traffic.
 The current checkout's verified kubectl 1.36.5 and isolated connection config are
 in ignored `.terraform/tools/` and `.terraform/validation/kubeconfig`. The system
 Docker kubectl was 1.29; use a client within one minor version of the cluster.
