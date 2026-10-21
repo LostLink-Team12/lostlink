@@ -1,6 +1,6 @@
 [tool.pytest.ini_options]
-testpaths = ["libs/tests", "services/service-template/tests", "services/venue-service/tests", "services/item-service/tests", "services/matching-service/tests", "services/claim-service/tests", "services/notification-service/tests"]
-pythonpath = ["libs/src", "services/service-template", "services/venue-service", "services/item-service", "services/matching-service", "services/claim-service", "services/notification-service"]
+testpaths = ["libs/tests", "services/service-template/tests", "services/venue-service/tests", "services/item-service/tests", "services/matching-service/tests", "services/claim-service/tests", "services/notification-service/tests", "services/delivery-service/tests"]
+pythonpath = ["libs/src", "services/service-template", "services/venue-service", "services/item-service", "services/matching-service", "services/claim-service", "services/notification-service", "services/delivery-service"]
 markers = [
     "integration: requires a disposable PostgreSQL or LocalStack environment",
     "model: requires a pinned CLIP checkpoint and ML dependencies",
