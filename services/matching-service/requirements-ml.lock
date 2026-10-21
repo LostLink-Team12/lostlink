@@ -93,7 +93,7 @@ open-clip-torch==3.3.0
     # via -r services/matching-service/requirements-ml.in
 packaging==26.3
     # via huggingface-hub
-pillow==12.3.0
+pillow==13.0.0
     # via
     #   -r services/matching-service/requirements-ml.in
     #   torchvision
