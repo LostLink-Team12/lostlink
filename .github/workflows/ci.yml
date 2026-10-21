@@ -144,7 +144,7 @@ jobs:
   build-image:
     needs: [discover, test, shared-library, integration, security-scan]
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: ${{ matrix.service == 'matching-service' && 60 || 30 }}
     strategy:
       fail-fast: false
       matrix:
@@ -157,11 +157,48 @@ jobs:
           persist-credentials: false
       # Images build from the repository root because services copy requirements.lock and libs/.
       - name: Build service image
-        run: >-
-          docker build --pull
-          --build-arg "SERVICE_DIR=services/${SERVICE_NAME}"
-          --file "services/${SERVICE_NAME}/Dockerfile"
-          --tag "lostlink/${SERVICE_NAME}:${GITHUB_SHA}" .
+        run: |
+          build_args=(--build-arg "SERVICE_DIR=services/${SERVICE_NAME}")
+          if [[ "${SERVICE_NAME}" == "matching-service" ]]; then
+            build_args+=(--build-arg INSTALL_ML=true)
+          fi
+          docker build --pull "${build_args[@]}" \
+            --file "services/${SERVICE_NAME}/Dockerfile" \
+            --tag "lostlink/${SERVICE_NAME}:${GITHUB_SHA}" .
+      - name: Verify Matching image with the pinned CLIP model
+        if: matrix.service == 'matching-service'
+        run: |
+          model_dir="${RUNNER_TEMP}/clip"
+          python3 scripts/prepare_clip_model.py --destination "${model_dir}/ViT-B-32.pt"
+          # The image runs as appuser; the downloader creates a private temporary file.
+          chmod 0755 "${model_dir}"
+          chmod 0444 "${model_dir}/ViT-B-32.pt"
+          checkpoint_sha="$(python3 -c 'from scripts.prepare_clip_model import SHA256; print(SHA256)')"
+          docker run --rm --interactive --network none \
+            --mount "type=bind,src=${model_dir},dst=/models,readonly" \
+            --env CLIP_CHECKPOINT=/models/ViT-B-32.pt \
+            --env "CLIP_SHA256=${checkpoint_sha}" \
+            "lostlink/${SERVICE_NAME}:${GITHUB_SHA}" python - <<'PY'
+          import io
+          import math
+          import os
+
+          from PIL import Image
+
+          from matching_app.embedding import ClipEncoder
+
+          encoder = ClipEncoder(os.environ["CLIP_CHECKPOINT"], os.environ["CLIP_SHA256"], "cpu")
+          encoder.ready()
+          photo = io.BytesIO()
+          Image.new("RGB", (224, 224), "red").save(photo, format="PNG")
+          for text, image in [("red backpack", None), (None, photo.getvalue())]:
+              vector = encoder.encode(text, image)
+              if len(vector) != 512 or not all(math.isfinite(value) for value in vector):
+                  raise RuntimeError("CLIP must produce 512 finite values")
+              if not math.isclose(sum(value * value for value in vector), 1.0, abs_tol=1e-5):
+                  raise RuntimeError("CLIP must produce unit-length vectors")
+          print("Matching image loaded the pinned model and encoded text and photo offline")
+          PY
       - name: Trivy image scan (OS and application dependencies)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -175,13 +212,16 @@ jobs:
       # Transfer the scanned image; publishing must not rebuild it.
       - name: Save scanned image
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        run: docker save --output "${RUNNER_TEMP}/image.tar" "lostlink/${SERVICE_NAME}:${GITHUB_SHA}"
+        # Compress once before transfer to keep the larger ML image archive manageable.
+        run: >-
+          docker save "lostlink/${SERVICE_NAME}:${GITHUB_SHA}"
+          | gzip -1 > "${RUNNER_TEMP}/image.tar.gz"
       - name: Upload scanned image
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v7
         with:
           name: image-${{ matrix.service }}
-          path: ${{ runner.temp }}/image.tar
+          path: ${{ runner.temp }}/image.tar.gz
           retention-days: 1
           compression-level: 0
           if-no-files-found: error
@@ -231,7 +271,7 @@ jobs:
           path: ${{ runner.temp }}/scanned-image
       - name: Load scanned image
         run: |
-          docker load --input "${RUNNER_TEMP}/scanned-image/image.tar"
+          docker load --input "${RUNNER_TEMP}/scanned-image/image.tar.gz"
           docker image inspect "lostlink/${SERVICE_NAME}:${GITHUB_SHA}" > /dev/null
       - name: Assume AWS role through GitHub OIDC
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
@@ -255,4 +295,5 @@ jobs:
           image="${ECR_REGISTRY}/lostlink/${SERVICE_NAME}:${GITHUB_SHA}"
           docker tag "lostlink/${SERVICE_NAME}:${GITHUB_SHA}" "${image}"
           docker push "${image}"
+          # shellcheck disable=SC2016 # Markdown backticks in the format string are literal.
           printf '### Published %s\n\n`%s`\n' "${SERVICE_NAME}" "${image}" >> "$GITHUB_STEP_SUMMARY"

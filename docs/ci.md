@@ -14,7 +14,10 @@ failed the image gate on CVE-2024-47874, CVE-2026-48818 and CVE-2026-54283.
    for HIGH/CRITICAL vulnerabilities with fixes available, secrets and IaC issues.
 3. After both gates pass, build each service's Linux image and scan its OS and
    application dependencies with Trivy (HIGH/CRITICAL with fixes available).
-4. On `main`, save the scanned images as artifacts, retained for one day.
+   Matching is built with `INSTALL_ML=true` and must pass an offline CLIP inference
+   check inside the built image before it can be scanned and published.
+4. On `main`, save the scanned images as gzip-compressed artifacts, retained for
+   one day. Artifact upload compression is disabled to avoid compressing twice.
 5. Only after **all** service builds and scans pass, a separate publishing job
    assumes an AWS role through GitHub OIDC, downloads the images from the same
    workflow run and pushes them to ECR. It does not rebuild the images.
@@ -32,6 +35,32 @@ Images use the merge commit's full SHA:
 
 The published URI appears in each publishing job's summary. C3 can use this tag
 for deployment. This workflow does not deploy to EKS.
+
+## Matching inference image
+
+CI publishes one inference-capable `lostlink/matching-service:<GITHUB_SHA>` image
+for the API and `tasks` worker. It installs the existing pinned
+`services/matching-service/requirements-ml.lock` through `INSTALL_ML=true`. The
+`consume` and `outbox` processes can use the same image. The Matching build job
+allows 60 minutes for the larger ML dependency installation, checks and image scan;
+other service builds retain their 30-minute timeout.
+
+The ML lock pins Pillow 13.0.0 to satisfy the image vulnerability gate; the previous
+12.3.0 pin has fixable HIGH/CRITICAL findings. See the
+[Pillow 13.0.0 security fixes](https://pillow.readthedocs.io/en/stable/releasenotes/13.0.0.html#security).
+
+The image check downloads the official checkpoint with
+`scripts/prepare_clip_model.py`, verifies its pinned SHA256, and mounts it read-only
+in a container running as the image's default non-root user with networking disabled.
+The container loads the real `ClipEncoder` and encodes both text and a generated PNG,
+checking for finite, unit-length 512-dimensional vectors. A missing ML dependency,
+incompatible runtime, or failed model load blocks publishing.
+
+Weights are not baked into the image. API and `tasks` deployments must still mount
+the same trusted checkpoint read-only and configure `CLIP_CHECKPOINT` and
+`CLIP_SHA256` as described in the [Matching runtime setup](../services/matching-service/README.md).
+The model check does not replace `/ready` checks for database migrations, identity
+configuration and service dependencies, or the AWS end-to-end acceptance checks.
 
 ## AWS setup after the account is confirmed
 
