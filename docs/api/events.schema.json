@@ -1,0 +1,544 @@
+{
+  "title": "LostLink domain events",
+  "description": "Version-one envelopes published on SNS. Payloads reject unknown fields; consumers deduplicate by event_id.",
+  "envelope": {
+    "$defs": {
+      "JsonValue": {}
+    },
+    "additionalProperties": false,
+    "properties": {
+      "event_id": {
+        "format": "uuid",
+        "title": "Event Id",
+        "type": "string"
+      },
+      "event_type": {
+        "maxLength": 100,
+        "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+        "title": "Event Type",
+        "type": "string"
+      },
+      "schema_version": {
+        "const": 1,
+        "default": 1,
+        "title": "Schema Version",
+        "type": "integer"
+      },
+      "source": {
+        "maxLength": 63,
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "title": "Source",
+        "type": "string"
+      },
+      "occurred_at": {
+        "format": "date-time",
+        "title": "Occurred At",
+        "type": "string"
+      },
+      "tenant_id": {
+        "anyOf": [
+          {
+            "format": "uuid",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Tenant Id"
+      },
+      "correlation_id": {
+        "format": "uuid",
+        "title": "Correlation Id",
+        "type": "string"
+      },
+      "data": {
+        "additionalProperties": {
+          "$ref": "#/$defs/JsonValue"
+        },
+        "title": "Data",
+        "type": "object"
+      }
+    },
+    "required": [
+      "event_type",
+      "source",
+      "data"
+    ],
+    "title": "DomainEvent",
+    "type": "object"
+  },
+  "events": {
+    "claim.approved": {
+      "source": "claim-service",
+      "tenant_required": true,
+      "data": {
+        "additionalProperties": false,
+        "properties": {
+          "claim_id": {
+            "format": "uuid",
+            "title": "Claim Id",
+            "type": "string"
+          },
+          "item_id": {
+            "format": "uuid",
+            "title": "Item Id",
+            "type": "string"
+          },
+          "owner_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Owner Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "claim_id",
+          "item_id",
+          "owner_id"
+        ],
+        "title": "ClaimApproved",
+        "type": "object"
+      }
+    },
+    "claim.cancelled": {
+      "source": "claim-service",
+      "tenant_required": true,
+      "data": {
+        "additionalProperties": false,
+        "properties": {
+          "claim_id": {
+            "format": "uuid",
+            "title": "Claim Id",
+            "type": "string"
+          },
+          "item_id": {
+            "format": "uuid",
+            "title": "Item Id",
+            "type": "string"
+          },
+          "owner_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Owner Id",
+            "type": "string"
+          },
+          "reason_code": {
+            "enum": [
+              "found_elsewhere",
+              "no_longer_needed",
+              "submitted_in_error",
+              "other"
+            ],
+            "title": "Reason Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "claim_id",
+          "item_id",
+          "owner_id",
+          "reason_code"
+        ],
+        "title": "ClaimCancelled",
+        "type": "object"
+      }
+    },
+    "claim.handed_over": {
+      "source": "claim-service",
+      "tenant_required": true,
+      "data": {
+        "additionalProperties": false,
+        "properties": {
+          "claim_id": {
+            "format": "uuid",
+            "title": "Claim Id",
+            "type": "string"
+          },
+          "item_id": {
+            "format": "uuid",
+            "title": "Item Id",
+            "type": "string"
+          },
+          "owner_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Owner Id",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "counter",
+              "courier"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "handed_over_at": {
+            "format": "date-time",
+            "title": "Handed Over At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "claim_id",
+          "item_id",
+          "owner_id",
+          "mode",
+          "handed_over_at"
+        ],
+        "title": "ClaimHandedOver",
+        "type": "object"
+      }
+    },
+    "item.catalog_changed": {
+      "source": "item-service",
+      "tenant_required": true,
+      "data": {
+        "additionalProperties": false,
+        "properties": {
+          "item_id": {
+            "format": "uuid",
+            "title": "Item Id",
+            "type": "string"
+          },
+          "item_version": {
+            "minimum": 1,
+            "title": "Item Version",
+            "type": "integer"
+          },
+          "revision": {
+            "minimum": 1,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "state": {
+            "enum": [
+              "awaiting_upload",
+              "processing",
+              "processing_failed",
+              "available",
+              "reserved",
+              "handed_over",
+              "withdrawn"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "category": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Category",
+            "type": "string"
+          },
+          "found_at": {
+            "format": "date-time",
+            "title": "Found At",
+            "type": "string"
+          },
+          "venue_id": {
+            "format": "uuid",
+            "title": "Venue Id",
+            "type": "string"
+          },
+          "photo_bucket": {
+            "anyOf": [
+              {
+                "maxLength": 63,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Bucket"
+          },
+          "photo_key": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photo Key"
+          }
+        },
+        "required": [
+          "item_id",
+          "item_version",
+          "revision",
+          "state",
+          "title",
+          "description",
+          "category",
+          "found_at",
+          "venue_id",
+          "photo_bucket",
+          "photo_key"
+        ],
+        "title": "ItemCatalogChanged",
+        "type": "object"
+      }
+    },
+    "item.embedded": {
+      "source": "embedding-worker",
+      "tenant_required": true,
+      "data": {
+        "additionalProperties": false,
+        "properties": {
+          "item_id": {
+            "format": "uuid",
+            "title": "Item Id",
+            "type": "string"
+          },
+          "item_version": {
+            "minimum": 1,
+            "title": "Item Version",
+            "type": "integer"
+          },
+          "model_version": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Model Version",
+            "type": "string"
+          },
+          "dimensions": {
+            "const": 512,
+            "default": 512,
+            "title": "Dimensions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "item_id",
+          "item_version",
+          "model_version"
+        ],
+        "title": "ItemEmbedded",
+        "type": "object"
+      }
+    },
+    "item.embedding_failed": {
+      "source": "embedding-worker",
+      "tenant_required": true,
+      "data": {
+        "additionalProperties": false,
+        "properties": {
+          "item_id": {
+            "format": "uuid",
+            "title": "Item Id",
+            "type": "string"
+          },
+          "item_version": {
+            "minimum": 1,
+            "title": "Item Version",
+            "type": "integer"
+          },
+          "error_code": {
+            "enum": [
+              "invalid_image",
+              "model_failure",
+              "retry_exhausted"
+            ],
+            "title": "Error Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_id",
+          "item_version",
+          "error_code"
+        ],
+        "title": "ItemEmbeddingFailed",
+        "type": "object"
+      }
+    },
+    "item.registered": {
+      "source": "item-service",
+      "tenant_required": true,
+      "data": {
+        "additionalProperties": false,
+        "properties": {
+          "item_id": {
+            "format": "uuid",
+            "title": "Item Id",
+            "type": "string"
+          },
+          "item_version": {
+            "minimum": 1,
+            "title": "Item Version",
+            "type": "integer"
+          },
+          "photo_bucket": {
+            "maxLength": 63,
+            "minLength": 1,
+            "title": "Photo Bucket",
+            "type": "string"
+          },
+          "photo_key": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Photo Key",
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Description",
+            "type": "string"
+          },
+          "category": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Category",
+            "type": "string"
+          },
+          "found_at": {
+            "format": "date-time",
+            "title": "Found At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_id",
+          "item_version",
+          "photo_bucket",
+          "photo_key",
+          "description",
+          "category",
+          "found_at"
+        ],
+        "title": "ItemRegistered",
+        "type": "object"
+      }
+    },
+    "lost_report.created": {
+      "source": "matching-service",
+      "tenant_required": false,
+      "data": {
+        "additionalProperties": false,
+        "properties": {
+          "report_id": {
+            "format": "uuid",
+            "title": "Report Id",
+            "type": "string"
+          },
+          "owner_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Owner Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "report_id",
+          "owner_id"
+        ],
+        "title": "LostReportCreated",
+        "type": "object"
+      }
+    },
+    "match.found": {
+      "source": "matching-service",
+      "tenant_required": true,
+      "data": {
+        "additionalProperties": false,
+        "properties": {
+          "match_id": {
+            "format": "uuid",
+            "title": "Match Id",
+            "type": "string"
+          },
+          "report_id": {
+            "format": "uuid",
+            "title": "Report Id",
+            "type": "string"
+          },
+          "item_id": {
+            "format": "uuid",
+            "title": "Item Id",
+            "type": "string"
+          },
+          "owner_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Owner Id",
+            "type": "string"
+          },
+          "score": {
+            "maximum": 1,
+            "minimum": -1,
+            "title": "Score",
+            "type": "number"
+          }
+        },
+        "required": [
+          "match_id",
+          "report_id",
+          "item_id",
+          "owner_id",
+          "score"
+        ],
+        "title": "MatchFound",
+        "type": "object"
+      }
+    },
+    "venue.membership_changed": {
+      "source": "venue-service",
+      "tenant_required": true,
+      "data": {
+        "additionalProperties": false,
+        "properties": {
+          "membership_id": {
+            "format": "uuid",
+            "title": "Membership Id",
+            "type": "string"
+          },
+          "user_sub": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "User Sub",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1,
+            "title": "Version",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "suspended"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "membership_id",
+          "user_sub",
+          "version",
+          "status"
+        ],
+        "title": "VenueMembershipChanged",
+        "type": "object"
+      }
+    }
+  }
+}
