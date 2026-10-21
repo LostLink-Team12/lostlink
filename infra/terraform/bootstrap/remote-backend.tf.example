@@ -1,0 +1,5 @@
+# Copy to remote-backend.tf AFTER the state bucket exists, then migrate the
+# bootstrap state into its own key in that bucket. See ../README.md.
+terraform {
+  backend "s3" {}
+}
