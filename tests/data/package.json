@@ -1,0 +1,5 @@
+{
+  "name": "lostlink-demo-data", "private": true, "type": "module",
+  "scripts": {"test": "node --test *.test.mjs", "dataset": "node seed.mjs prepare", "seed": "node seed.mjs import"},
+  "dependencies": {"csv-parse": "^6.1.0"}
+}
