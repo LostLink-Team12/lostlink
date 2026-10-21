@@ -37,8 +37,9 @@ jobs:
           for service in services:
               if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", service):
                   raise SystemExit(f"Invalid service directory name: {service}")
-              if not (Path("services") / service / "requirements.txt").is_file():
-                  raise SystemExit(f"Missing requirements.txt for {service}")
+              for required in ("requirements.txt", "requirements-dev.txt"):
+                  if not (Path("services") / service / required).is_file():
+                      raise SystemExit(f"Missing {required} for {service}")
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               output.write(f"services={json.dumps(services)}\n")
           PY
@@ -62,9 +63,66 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: services/${{ matrix.service }}/requirements.txt
-      - run: python -m pip install -r requirements.txt
-      - run: python -m pytest -q
+          cache-dependency-path: requirements-dev.lock
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pytest -q -m "not integration"
+
+  shared-library:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.lock
+      - run: python -m pip install -r requirements-dev.lock ./libs
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: python -m pytest -q libs/tests -m "not integration"
+
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: lostlink
+          POSTGRES_PASSWORD: lostlink
+          POSTGRES_DB: lostlink
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lostlink -d lostlink"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+      localstack:
+        image: localstack/localstack:3
+        env:
+          SERVICES: s3,sns,sqs
+          SQS_ENDPOINT_STRATEGY: path
+        ports:
+          - 4566:4566
+        options: >-
+          --health-cmd "curl -f http://localhost:4566/_localstack/health"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      LOSTLINK_TEST_ADMIN_URL: postgresql+psycopg://lostlink:lostlink@localhost:5432/lostlink
+      LOSTLINK_TEST_AWS_ENDPOINT: http://localhost:4566
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.lock
+      - run: python -m pip install -r requirements-dev.lock ./libs
+      - run: python -m pytest -q -m integration
 
   security-scan:
     runs-on: ubuntu-24.04
@@ -84,7 +142,7 @@ jobs:
           ignore-unfixed: true
 
   build-image:
-    needs: [discover, test, security-scan]
+    needs: [discover, test, shared-library, integration, security-scan]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
@@ -97,8 +155,13 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+      # Images build from the repository root because services copy requirements.lock and libs/.
       - name: Build service image
-        run: docker build --pull --tag "lostlink/${SERVICE_NAME}:${GITHUB_SHA}" "services/${SERVICE_NAME}"
+        run: >-
+          docker build --pull
+          --build-arg "SERVICE_DIR=services/${SERVICE_NAME}"
+          --file "services/${SERVICE_NAME}/Dockerfile"
+          --tag "lostlink/${SERVICE_NAME}:${GITHUB_SHA}" .
       - name: Trivy image scan (OS and application dependencies)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -125,8 +188,11 @@ jobs:
           overwrite: true
 
   publish-image:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    needs: [discover, test, security-scan, build-image]
+    # Runs once the AWS account is configured (docs/ci.md); until then main stays green.
+    if: >-
+      github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+      && vars.AWS_ROLE_ARN != ''
+    needs: [discover, build-image]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:

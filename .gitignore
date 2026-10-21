@@ -4,6 +4,9 @@ __pycache__/
 venv/
 .env
 .env.*
+!.env.example
+.ruff_cache/
+*.egg-info/
 .pytest_cache/
 .coverage
 htmlcov/
@@ -17,3 +20,6 @@ build/
 .idea/
 .vscode/
 .DS_Store
+.models/
+# Local-only backend handoff and implementation records.
+docs/local/

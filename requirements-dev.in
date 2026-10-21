@@ -1,0 +1,4 @@
+-r requirements.lock
+httpx2>=2,<3
+pytest>=8.3.3,<9
+ruff>=0.9,<1
