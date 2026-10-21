@@ -21,13 +21,15 @@ disclosure and single-use QR handover.
 alert: it consumes match.found, revalidates the match with Matching, resolves the
 owner's verified email and sends through SES with explicit unknown-outcome handling.
 
+[Delivery Service](delivery-service/README.md) is the Seed 2 skeleton: the shipment
+lifecycle and its reactions to claim events, ahead of the Phase 2 Partner API (ADR-0009).
+
 | Service | Bounded context | Use cases | Owner | Phase |
 | --- | --- | --- | --- | --- |
 | venue-service | Venue and Tenant | UC1 | JIANG YIBAI | 1 |
 | item-service | Item Catalogue | UC2 | JIANG YIBAI | 1 |
 | claim-service | Claim and Verification | UC5 | JIANG YIBAI | 1 |
-| notification-service | Notification, partner webhooks | UC4, UC6 | JIANG YIBAI | 1 |
-| embedding-worker | Media and Embedding (SQS consumer) | UC2, UC3 | YANG DONGWEI | 1 |
-| matching-service | Matching | UC3, UC4 | YANG DONGWEI | 1 |
-| delivery-service | Return Delivery (Seed 2) | UC6 | YANG DONGWEI | 2 |
+| notification-service | Notification (partner webhooks in Phase 2) | UC4, UC6 | JIANG YIBAI | 1 |
+| matching-service | Matching, plus the Embedding worker processes (ADR-0007) | UC3, UC4 | YANG DONGWEI (design), JIANG YIBAI (implementation) | 1 |
+| delivery-service | Return Delivery (Seed 2), lifecycle skeleton | UC6 | YANG DONGWEI | 2 |
 | analytics-service | Analytics | UC7 | ZHANG JI | 2 |

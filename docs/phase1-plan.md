@@ -36,6 +36,15 @@ B1/B2/B3（2026-10-21）：JIANG YIBAI 负责的 Phase 1 后端已全部实现�
 
 仍需团队完成：合入 `main` 并通过 CI；C 组配置 Cognito（V2 触发器、M2M scope）、SES、SNS/SQS 订阅与 DLQ、各服务数据库角色和秘密后部署 dev；前端按接口接入。具体要求见[后端接入指南](team-alignment.md)。Partner API 与 Webhooks 属于 Phase 2。
 
+## 架构与 Seed 2 进度（2026-10-21，YANG DONGWEI）
+
+A1–A3 的实现已由后端分支完成（见上）。架构负责人这边完成：
+
+- A1 契约审阅：[架构审阅](reviews/2026-10-21-architecture-review.md)，契约通过，附 3 项高优先级修改（KEDA 伸缩信号、搜索逐个调用 Item、错误响应未写入契约）。
+- ADR：修订 ADR-0002（KEDA 改按 PostgreSQL 任务积压伸缩）；新增 ADR-0007（Embedding 放在 Matching 上下文）、ADR-0008（发件箱/收件箱/任务表）、ADR-0009（Seed 2 交付授权与扫码取件）。
+- 阈值标定：`scripts/calibrate_match_threshold.py` 按查询方式给出推荐阈值；等 D1 的带标签数据（约 100 对）后运行并更新 `MATCH_THRESHOLD`。
+- Seed 2：`services/delivery-service` 骨架（运输状态机和 claim 事件处理，含单元测试）。
+
 ## Daily rhythm
 
 - 10-minute stand-up at 10pm each day: done, next, blocked.
