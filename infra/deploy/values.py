@@ -4,6 +4,13 @@ This module never retrieves credentials. Every secret ARN is process specific.
 """
 
 import json
+from pathlib import Path
+
+import yaml
+
+MATCHING_DEFAULTS = yaml.safe_load(
+    (Path(__file__).resolve().parents[1] / "helm/lostlink/values.yaml").read_text(encoding="utf-8")
+)["matching"]
 
 SERVICES = ["venue", "item", "matching", "claim", "notification"]
 MODES = {
@@ -111,6 +118,11 @@ def helm_values(outputs, images, *, origin, revision, proxy_image):
             if service == "item" and mode == "cleanup":
                 env["CLEANUP_PREFIXES"] = '["staging/"]'
             model = service == "matching" and mode in {"api", "tasks"}
+            if service == "matching":
+                env.update(
+                    MATCH_THRESHOLD=str(MATCHING_DEFAULTS["threshold"]),
+                    MATCH_THRESHOLD_TEXT=str(MATCHING_DEFAULTS["thresholdText"]),
+                )
             if model:
                 env.update(
                     CLIP_CHECKPOINT="/models/ViT-B-32.pt",
@@ -149,7 +161,7 @@ def helm_values(outputs, images, *, origin, revision, proxy_image):
                         else "100m"
                         if service == "item" and mode == "api"
                         else "25m",
-                        "memory": "2500Mi" if model else "128Mi",
+                        "memory": "4Gi" if model else "128Mi",
                     },
                     "limits": {
                         "cpu": "1500m"
@@ -168,7 +180,7 @@ def helm_values(outputs, images, *, origin, revision, proxy_image):
             "runtimeRevision": revision,
             "env": common,
             "processes": processes,
-            "hpa": {"maxReplicas": 8 if service in {"matching", "item"} else 2},
+            "hpa": {"maxReplicas": 8 if service == "item" else 2},
             "keda": {"maxReplicas": 2},
             "migration": {"enabled": False},
         }

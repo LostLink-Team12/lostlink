@@ -49,11 +49,21 @@ def main():
     os.environ.update(AWS_PROFILE="lostlink-dev", AWS_DEFAULT_REGION="ap-southeast-1")
     data = outputs()
     origin = data["c3"]["value"]["frontend_origin"]
-    if (
-        args.mode == "search"
-        and metric('sum(kube_node_status_condition{condition="Ready",status="true"})') < 5
-    ):
-        raise RuntimeError("The 200 VU acceptance profile requires five ready demo nodes")
+    if args.mode == "search":
+        # A t3.large can hold only one reserved 4 GiB model pod. Node count
+        # alone is insufficient for eight API replicas plus the warm worker.
+        slots = metric(
+            'sum(floor(kube_node_status_allocatable{resource="memory",unit="byte"}/4294967296))'
+        )
+        cap = metric(
+            'kube_horizontalpodautoscaler_spec_max_replicas{namespace="lostlink",'
+            'horizontalpodautoscaler="matching-api"}'
+        )
+        if slots < 9 or cap < 8:
+            raise RuntimeError(
+                "The 200 VU profile needs an explicit eight-API HPA and at least "
+                "nine reserved 4 GiB model slots, plus room for other workloads"
+            )
 
     class C:
         kubectl = str(ROOT / "infra/terraform/.terraform/tools/kubectl.exe")

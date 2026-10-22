@@ -2,6 +2,19 @@
 {{- $root := . -}}
 {{- range $mode, $process := .Values.processes }}
 {{- $name := printf "%s-%s" $root.Values.service $mode }}
+{{- if $process.model }}
+{{- range $kind := list "requests" "limits" }}
+{{- $memory := toString (get (get $process.resources $kind) "memory") }}
+{{- if not (regexMatch "^[0-9]+(Mi|Gi)$" $memory) }}
+{{- fail (printf "%s memory %s must use integer Mi or Gi" $name $kind) }}
+{{- end }}
+{{- $amount := int (regexFind "^[0-9]+" $memory) }}
+{{- if hasSuffix "Gi" $memory }}{{- $amount = mul $amount 1024 }}{{- end }}
+{{- if lt (int $amount) 4096 }}
+{{- fail (printf "%s memory %s must be at least 4Gi for the pinned CLIP model" $name $kind) }}
+{{- end }}
+{{- end }}
+{{- end }}
 ---
 apiVersion: v1
 kind: ServiceAccount

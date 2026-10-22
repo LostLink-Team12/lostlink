@@ -3,6 +3,7 @@
 import base64
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -16,6 +17,63 @@ from matching_app.embedding import ClipEncoder, EmbeddingError, decode_photo, no
 from matching_app.main import create_app
 from matching_app.schemas import NewReport, Search
 from pydantic import ValidationError
+
+
+@pytest.mark.parametrize("has_photo,expected", [(False, True), (True, False)])
+def test_rematching_applies_the_calibrated_cutoff_to_each_report_modality(
+    monkeypatch, has_photo, expected
+):
+    import matching_app.workers as workers
+
+    item = SimpleNamespace(item_id=uuid4(), state="available", item_version=1, tenant_id=uuid4())
+    vector = SimpleNamespace(item_version=1, tenant_id=item.tenant_id, model_version="test")
+    report = SimpleNamespace(id=uuid4(), has_photo=has_photo, model_version="test")
+    job = SimpleNamespace(resource_id=item.item_id, cursor=None)
+    session = SimpleNamespace(
+        get=lambda model, _id: item if model is workers.Catalog else vector,
+        scalars=lambda _query: [report],
+        scalar=lambda _query: 0.70,
+    )
+    worker = workers.MatchingWorker(
+        SimpleNamespace(context=lambda **_kwargs: nullcontext(session)),
+        settings=MatchingSettings(_env_file=None, match_threshold=0.78, match_threshold_text=0.63),
+    )
+    monkeypatch.setattr(worker, "current", lambda *_args: job)
+    monkeypatch.setattr(worker, "finish", lambda *_args: None)
+    monkeypatch.setattr(workers, "filters_match", lambda *_args: True)
+    saved = []
+    monkeypatch.setattr(workers, "save_match", lambda *_args: saved.append(True))
+    worker.item_match(job)
+    assert bool(saved) is expected
+
+
+def test_unconfigured_text_cutoff_preserves_the_existing_single_threshold():
+    settings = MatchingSettings(_env_file=None, match_threshold=0.42)
+    assert settings.automatic_match_threshold(False) == 0.42
+    assert settings.automatic_match_threshold(True) == 0.42
+
+
+@pytest.mark.parametrize("has_photo,expected", [(False, 0.63), (True, 0.78)])
+def test_new_report_matching_passes_its_modality_cutoff_to_candidate_selection(
+    monkeypatch, has_photo, expected
+):
+    import matching_app.workers as workers
+
+    report = SimpleNamespace(
+        state="open", embedding=[1.0], model_version="test", has_photo=has_photo
+    )
+    session = SimpleNamespace(scalar=lambda _query: report)
+    job = SimpleNamespace(resource_id=uuid4())
+    worker = workers.MatchingWorker(
+        SimpleNamespace(context=lambda **_kwargs: nullcontext(session)),
+        settings=MatchingSettings(_env_file=None, match_threshold=0.78, match_threshold_text=0.63),
+    )
+    monkeypatch.setattr(worker, "current", lambda *_args: job)
+    monkeypatch.setattr(worker, "finish", lambda *_args: None)
+    cutoffs = []
+    monkeypatch.setattr(workers, "candidates", lambda *args: cutoffs.append(args[-1]) or [])
+    worker.report_match(job)
+    assert cutoffs == [expected]
 
 
 @pytest.mark.parametrize("value", [[], [0.0] * 512, [float("nan")] * 512, [1.0] * 511])

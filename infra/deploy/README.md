@@ -7,6 +7,16 @@ provides the frontend gateway, private ALB Ingress, Prometheus, a restricted
 SQL exporter and provisioned Grafana dashboard. Controller versions are fixed
 in `controllers.ps1`; installed application images are ECR digests.
 
+The separately merged `infra/helm/lostlink` umbrella chart from #17 remains
+available with its original contract checks. The live deployment described here
+uses five per-service releases plus `platform`, as requested in #6. They share
+process service-account identities: **do not install both variants into the same
+namespace**. The operator renderer reads #17's matching threshold values directly
+and preserves its 4 GiB model memory floor. Both durable matching paths consume
+`MATCH_THRESHOLD_TEXT` for text-only reports and `MATCH_THRESHOLD` for reports
+with a photo. If the text setting is absent, the old single-threshold behavior
+is preserved. This connects #17's values; it does not re-calibrate the dataset.
+
 ## Prerequisites
 
 - Apply the application AWS configuration from `../terraform/APPLICATION.md`.
@@ -137,22 +147,29 @@ The scaler's runnable SQL is fixed in ADR-0002 and the chart. It excludes
 delayed retries and in-flight leases, which the dashboard exposes separately.
 Matching tasks keep one warm replica; KEDA handles replica changes from the
 PostgreSQL query and HPA stabilization governs scale-down to one. The baseline
-has two nodes. Matching API can scale to eight replicas for the measured
-200 VU profile; other APIs and matching tasks cap at two. KEDA does not
-provision nodes.
+has two nodes. Matching API and tasks each cap at two, and each model pod reserves
+and limits 4 GiB, retaining #17's verified memory floor. Item API caps at eight
+after real search exposed its internal lookup bottleneck; other APIs cap at two.
+The two-node baseline supports the minimum two model pods, not the combined
+HPA/KEDA ceiling. Four model pods require four t3.large model slots plus capacity
+for non-model processes. KEDA does not provision nodes.
 Check allocatable CPU/memory, model cold starts and RDS connections before
 raising those caps. Preserve controller conditions/events alongside load
 summaries and same-time-range Grafana screenshots. Upload confirmation alone
 does not establish embedding completion or search availability.
 
-The first two-node, two-API-replica run failed its 5s p95 target. The measured
-acceptance profile temporarily raises the same Terraform var-file to
-`node_desired_size=5`, `node_max_size=5`, reviews/applies the plan, and waits for
-five Ready nodes. `load.py search` refuses to run this profile on less capacity.
-Keep the successful and failed results distinct. After demonstration load,
-backlog drain and replica cooldown, return `node_desired_size` to 2 through a
-reviewed Terraform plan. This is deliberate operator capacity management; no
-node autoscaler is installed.
+The first two-node, two-API-replica run failed its 5s p95 target. Subsequent text
+profiling temporarily used five t3.large nodes and eight Matching API replicas
+with 2500 MiB requests / 4 GiB limits, before #17's safer 4 GiB reservation was
+merged. Those historical runs are not a maximum-photo capacity guarantee.
+The final templates reject that lower reservation. `load.py search` now requires
+an explicit eight-replica HPA and at least nine reserved 4 GiB model slots,
+plus room for other processes. Five t3.large nodes cannot provide those slots;
+provision larger/more nodes and inspect actual placement before repeating it.
+Use an explicit Helm `--set hpa.maxReplicas=8` override only with that capacity.
+Keep all results distinct. After load, backlog drain and cooldown, restore the
+default HPA cap and return `node_desired_size` to 2 through a reviewed Terraform
+plan. This is deliberate operator capacity management; no node autoscaler is installed.
 
 `preserve-monitoring.py protect` temporarily protects the two original baseline
 instances before removing the three demo nodes, so their private monitoring

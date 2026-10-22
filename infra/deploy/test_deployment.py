@@ -138,6 +138,18 @@ def test_rendered_charts_have_probes_isolated_roles_and_postgres_scaler(generate
             assert trigger["type"] == "postgresql"
             assert "available_at <= now()" in trigger["metadata"]["query"]
             assert scaler["spec"]["minReplicaCount"] >= 1
+            # The former 2500 MiB reservation allowed unsafe model packing even
+            # with a larger limit. Reject that known scheduling regression.
+            values["processes"]["api"]["resources"]["requests"]["memory"] = "2500Mi"
+            path.write_text(yaml.safe_dump(values), encoding="utf-8")
+            rejected = subprocess.run(
+                [helm, "template", service, str(chart), "-f", str(path)],
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+            assert rejected.returncode != 0
+            assert "must be at least 4Gi" in rejected.stderr
         for resource in resources:
             if resource and resource["kind"] in {"HorizontalPodAutoscaler", "ScaledObject"}:
                 assert resource["metadata"]["labels"]["app.kubernetes.io/part-of"] == "lostlink"

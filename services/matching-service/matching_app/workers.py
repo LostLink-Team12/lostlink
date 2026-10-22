@@ -275,7 +275,7 @@ class MatchingWorker:
                     row.model_version,
                     row,
                     self.settings.candidate_limit,
-                    self.settings.match_threshold,
+                    self.settings.automatic_match_threshold(row.has_photo),
                 ):
                     save_match(session, row, item, embedding, score)
             self.finish(job)
@@ -313,7 +313,7 @@ class MatchingWorker:
                     .where(Report.id == row.id)
                 )
                 score = max(-1.0, min(1.0, float(score)))
-                if score >= self.settings.match_threshold:
+                if score >= self.settings.automatic_match_threshold(row.has_photo):
                     save_match(session, row, item, embedding, score)
             if len(rows) == 50:
                 job.cursor = str(rows[-1].id)
