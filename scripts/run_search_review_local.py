@@ -8,6 +8,7 @@ import argparse
 import base64
 import contextlib
 import contextvars
+import importlib
 import io
 import json
 import os
@@ -24,8 +25,9 @@ from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "scripts"))
-import backend_admin as admin  # noqa: E402
+sys.path.insert(0, str(ROOT))
+# Initialize the tool's shared/service import paths before loading the fixture apps.
+admin = importlib.import_module("scripts.backend_admin")
 import httpx  # noqa: E402
 import uvicorn  # noqa: E402
 from item_app.config import ItemSettings  # noqa: E402
@@ -40,7 +42,6 @@ from matching_app.database import MatchingDatabase  # noqa: E402
 from matching_app.embedding import ClipEncoder  # noqa: E402
 from matching_app.main import create_app as matching_app  # noqa: E402
 from matching_app.models import Catalog, ItemVector  # noqa: E402
-from PIL import Image  # noqa: E402
 from psycopg import sql  # noqa: E402
 from sqlalchemy import create_engine  # noqa: E402
 from sqlalchemy.engine import make_url  # noqa: E402
@@ -116,6 +117,8 @@ def disposable_database():
         "::1",
     }:
         raise ValueError("LOSTLINK_TEST_ADMIN_URL must be a local PostgreSQL SQLAlchemy URL")
+    # Check before the initial CREATE DATABASE connection, not only during bootstrap.
+    admin.check_connection_parameters(base)
     suffix = uuid4().hex
     name = "ll_search_review_" + suffix
     target = base.set(database=name)
@@ -250,6 +253,8 @@ def diagnostics(rows):
 
 
 def run(args):
+    from PIL import Image
+
     os.environ.setdefault("OMP_NUM_THREADS", "2")
     os.environ.setdefault("MKL_NUM_THREADS", "2")
     encoder = TimedEncoder(str(args.checkpoint.resolve()), args.sha256)

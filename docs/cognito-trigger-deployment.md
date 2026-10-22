@@ -2,6 +2,25 @@
 
 对应 Issue #7。本步骤只准备 Lambda ZIP、入口验证和部署输入；不创建 AWS 资源、不绑定真实用户池，也不表示真实登录已验收。
 
+## 与 AWS 应用配置 PR #15 的接入关系
+
+截至 2026-10-22，[PR #15](https://github.com/LostLink-Team12/lostlink/pull/15) 另有 Secrets Manager
+适配入口和部署记录。它与本工具复用同一个 `venue_app.token_trigger` 身份规则，但 ZIP **不能直接互换**：
+
+| 项目 | 本工具 / CI 的入口包 | PR #15 的 AWS 部署包 |
+| --- | --- | --- |
+| handler | `venue_app.token_trigger.handler` | `lambda_entry.handler`，读取秘密后委托给左侧入口 |
+| 凭据 | 部署系统提供 `IDENTITY_DATABASE_URL` | 提供 `IDENTITY_SECRET_ARN`，wrapper 在内存中构建 URL |
+| CA 文件 | `rds-global-bundle.pem` | `global-bundle.pem` |
+| 轮换 | 本入口缓存配置；需刷新执行环境 | wrapper 定期重新读取秘密，变化时释放旧池并清空依赖缓存 |
+
+当前 Terraform 的 handler/环境只与右侧包匹配。不要把左侧 Actions ZIP 直接覆盖到该函数，
+也不要为复用 ZIP 将密码写进 Terraform state。合入后由部署方使用最终源码重建右侧适配包，
+核对 ZIP SHA、CA 路径及 handler，重新做冷/热调用和真实登录验收。
+若后续统一构建入口，须同时覆盖 wrapper 的秘密读取、轮换和失败路径测试。
+PR #15 已记录 2048 MiB 的实测和学生账号无法设置保留并发的限制；以下内存/并发建议仅是通用起点，
+实际配置以团队 IaC、账号配额和整体 5 秒预算为准，不能未经测量改回更小配置。
+
 ## 1. 生成部署产物
 
 在仓库根目录运行，需 Python 3.12+、Docker Desktop 的 Linux 引擎及 Buildx：

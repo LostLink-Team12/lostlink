@@ -94,6 +94,15 @@ def secret(name):
     return value
 
 
+def check_connection_parameters(url):
+    # libpq also accepts hostaddr/service/options, which can override the target or identity.
+    require(
+        set(url.query)
+        <= {"sslmode", "sslrootcert", "sslcert", "sslkey", "channel_binding", "application_name"},
+        "database_query_parameters_invalid",
+    )
+
+
 def database_url(variable, config, environment):
     url = make_url(secret(variable))
     require(url.drivername == "postgresql+psycopg", "database_driver_invalid")
@@ -101,12 +110,7 @@ def database_url(variable, config, environment):
     require(bool(url.host and url.username and url.password), "database_url_incomplete")
     if environment == "local":
         require(url.host in {"localhost", "127.0.0.1", "::1"}, "local_target_must_be_loopback")
-    # Prevent connection-string parameters from overriding the validated target/login.
-    require(
-        set(url.query)
-        <= {"sslmode", "sslrootcert", "sslcert", "sslkey", "channel_binding", "application_name"},
-        "database_query_parameters_invalid",
-    )
+    check_connection_parameters(url)
     if environment != "local":
         require(url.query.get("sslmode") == "verify-full", "database_tls_verify_full_required")
         certificate = url.query.get("sslrootcert")
