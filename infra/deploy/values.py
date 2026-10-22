@@ -144,11 +144,19 @@ def helm_values(outputs, images, *, origin, revision, proxy_image):
                 "keda": service == "matching" and mode == "tasks",
                 "resources": {
                     "requests": {
-                        "cpu": "500m" if model else "25m",
+                        "cpu": "500m"
+                        if model
+                        else "100m"
+                        if service == "item" and mode == "api"
+                        else "25m",
                         "memory": "2500Mi" if model else "128Mi",
                     },
                     "limits": {
-                        "cpu": "1500m" if model else "500m",
+                        "cpu": "1500m"
+                        if model
+                        else "1000m"
+                        if service == "item" and mode == "api"
+                        else "500m",
                         "memory": "4Gi" if model else "384Mi",
                     },
                 },
@@ -160,7 +168,7 @@ def helm_values(outputs, images, *, origin, revision, proxy_image):
             "runtimeRevision": revision,
             "env": common,
             "processes": processes,
-            "hpa": {"maxReplicas": 8 if service == "matching" else 2},
+            "hpa": {"maxReplicas": 8 if service in {"matching", "item"} else 2},
             "keda": {"maxReplicas": 2},
             "migration": {"enabled": False},
         }

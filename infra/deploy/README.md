@@ -28,7 +28,8 @@ Helm values, raw Kubernetes Secret objects, request tokens or S3 upload fields.
 
 1. Run `python infra/deploy/configure.py infrastructure`. This creates ignored
    `.local/infrastructure.tfvars.json`, including a random origin header and
-   two baseline nodes and a five-node demo ceiling. Preserve this file for subsequent Terraform runs.
+   two baseline nodes and a five-node demo ceiling. Preserve this file for
+   subsequent Terraform runs.
 2. Plan and apply dev Terraform with
    `-var-file=../../../deploy/.local/infrastructure.tfvars.json` when using
    `-chdir=infra/terraform/environments/dev`. Review the saved plan first.
@@ -135,9 +136,10 @@ Use `tests/load/README.md` for search/import execution. Handoff parameters:
 The scaler's runnable SQL is fixed in ADR-0002 and the chart. It excludes
 delayed retries and in-flight leases, which the dashboard exposes separately.
 Matching tasks keep one warm replica; KEDA handles replica changes from the
-PostgreSQL query and HPA stabilization governs scale-down to one. The two-node
-baseline has two nodes. Matching API can scale to eight replicas for the measured
-200 VU profile; other APIs and matching tasks cap at two. KEDA does not provision nodes.
+PostgreSQL query and HPA stabilization governs scale-down to one. The baseline
+has two nodes. Matching API can scale to eight replicas for the measured
+200 VU profile; other APIs and matching tasks cap at two. KEDA does not
+provision nodes.
 Check allocatable CPU/memory, model cold starts and RDS connections before
 raising those caps. Preserve controller conditions/events alongside load
 summaries and same-time-range Grafana screenshots. Upload confirmation alone
@@ -163,6 +165,24 @@ embedding/lease drain, separately from the 5,000-photo confirmation counter.
 The first bulk acceptance also ran a real owner search canary every 30 seconds;
 its low-rate timings are separate from k6's bulk HTTP metrics. Future bulk
 captures use `--no-search-p95` when no concurrent searches are generated.
+
+For a retry, keep `--run-id` unchanged and supply a new `--evidence-id`; this
+preserves the failed attempt's evidence and its deterministic import identities.
+The collector requires runnable/leased/delayed jobs to drain, rejects any increase
+in historical failed jobs, and verifies actual Item states after bulk load.
+It does not delete failed audit records or count them as drained work.
+
+The initial D1 import found five MPO originals and two oversized photos (one
+overlaps the MPO group), affecting six items. `repair-load-photos.py` is limited
+to failed items in the recorded synthetic C3 venue. With the locked Matching
+`Pillow==13.0.0`, it uploads first-frame JPEG derivatives bounded to 2048 pixels
+through Item's normal versioned API. Original files, source attribution, hashes,
+derived hashes and historical failures are retained. Review `.local/photo-repairs.json`.
+
+This dev-only CloudFront distribution intentionally defers a paid WAF policy;
+the scoped Trivy exception is documented beside that resource. Provision a
+reviewed WAF policy before using this as a production service. Deployments in
+this change are operator-driven; `c3.yml` validates charts, not cloud CD.
 
 ## Verification
 
