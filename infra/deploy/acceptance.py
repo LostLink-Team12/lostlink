@@ -519,7 +519,7 @@ def main():
         elif args.action == "staff-flow":
             staff_flow(cluster, data, users)
         else:
-            print("Prepared five isolated Cognito fixtures without sending invitations")
+            print(f"Prepared {len(users)} isolated Cognito fixtures without sending invitations")
     finally:
         client.close()
 

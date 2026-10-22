@@ -44,8 +44,12 @@ async function upload(target,photo) {
   apiBase(target.url.split('?')[0]);
   const boundary='lostlink-'+exec.vu.idInTest+'-'+Date.now()+'-'+Math.random().toString(16).slice(2);
   const body=multipart(target.fields,photo,boundary);
-  const res=http.post(target.url,body,{headers:{'Content-Type':'multipart/form-data; boundary='+boundary},tags:{name:'s3-upload'},timeout:'60s',redirects:0});
-  if (![200,201,204].includes(res.status)) throw Error('S3 upload failed (HTTP '+res.status+')');
+  for(let attempt=0;attempt<3;attempt++) {
+    const res=http.post(target.url,body,{headers:{'Content-Type':'multipart/form-data; boundary='+boundary},tags:{name:'s3-upload'},timeout:'60s',redirects:0});
+    if ([200,201,204].includes(res.status)) return;
+    if (!(res.status===0 || res.status===429 || res.status>=500) || attempt===2) throw Error('S3 upload failed (HTTP '+res.status+')');
+    sleep(attempt+1);
+  }
 }
 export async function setup() {
   if (!__ENV.LOSTLINK_ACCESS_TOKEN) throw Error('Set LOSTLINK_ACCESS_TOKEN to a fresh venue staff token');

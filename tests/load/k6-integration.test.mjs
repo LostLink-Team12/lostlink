@@ -17,7 +17,7 @@ function run(script,env) {
   });
 }
 test('real k6 executes search ramps, multipart uploads, poll, resume and failure thresholds against a local contract double', {skip:!k6,timeout:120000},async()=> {
-  let imports=0,uploads=0,confirmed=0,rejectSearch=false,uploadLeak=false,uploadHeaders=[],versionHeaders=[],keys=[],pendingReads=0;
+  let imports=0,uploads=0,confirmed=0,rejectSearch=false,uploadLeak=false,uploadHeaders=[],versionHeaders=[],keys=[],pendingReads=0,transientUploads=0;
   const jobs=new Map(),items=new Map();
   const server=createServer(async(req,res)=> {
     const buffers=[];for await(const b of req)buffers.push(b);const raw=Buffer.concat(buffers);
@@ -42,6 +42,7 @@ test('real k6 executes search ramps, multipart uploads, poll, resume and failure
     if(req.url==='/s3') {
       if(req.headers.authorization)uploadLeak=true;
       const text=raw.toString('latin1');assert(text.indexOf('name="policy"')<text.indexOf('name="file"'));
+      if(transientUploads>0) {transientUploads--;return send(503,{});}
       uploadHeaders.push(req.headers['content-type']);uploads++;res.writeHead(204);return res.end();
     }
     if(req.url.startsWith('/v1/item-operations/')) {pendingReads++;if(pendingReads===1)return send(200,{state:'pending'});confirmed++;return send(200,{state:'completed'});}
@@ -63,6 +64,13 @@ test('real k6 executes search ramps, multipart uploads, poll, resume and failure
     const initialKeys=[...keys].sort();const metrics=JSON.parse(await readFile(join(root,'bulk.json'),'utf8')).metrics;assert.equal(metrics.photos_confirmed.values.count,4);
     result=await run('tests/load/bulk_import.js',bulk);assert.equal(result.code,0,result.output);assert.equal(uploads,4);assert.deepEqual(keys.slice(2).sort(),initialKeys);
     assert.equal(JSON.parse(await readFile(join(root,'bulk.json'),'utf8')).metrics.photos_reused.values.count,4);
+    transientUploads=1;
+    result=await run('tests/load/bulk_import.js',{...bulk,RUN_ID:'transient-retry'});
+    // A single failure exceeds 1% in this tiny contract fixture; it must remain
+    // visible even though upload retry completes every photo successfully.
+    assert.equal(result.code,99,result.output);
+    const retried=JSON.parse(await readFile(join(root,'bulk.json'),'utf8')).metrics;
+    assert.equal(retried.photos_confirmed.values.count,4);assert.equal(retried.batches_succeeded.values.rate,1);
     rejectSearch=true;result=await run('tests/load/search_load.js',{...common,MATCHING_API_URL:base,MAX_VUS:'1',RAMP_DURATION:'1s',HOLD_DURATION:'1s',SUMMARY_PATH:join(root,'failed.json')});assert.notEqual(result.code,0);
     assert(!result.output.includes(common.LOSTLINK_ACCESS_TOKEN));
   } finally { server.closeAllConnections(); await new Promise(r=>server.close(r)); }

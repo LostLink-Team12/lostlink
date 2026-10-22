@@ -33,14 +33,14 @@ export function reportHtml(samples,metadata) {
   const errors=samples.flatMap((s,i)=>(s.errors || []).map(e=>`Sample ${i}: ${e}`));
   return `<!doctype html><meta charset="utf-8"><title>LostLink scaling evidence</title><style>body{font:16px system-ui;max-width:1050px;margin:40px auto;padding:20px;color:#172033;background:#f5f7fa}section{background:white;padding:20px;margin:20px 0;border:1px solid #ddd;border-radius:8px}svg{width:100%}pre{white-space:pre-wrap}.warning{color:#9a3412}</style><h1>LostLink scaling evidence</h1><p>Read-only observations; ${samples.length} samples. No scaling success is inferred automatically. Compare desired and ready replicas, backlog drain, cooldown and the k6 summary.</p><pre>${escape(JSON.stringify(metadata,null,2))}</pre><p class="warning">Collection errors: ${errors.length}. Empty/missing metrics are unavailable, never zero.</p><pre>${escape(errors.join('\n'))}</pre>${charts || '<p>No chartable observations. C3 prerequisites may be missing.</p>'}`;
 }
-export async function capture({context,namespace,selector,prometheus,backlogQuery,out,seconds=1200,interval=15,kubectl='kubectl',query,stopFile}, deps={}) {
+export async function capture({context,namespace,selector,prometheus,backlogQuery,out,seconds=1200,interval=15,kubectl='kubectl',query,stopFile,includeSearchP95=true}, deps={}) {
   if (!context || !namespace || !selector || !backlogQuery || !prometheus) throw Error('Set --context, --namespace, --selector, --prometheus and --backlog-query from the deployed C3 configuration');
   if (!/^[a-z0-9-]+$/.test(namespace) || !Number.isInteger(seconds) || seconds<0 || !Number.isInteger(interval) || interval<1) throw Error('Invalid capture configuration');
   const url=new URL(prometheus); if(url.username||url.password||url.search||url.hash || (url.protocol!=='https:' && !(url.protocol==='http:' && ['127.0.0.1','localhost','[::1]'].includes(url.hostname)))) throw Error('Prometheus requires HTTPS or localhost without URL credentials');
   const run=deps.execute || execute, request=deps.fetch || fetch, pause=deps.pause || (ms=>new Promise(r=>setTimeout(r,ms))),clock=deps.now || Date.now;
   await mkdir(out,{recursive:true});
-  const samples=[],start=clock(), metadata={context,namespace,selector,started_at:new Date(start).toISOString(),interval_seconds:interval,backlog_query:backlogQuery};
-  const queries={p95_seconds:query || `histogram_quantile(0.95, sum by (le) (rate(lostlink_http_request_duration_seconds_bucket{namespace="${namespace}",service="matching-service",route="/v1/search",method="POST"}[2m])))`,embedding_backlog:backlogQuery};
+  const samples=[],start=clock(), metadata={context,namespace,selector,started_at:new Date(start).toISOString(),interval_seconds:interval,backlog_query:backlogQuery,search_p95_collected:includeSearchP95};
+  const queries={...(includeSearchP95?{p95_seconds:query || `histogram_quantile(0.95, sum by (le) (rate(lostlink_http_request_duration_seconds_bucket{namespace="${namespace}",service="matching-service",route="/v1/search",method="POST"}[2m])))`}:{}),embedding_backlog:backlogQuery};
   do {
     const sample={time:new Date(clock()).toISOString(),metrics:{},errors:[]};
     const kube=await Promise.allSettled(['deployments','hpa','scaledobjects.keda.sh'].map(async resource=> {
@@ -82,6 +82,6 @@ export async function capture({context,namespace,selector,prometheus,backlogQuer
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href) {
   const args=process.argv.slice(2),opt=(key,fallback)=>args.includes(key)?args[args.indexOf(key)+1]:fallback;
-  const result=await capture({context:opt('--context'),namespace:opt('--namespace'),selector:opt('--selector'),prometheus:opt('--prometheus'),backlogQuery:opt('--backlog-query'),out:resolve(opt('--out','tests/load/results')),seconds:Number(opt('--seconds','1200')),interval:Number(opt('--interval','15')),kubectl:opt('--kubectl','kubectl'),query:opt('--p95-query'),stopFile:opt('--stop-file')});
+  const result=await capture({context:opt('--context'),namespace:opt('--namespace'),selector:opt('--selector'),prometheus:opt('--prometheus'),backlogQuery:opt('--backlog-query'),out:resolve(opt('--out','tests/load/results')),seconds:Number(opt('--seconds','1200')),interval:Number(opt('--interval','15')),kubectl:opt('--kubectl','kubectl'),query:opt('--p95-query'),stopFile:opt('--stop-file'),includeSearchP95:!args.includes('--no-search-p95')});
   console.log(JSON.stringify(result));if(result.incomplete)process.exitCode=2;
 }

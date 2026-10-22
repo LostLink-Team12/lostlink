@@ -2,7 +2,7 @@
   "uid": "lostlink-c3-scaling",
   "title": "LostLink C3 Scaling",
   "schemaVersion": 41,
-  "version": 1,
+  "version": 3,
   "refresh": "15s",
   "timezone": "utc",
   "time": {
@@ -13,7 +13,7 @@
     {
       "id": 1,
       "type": "timeseries",
-      "title": "API desired and ready replicas",
+      "title": "API and embedding worker replicas",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -26,14 +26,14 @@
       },
       "targets": [
         {
-          "expr": "kube_deployment_spec_replicas{namespace=\"lostlink\"}",
+          "expr": "kube_deployment_spec_replicas{namespace=\"lostlink\",deployment=~\".*-api|matching-tasks\"}",
           "refId": "A",
-          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+          "legendFormat": "{{deployment}} desired"
         },
         {
-          "expr": "kube_deployment_status_replicas_available{namespace=\"lostlink\"}",
+          "expr": "kube_deployment_status_replicas_available{namespace=\"lostlink\",deployment=~\".*-api|matching-tasks\"}",
           "refId": "B",
-          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+          "legendFormat": "{{deployment}} ready"
         }
       ]
     },
@@ -55,22 +55,22 @@
         {
           "expr": "lostlink_embedding_runnable_jobs",
           "refId": "A",
-          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+          "legendFormat": "runnable"
         },
         {
           "expr": "lostlink_embedding_leased_jobs",
           "refId": "B",
-          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+          "legendFormat": "leased"
         },
         {
           "expr": "lostlink_embedding_delayed_jobs",
           "refId": "C",
-          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+          "legendFormat": "delayed"
         },
         {
           "expr": "lostlink_embedding_failed_jobs",
           "refId": "D",
-          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+          "legendFormat": "failed"
         }
       ]
     },
@@ -92,7 +92,7 @@
         {
           "expr": "histogram_quantile(0.95, sum by (le,service) (rate(lostlink_http_request_duration_seconds_bucket[2m])))",
           "refId": "A",
-          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+          "legendFormat": "{{service}}"
         }
       ]
     },
@@ -112,9 +112,9 @@
       },
       "targets": [
         {
-          "expr": "sum by (service) (rate(lostlink_http_requests_total{status=~\"5..\"}[2m])) / sum by(service) (rate(lostlink_http_requests_total[2m]))",
+          "expr": "(sum by (service) (rate(lostlink_http_requests_total{namespace=\"lostlink\",status=~\"5..\"}[2m])) or sum by (service) (rate(lostlink_http_requests_total{namespace=\"lostlink\"}[2m])) * 0) / sum by(service) (rate(lostlink_http_requests_total{namespace=\"lostlink\"}[2m]))",
           "refId": "A",
-          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+          "legendFormat": "{{service}}"
         }
       ]
     },
@@ -136,7 +136,7 @@
         {
           "expr": "sum by(service) (rate(lostlink_http_requests_total[2m]))",
           "refId": "A",
-          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+          "legendFormat": "{{service}}"
         }
       ]
     },
@@ -158,7 +158,7 @@
         {
           "expr": "up{job=~\"lostlink-api|embedding-backlog|kube-state-metrics\"}",
           "refId": "A",
-          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+          "legendFormat": "{{job}} {{service}} {{instance}}"
         }
       ]
     }

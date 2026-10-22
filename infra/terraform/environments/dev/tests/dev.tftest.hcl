@@ -344,3 +344,39 @@ run "reject_mismatched_postgres_family" {
   }
   expect_failures = [var.postgres_engine_version]
 }
+
+run "c3_private_gateway_and_controller_identity" {
+  command = plan
+  override_resource {
+    target          = aws_eks_cluster.this
+    override_during = plan
+    values = {
+      identity = [{ oidc = [{ issuer = "https://oidc.eks.ap-southeast-1.amazonaws.com/id/test" }] }]
+    }
+  }
+  override_resource {
+    target          = aws_iam_openid_connect_provider.eks
+    override_during = plan
+    values = {
+      arn = "arn:aws:iam::123456789012:oidc-provider/oidc.eks.ap-southeast-1.amazonaws.com/id/test"
+    }
+  }
+  variables {
+    c3_enabled        = true
+    node_desired_size = 2
+    node_max_size     = 5
+  }
+  assert {
+    condition = (
+      length(aws_iam_role.alb_controller) == 1 &&
+      length(aws_cloudfront_distribution.dev) == 0 &&
+      aws_ecr_repository.frontend[0].image_tag_mutability == "IMMUTABLE" &&
+      aws_vpc_security_group_ingress_rule.c3_cloudfront[0].cidr_ipv4 == null &&
+      aws_vpc_security_group_ingress_rule.c3_cloudfront[0].from_port == 80 &&
+      aws_vpc_security_group_ingress_rule.c3_gateway[0].from_port == 8080 &&
+      aws_vpc_security_group_ingress_rule.c3_gateway[0].to_port == 8080 &&
+      jsondecode(aws_iam_role.alb_controller[0].assume_role_policy).Statement[0].Condition.StringEquals["${local.oidc_host}:sub"] == "system:serviceaccount:kube-system:aws-load-balancer-controller"
+    )
+    error_message = "C3 requires an isolated controller identity, immutable frontend images and a scoped private gateway boundary."
+  }
+}

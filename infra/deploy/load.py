@@ -37,13 +37,23 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=["search", "bulk"])
     parser.add_argument("--run-id", required=True)
+    parser.add_argument(
+        "--evidence-id", help="Separate evidence directory when resuming the same run"
+    )
     parser.add_argument("--count", type=int, default=5000)
     args = parser.parse_args()
     if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]{0,39}", args.run_id):
         raise ValueError("Use a stable 1-40 character run ID")
+    if args.evidence_id and not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]{0,59}", args.evidence_id):
+        raise ValueError("Use a safe 1-60 character evidence directory name")
     os.environ.update(AWS_PROFILE="lostlink-dev", AWS_DEFAULT_REGION="ap-southeast-1")
     data = outputs()
     origin = data["c3"]["value"]["frontend_origin"]
+    if (
+        args.mode == "search"
+        and metric('sum(kube_node_status_condition{condition="Ready",status="true"})') < 5
+    ):
+        raise RuntimeError("The 200 VU acceptance profile requires five ready demo nodes")
 
     class C:
         kubectl = str(ROOT / "infra/terraform/.terraform/tools/kubectl.exe")
@@ -69,7 +79,8 @@ def main():
         api.call("matching", "/v1/search", owner, {"text": "backpack", "limit": 5})
         time.sleep(1)
     metric("lostlink_embedding_runnable_jobs")
-    out = ROOT / "tests/load/results" / args.run_id
+    failed_baseline = metric("lostlink_embedding_failed_jobs")
+    out = ROOT / "tests/load/results" / (args.evidence_id or args.run_id)
     out.mkdir(parents=True, exist_ok=True)
     stop = out / "capture.stop"
     stop.unlink(missing_ok=True)
@@ -78,6 +89,8 @@ def main():
         LOSTLINK_ACCESS_TOKEN=owner if args.mode == "search" else staff,
         SUMMARY_PATH=str(summary),
         IMPORT_COUNT=str(args.count),
+        LOAD_MANIFEST=str(ROOT / "tests/load/generated/manifest.json"),
+        LOAD_PHOTOS=str(ROOT / "tests/load/generated/photos.bin"),
     )
     capture_args = [
         "node",
@@ -107,10 +120,16 @@ def main():
         "--stop-file",
         str(stop),
     ]
+    if args.mode == "bulk":
+        capture_args.append("--no-search-p95")
     started = datetime.now(UTC).isoformat()
     capture_log = (out / "capture.log").open("w", encoding="utf-8")
     collector = subprocess.Popen(
-        capture_args, cwd=ROOT, env=environment, stdout=capture_log, stderr=subprocess.STDOUT
+        capture_args,
+        cwd=ROOT,
+        env={k: v for k, v in environment.items() if k != "LOSTLINK_ACCESS_TOKEN"},
+        stdout=capture_log,
+        stderr=subprocess.STDOUT,
     )
     try:
         k6 = ROOT / "infra/terraform/.terraform/tools/k6/k6-v1.6.0-windows-amd64/k6.exe"
@@ -119,7 +138,7 @@ def main():
             load = subprocess.run(
                 [str(k6), "run", "--quiet", "--no-color", "tests/load/" + script],
                 cwd=ROOT,
-                env={k: v for k, v in environment.items() if k != "LOSTLINK_ACCESS_TOKEN"},
+                env=environment,
                 stdout=log,
                 stderr=subprocess.STDOUT,
             )
@@ -136,11 +155,14 @@ def main():
             }
             desired = metric("sum(kube_deployment_spec_replicas" + replica_filter + ")")
             ready = metric("sum(kube_deployment_status_replicas_available" + replica_filter + ")")
-            if values["failed"]:
+            if values["failed"] > failed_baseline:
                 raise RuntimeError(
                     "Real embedding failures remain; inspect worker/controller evidence"
                 )
-            if all(value == 0 for value in values.values()) and desired == ready == 6:
+            if (
+                all(values[key] == 0 for key in ["runnable", "leased", "delayed"])
+                and desired == ready == 6
+            ):
                 stable_since = stable_since or time.monotonic()
                 if time.monotonic() - stable_since >= 180:
                     break
@@ -167,6 +189,25 @@ def main():
             str(out / "report"),
         ]
     )
+    if args.mode == "bulk" and load.returncode == 0:
+        staff = login(users["staff"], app["operator_client_id"], domain, origin, venue=True)
+        states, offset = {}, 0
+        while True:
+            page = api.call("item", f"/v1/items?limit=100&offset={offset}", staff)
+            for item in page["items"]:
+                states[item["state"]] = states.get(item["state"], 0) + 1
+            if not page["has_more"]:
+                break
+            offset += 100
+        (out / "inventory-states.json").write_text(json.dumps(states, indent=2), encoding="utf-8")
+        if states.get("available", 0) < args.count or any(
+            states.get(state, 0) for state in ["processing", "processing_failed", "awaiting_upload"]
+        ):
+            raise RuntimeError("Confirmed photos have not all reached searchable available state")
+        owner = login(users["owner"], app["web_client_id"], domain, origin)
+        result = api.call("matching", "/v1/search", owner, {"text": "backpack", "limit": 5})
+        if not result["items"]:
+            raise RuntimeError("No real imported item is searchable after backlog drain")
     events = json.loads(run([*cluster.command, "get", "events", "-n", "lostlink", "-o", "json"]))
     token = json.loads((LOCAL / "infrastructure.tfvars.json").read_text())["c3_origin_token"]
     evidence = [
@@ -198,6 +239,8 @@ def main():
                 "k6_exit_code": load.returncode,
                 "collector_exit_code": collector.returncode,
                 "cooldown_and_drain_observed": True,
+                "historical_failed_jobs_before": failed_baseline,
+                "failed_jobs_after": values["failed"],
                 "prometheus_p95_window": "15m",
                 "search_latency_source": "search k6 summary",
             },

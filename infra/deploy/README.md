@@ -28,7 +28,7 @@ Helm values, raw Kubernetes Secret objects, request tokens or S3 upload fields.
 
 1. Run `python infra/deploy/configure.py infrastructure`. This creates ignored
    `.local/infrastructure.tfvars.json`, including a random origin header and
-   a two-node capacity bound. Preserve this file for subsequent Terraform runs.
+   two baseline nodes and a five-node demo ceiling. Preserve this file for subsequent Terraform runs.
 2. Plan and apply dev Terraform with
    `-var-file=../../../deploy/.local/infrastructure.tfvars.json` when using
    `-chdir=infra/terraform/environments/dev`. Review the saved plan first.
@@ -136,11 +136,33 @@ The scaler's runnable SQL is fixed in ADR-0002 and the chart. It excludes
 delayed retries and in-flight leases, which the dashboard exposes separately.
 Matching tasks keep one warm replica; KEDA handles replica changes from the
 PostgreSQL query and HPA stabilization governs scale-down to one. The two-node
-demo has API and task caps of two replicas; KEDA does not provision nodes.
+baseline has two nodes. Matching API can scale to eight replicas for the measured
+200 VU profile; other APIs and matching tasks cap at two. KEDA does not provision nodes.
 Check allocatable CPU/memory, model cold starts and RDS connections before
 raising those caps. Preserve controller conditions/events alongside load
 summaries and same-time-range Grafana screenshots. Upload confirmation alone
 does not establish embedding completion or search availability.
+
+The first two-node, two-API-replica run failed its 5s p95 target. The measured
+acceptance profile temporarily raises the same Terraform var-file to
+`node_desired_size=5`, `node_max_size=5`, reviews/applies the plan, and waits for
+five Ready nodes. `load.py search` refuses to run this profile on less capacity.
+Keep the successful and failed results distinct. After demonstration load,
+backlog drain and replica cooldown, return `node_desired_size` to 2 through a
+reviewed Terraform plan. This is deliberate operator capacity management; no
+node autoscaler is installed.
+
+`preserve-monitoring.py protect` temporarily protects the two original baseline
+instances before removing the three demo nodes, so their private monitoring
+emptyDir histories survive that scale-in. Run `preserve-monitoring.py restore`
+afterwards to restore their previous protection flags. This is not durable
+storage or protection against node failure; keep exported report artifacts.
+
+`load.py bulk --run-id <stable-id>` checks actual available item states after
+embedding/lease drain, separately from the 5,000-photo confirmation counter.
+The first bulk acceptance also ran a real owner search canary every 30 seconds;
+its low-rate timings are separate from k6's bulk HTTP metrics. Future bulk
+captures use `--no-search-p95` when no concurrent searches are generated.
 
 ## Verification
 

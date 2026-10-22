@@ -385,7 +385,7 @@ def main():
                 ),
                 encoding="utf-8",
             )
-        print("Prepared ignored C3 Terraform input; two nodes bound application replica capacity")
+        print("Prepared ignored C3 inputs: two baseline nodes, five-node demo ceiling")
         return
     data = outputs()
     cluster = Cluster(args)

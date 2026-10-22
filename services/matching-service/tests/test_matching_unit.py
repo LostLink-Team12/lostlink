@@ -81,8 +81,11 @@ def test_probes_and_metrics_survive_exhausted_search_thread_pool():
     db = SimpleNamespace(check_ready=lambda *_args: None)
     app = create_app(
         MatchingSettings(_env_file=None, user_client_ids=["owner"]),
-        token_verifier=object(), database=db, internal_database=db,
-        encoder=SimpleNamespace(ready=lambda: None), item_client=object(),
+        token_verifier=object(),
+        database=db,
+        internal_database=db,
+        encoder=SimpleNamespace(ready=lambda: None),
+        item_client=object(),
     )
 
     @app.get("/occupied-search-worker")
