@@ -1,0 +1,18 @@
+{{- /* Fail early on missing deployment inputs instead of letting pods crash-loop. */}}
+{{- $v := .Values }}
+{{- $_ := required "aws.eventTopicArn is required (application.event_topic_arn)" $v.aws.eventTopicArn }}
+{{- $_ := required "aws.mediaBucket is required (media_bucket)" $v.aws.mediaBucket }}
+{{- $_ := required "cognito.userPoolId is required" $v.cognito.userPoolId }}
+{{- range $queue := list "matching" "item" "notifications" }}
+{{- $_ := required (printf "aws.queueUrls.%s is required (application.queue_urls)" $queue) (get $v.aws.queueUrls $queue) }}
+{{- end }}
+{{- if $v.services.notification.enabled }}
+{{- $origin := required "notification.ownerAppBaseUrl is required (Owner App HTTPS origin)" $v.notification.ownerAppBaseUrl }}
+{{- if not (hasPrefix "https://" $origin) }}
+{{- fail "notification.ownerAppBaseUrl must be an https:// origin" }}
+{{- end }}
+{{- $_ := required "notification.sesFromAddress is required (verified SES sender)" $v.notification.sesFromAddress }}
+{{- end }}
+{{- if and (ne $v.environment "dev") (ne $v.environment "prod") }}
+{{- fail "environment must be dev or prod for a cluster deployment" }}
+{{- end }}

@@ -1,0 +1,86 @@
+{{- $root := . }}
+{{- range $name := keys .Values.services | sortAlpha }}
+{{- $svc := get $root.Values.services $name }}
+{{- if $svc.enabled }}
+{{- if and $svc.api $root.Values.hpa.enabled }}
+{{- $process := printf "%s-api" $name }}
+{{- $range := $svc.api.hpa | default dict }}
+---
+# CPU-based scaling for the API (search runs CLIP inference in-request, ADR-0007).
+# Requires metrics-server. The single demo node bounds the useful maximum.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ $process }}
+  labels:
+    {{- include "lostlink.labels" (dict "root" $root "service" $name "process" $process) | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ $process }}
+  minReplicas: {{ $range.minReplicas | default 1 }}
+  maxReplicas: {{ $range.maxReplicas | default 2 }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $root.Values.hpa.targetCPUUtilizationPercentage }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 120
+{{- end }}
+{{- range $mode, $worker := $svc.workers }}
+{{- if and $worker.keda $root.Values.keda.enabled }}
+{{- $process := printf "%s-%s" $name $mode }}
+{{- $scale := $worker.scale | default dict }}
+{{- $secret := printf "%s/%s" $root.Values.aws.secretPrefix $root.Values.keda.secret }}
+---
+# ADR-0002 (amended): the embedding backlog lives in PostgreSQL, so scale on pending jobs,
+# not SQS depth. minReplicaCount stays 1 so a burst never waits for a cold model load.
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: {{ $process }}-backlog
+  labels:
+    {{- include "lostlink.labels" (dict "root" $root "service" $name "process" $process) | nindent 4 }}
+spec:
+  awsSecretManager:
+    podIdentity:
+      provider: aws
+    region: {{ $root.Values.aws.region }}
+    secrets:
+      - {parameter: host, name: {{ $secret }}, secretKey: host}
+      - {parameter: userName, name: {{ $secret }}, secretKey: username}
+      - {parameter: password, name: {{ $secret }}, secretKey: password}
+      - {parameter: dbName, name: {{ $secret }}, secretKey: dbname}
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ $process }}
+  labels:
+    {{- include "lostlink.labels" (dict "root" $root "service" $name "process" $process) | nindent 4 }}
+spec:
+  scaleTargetRef:
+    name: {{ $process }}
+  minReplicaCount: {{ $scale.minReplicas | default 1 }}
+  maxReplicaCount: {{ $scale.maxReplicas | default 2 }}
+  pollingInterval: {{ $root.Values.keda.pollingInterval }}
+  cooldownPeriod: {{ $root.Values.keda.cooldownPeriod }}
+  triggers:
+    - type: postgresql
+      metadata:
+        sslmode: {{ $root.Values.keda.sslmode }}
+        port: {{ $root.Values.keda.port | quote }}
+        query: {{ $root.Values.keda.query | quote }}
+        targetQueryValue: {{ $root.Values.keda.targetPendingJobs | quote }}
+        activationTargetQueryValue: "0"
+      authenticationRef:
+        name: {{ $process }}-backlog
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

@@ -370,7 +370,7 @@ def main():
     parser.add_argument("mode", choices=["consume", "tasks"])
     parser.add_argument("--once", action="store_true")
     args = parser.parse_args()
-    settings = NotificationSettings(process_mode="worker")
+    settings = NotificationSettings(process_mode="worker", worker_mode=args.mode)
     configure_logging(settings.service_name, settings.log_level)
     if not settings.worker_database_url:
         parser.error("WORKER_DATABASE_URL is required")

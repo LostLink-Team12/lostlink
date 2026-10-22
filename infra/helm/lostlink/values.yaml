@@ -1,0 +1,335 @@
+# LostLink C3 deployment. Non-secret IDs come from `terraform output -json application`
+# (see infra/helm/render_values.py); secret VALUES stay in AWS Secrets Manager and are
+# read in memory by each pod's own IRSA role (lostlink_common.secret_env).
+
+environment: dev
+logLevel: INFO
+
+image:
+  # <registry>/<service>:<tag>, e.g. 152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/item-service
+  registry: 152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink
+  # Required: the full commit SHA that CI published to ECR.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+aws:
+  region: ap-southeast-1
+  # IRSA role per process: <roleArnPrefix><process>, e.g. ...:role/lostlink-dev-item-api.
+  # Terraform trusts system:serviceaccount:lostlink:<process>, so keep namespace lostlink.
+  roleArnPrefix: arn:aws:iam::152174417545:role/lostlink-dev-
+  # Optional per-process overrides of the ARN above.
+  roleArns: {}
+  # Secrets Manager names are <secretPrefix>/<path>, e.g. lostlink-dev/database/item/worker.
+  secretPrefix: lostlink-dev
+  eventTopicArn: ""
+  queueUrls:
+    matching: ""
+    item: ""
+    notifications: ""
+  mediaBucket: ""
+
+cognito:
+  issuer: ""
+  userPoolId: ""
+  clients:
+    owner: ""      # application.web_client_id (Owner App)
+    operator: ""   # application.operator_client_id (Venue Portal / operator console)
+  machineClients:  # application.machine_client_ids
+    item: ""
+    claim: ""
+    matching: ""
+    notification: ""
+
+database:
+  poolSize: 1
+  maxOverflow: 0
+  # Required. helm ... --set-file database.caBundle=global-bundle.pem
+  # (https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem)
+  caBundle: ""
+
+notification:
+  ownerAppBaseUrl: ""   # final Owner App HTTPS origin; links are <origin>/matches/{id}
+  sesFromAddress: ""
+  sesConfigurationSet: ""
+
+matching:
+  threshold: "0.25"
+  model:
+    url: https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt
+    sha256: 40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af
+    path: /models/ViT-B-32.pt
+    sizeLimit: 1Gi
+
+# Internal service URLs must be HTTPS (backend validators). The chart creates a private CA
+# and one certificate per API Service; pods trust it through SSL_CERT_FILE.
+tls:
+  validityDays: 730
+  clusterDomain: cluster.local
+
+# Prometheus scraping is cluster-internal; /metrics and /internal/v1/* are never routed by the
+# Ingress below because it lists only public path prefixes.
+ingress:
+  enabled: false
+  className: alb
+  host: ""
+  certificateArn: ""   # ACM certificate; without it the ALB listens on HTTP only (demo)
+  annotations: {}
+
+hpa:
+  enabled: true
+  targetCPUUtilizationPercentage: 70
+
+keda:
+  enabled: true
+  # KEDA reads the Matching worker credential with the KEDA operator's own IRSA role.
+  # The role needs secretsmanager:GetSecretValue on this secret only (see README).
+  secret: database/matching/worker
+  sslmode: require
+  # The secret's numeric port field is not passed through KEDA's string extraction.
+  port: "5432"
+  pollingInterval: 15
+  cooldownPeriod: 120
+  targetPendingJobs: "20"
+  query: >-
+    SELECT count(*) FROM matching.work_jobs
+    WHERE state = 'pending' AND kind = 'embed' AND available_at <= now()
+
+# Alembic migrations normally run once through infra/terraform/scripts/bootstrap-app.py,
+# which holds the migration credentials only in a temporary namespace. Enable this hook
+# only after Terraform grants <roleArnPrefix><service>-migration roles.
+migrations:
+  enabled: false
+  roleArns: {}
+
+podSecurity:
+  runAsUser: 1000
+  runAsGroup: 1000
+
+defaults:
+  resources:
+    requests: {cpu: 25m, memory: 160Mi}
+    limits: {memory: 384Mi}
+  apiResources:
+    requests: {cpu: 50m, memory: 192Mi}
+    limits: {memory: 512Mi}
+
+# One entry per bounded context. `api` is the HTTP process (Service <name>-service, port 443);
+# every worker is its own Deployment named <name>-<mode> with its own service account.
+#   secretEnv: ENV -> {secret: <path under secretPrefix>, format: database | key: <json field>}
+#   clients:   ENV -> client refs (owner, operator, machine.<service>); the API also gets
+#              COGNITO_ISSUER and COGNITO_CLIENT_IDS = union of all its refs.
+#   services:  ENV -> service name whose internal HTTPS URL is injected.
+#   env:       literal values; strings are rendered with tpl so they can reference .Values.
+services:
+  venue:
+    enabled: true
+    migrations: true
+    image: venue-service
+    module: venue_app
+    publicPaths: [/v1/venues, /v1/admin/venues, /v1/admin/identity-sync]
+    api:
+      secretEnv:
+        DATABASE_URL: {secret: database/venue/api, format: database}
+        PLATFORM_DATABASE_URL: {secret: database/venue/platform, format: database}
+      clients:
+        USER_CLIENT_IDS: [owner, operator]
+        PLATFORM_CLIENT_IDS: [operator]
+        MEMBER_CHECK_CLIENT_IDS: [machine.item, machine.claim]
+      env:
+        COGNITO_USER_POOL_ID: "{{ .Values.cognito.userPoolId }}"
+    workers:
+      outbox:
+        secretEnv:
+          WORKER_DATABASE_URL: {secret: database/venue/worker, format: database}
+        env:
+          EVENT_TOPIC_ARN: "{{ .Values.aws.eventTopicArn }}"
+      identity:
+        secretEnv:
+          WORKER_DATABASE_URL: {secret: database/venue/worker, format: database}
+        env:
+          COGNITO_USER_POOL_ID: "{{ .Values.cognito.userPoolId }}"
+
+  item:
+    enabled: true
+    migrations: true
+    image: item-service
+    module: item_app
+    publicPaths: [/v1/items, /v1/item-imports, /v1/item-operations]
+    api:
+      secretEnv:
+        DATABASE_URL: {secret: database/item/api, format: database}
+        INTERNAL_DATABASE_URL: {secret: database/item/internal, format: database}
+        MACHINE_CLIENT_ID: {secret: machine/item, key: client_id}
+        MACHINE_CLIENT_SECRET: {secret: machine/item, key: client_secret}
+        MACHINE_TOKEN_URL: {secret: machine/item, key: token_url}
+      clients:
+        USER_CLIENT_IDS: [owner, operator]
+        CLAIM_CLIENT_IDS: [machine.claim]
+        INDEX_CLIENT_IDS: [machine.matching]
+      services:
+        VENUE_BASE_URL: venue
+      env:
+        PHOTO_BUCKET: "{{ .Values.aws.mediaBucket }}"
+    workers:
+      tasks:
+        secretEnv:
+          WORKER_DATABASE_URL: {secret: database/item/worker, format: database}
+        env:
+          PHOTO_BUCKET: "{{ .Values.aws.mediaBucket }}"
+      outbox:
+        secretEnv:
+          WORKER_DATABASE_URL: {secret: database/item/worker, format: database}
+        env:
+          PHOTO_BUCKET: "{{ .Values.aws.mediaBucket }}"
+          EVENT_TOPIC_ARN: "{{ .Values.aws.eventTopicArn }}"
+      consume:
+        secretEnv:
+          WORKER_DATABASE_URL: {secret: database/item/worker, format: database}
+        env:
+          PHOTO_BUCKET: "{{ .Values.aws.mediaBucket }}"
+          EVENT_QUEUE_URL: "{{ .Values.aws.queueUrls.item }}"
+      cleanup:
+        secretEnv:
+          WORKER_DATABASE_URL: {secret: database/item/worker, format: database}
+        env:
+          PHOTO_BUCKET: "{{ .Values.aws.mediaBucket }}"
+
+  matching:
+    enabled: true
+    migrations: true
+    image: matching-service
+    module: matching_app
+    publicPaths: [/v1/lost-reports, /v1/search]
+    api:
+      model: true
+      resources:
+        requests: {cpu: 250m, memory: 1Gi}
+        limits: {memory: 1536Mi}
+      hpa: {minReplicas: 1, maxReplicas: 2}
+      secretEnv:
+        DATABASE_URL: {secret: database/matching/api, format: database}
+        INTERNAL_DATABASE_URL: {secret: database/matching/internal, format: database}
+        MACHINE_CLIENT_ID: {secret: machine/matching, key: client_id}
+        MACHINE_CLIENT_SECRET: {secret: machine/matching, key: client_secret}
+        MACHINE_TOKEN_URL: {secret: machine/matching, key: token_url}
+      clients:
+        USER_CLIENT_IDS: [owner]
+        NOTIFICATION_CLIENT_IDS: [machine.notification]
+      services:
+        ITEM_BASE_URL: item
+      env:
+        ITEM_PHOTO_BUCKETS: '["{{ .Values.aws.mediaBucket }}"]'
+        MATCH_THRESHOLD: "{{ .Values.matching.threshold }}"
+    workers:
+      tasks:
+        model: true
+        keda: true
+        resources:
+          requests: {cpu: 250m, memory: 1Gi}
+          limits: {memory: 1536Mi}
+        scale: {minReplicas: 1, maxReplicas: 2}
+        secretEnv:
+          WORKER_DATABASE_URL: {secret: database/matching/worker, format: database}
+          MACHINE_CLIENT_ID: {secret: machine/matching, key: client_id}
+          MACHINE_CLIENT_SECRET: {secret: machine/matching, key: client_secret}
+          MACHINE_TOKEN_URL: {secret: machine/matching, key: token_url}
+        services:
+          ITEM_BASE_URL: item
+        env:
+          ITEM_PHOTO_BUCKETS: '["{{ .Values.aws.mediaBucket }}"]'
+          MATCH_THRESHOLD: "{{ .Values.matching.threshold }}"
+      consume:
+        secretEnv:
+          WORKER_DATABASE_URL: {secret: database/matching/worker, format: database}
+        env:
+          EVENT_QUEUE_URL: "{{ .Values.aws.queueUrls.matching }}"
+      outbox:
+        secretEnv:
+          WORKER_DATABASE_URL: {secret: database/matching/worker, format: database}
+        env:
+          EVENT_TOPIC_ARN: "{{ .Values.aws.eventTopicArn }}"
+
+  claim:
+    enabled: true
+    migrations: true
+    image: claim-service
+    module: claim_app
+    publicPaths: [/v1/claims, /v1/claim-questions, /v1/claim-operations, /v1/venue]
+    api:
+      secretEnv:
+        DATABASE_URL: {secret: database/claim/api, format: database}
+        MACHINE_CLIENT_ID: {secret: machine/claim, key: client_id}
+        MACHINE_CLIENT_SECRET: {secret: machine/claim, key: client_secret}
+        MACHINE_TOKEN_URL: {secret: machine/claim, key: token_url}
+        FIELD_ENCRYPTION_KEYS: {secret: claim/crypto, key: FIELD_ENCRYPTION_KEYS}
+        FIELD_ENCRYPTION_ACTIVE_KEY_ID: {secret: claim/crypto, key: FIELD_ENCRYPTION_ACTIVE_KEY_ID}
+        HANDOVER_TOKEN_KEY: {secret: claim/crypto, key: HANDOVER_TOKEN_KEY}
+      clients:
+        USER_CLIENT_IDS: [owner, operator]
+      services:
+        VENUE_BASE_URL: venue
+        ITEM_BASE_URL: item
+      env:
+        COGNITO_USER_POOL_ID: "{{ .Values.cognito.userPoolId }}"
+    workers:
+      tasks:
+        secretEnv:
+          WORKER_DATABASE_URL: {secret: database/claim/worker, format: database}
+          MACHINE_CLIENT_ID: {secret: machine/claim, key: client_id}
+          MACHINE_CLIENT_SECRET: {secret: machine/claim, key: client_secret}
+          MACHINE_TOKEN_URL: {secret: machine/claim, key: token_url}
+          FIELD_ENCRYPTION_KEYS: {secret: claim/crypto, key: FIELD_ENCRYPTION_KEYS}
+          FIELD_ENCRYPTION_ACTIVE_KEY_ID: {secret: claim/crypto, key: FIELD_ENCRYPTION_ACTIVE_KEY_ID}
+          HANDOVER_TOKEN_KEY: {secret: claim/crypto, key: HANDOVER_TOKEN_KEY}
+        services:
+          ITEM_BASE_URL: item
+        env:
+          COGNITO_USER_POOL_ID: "{{ .Values.cognito.userPoolId }}"
+      outbox:
+        secretEnv:
+          WORKER_DATABASE_URL: {secret: database/claim/worker, format: database}
+        env:
+          EVENT_TOPIC_ARN: "{{ .Values.aws.eventTopicArn }}"
+
+  notification:
+    enabled: true
+    migrations: true
+    image: notification-service
+    module: notification_app
+    publicPaths: [/v1/notifications, /v1/admin/notifications, /v1/admin/notification-stats]
+    api:
+      secretEnv:
+        DATABASE_URL: {secret: database/notification/api, format: database}
+        ADMIN_DATABASE_URL: {secret: database/notification/admin, format: database}
+      clients:
+        USER_CLIENT_IDS: [owner]
+        OPERATOR_CLIENT_IDS: [operator]
+    workers:
+      consume:
+        secretEnv:
+          WORKER_DATABASE_URL: {secret: database/notification/worker, format: database}
+        env:
+          EVENT_QUEUE_URL: "{{ .Values.aws.queueUrls.notifications }}"
+      tasks:
+        secretEnv:
+          WORKER_DATABASE_URL: {secret: database/notification/worker, format: database}
+          MACHINE_CLIENT_ID: {secret: machine/notification, key: client_id}
+          MACHINE_CLIENT_SECRET: {secret: machine/notification, key: client_secret}
+          MACHINE_TOKEN_URL: {secret: machine/notification, key: token_url}
+        services:
+          MATCHING_BASE_URL: matching
+        env:
+          COGNITO_USER_POOL_ID: "{{ .Values.cognito.userPoolId }}"
+          OWNER_APP_BASE_URL: "{{ .Values.notification.ownerAppBaseUrl }}"
+          EMAIL_SENDER: ses
+          SES_FROM_ADDRESS: "{{ .Values.notification.sesFromAddress }}"
+          SES_CONFIGURATION_SET: "{{ .Values.notification.sesConfigurationSet }}"
+
+  # Seed 2 skeleton (ADR-0009). No database or IRSA role yet; enable for the Seed 2 demo.
+  delivery:
+    enabled: false
+    image: delivery-service
+    module: delivery_app
+    publicPaths: [/v1/shipment-lifecycle]
+    api:
+      serviceAccount: {irsa: false}

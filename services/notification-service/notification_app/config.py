@@ -26,6 +26,8 @@ def https_url(value, *, allow_path=False):
 class NotificationSettings(Settings):
     service_name: str = "notification-service"
     process_mode: Literal["api", "worker"] = "api"
+    # The inbox consumer only records matches; only the sender needs Matching and SES.
+    worker_mode: Literal["consume", "tasks"] | None = None
     admin_database_url: SecretStr | None = None
     worker_database_url: SecretStr | None = None
     user_client_ids: list[str] = Field(default_factory=list)
@@ -83,16 +85,20 @@ class NotificationSettings(Settings):
         if self.environment in {"dev", "prod"}:
             if self.email_sender != "ses":
                 raise ValueError("The capture sender is restricted to local/test environments")
-            if self.process_mode == "worker" and not all(
-                [
-                    self.matching_base_url,
-                    self.machine_token_url,
-                    self.machine_client_id,
-                    self.machine_client_secret,
-                    self.cognito_user_pool_id,
-                    self.owner_app_base_url,
-                    self.ses_from_address,
-                ]
+            if (
+                self.process_mode == "worker"
+                and self.worker_mode != "consume"
+                and not all(
+                    [
+                        self.matching_base_url,
+                        self.machine_token_url,
+                        self.machine_client_id,
+                        self.machine_client_secret,
+                        self.cognito_user_pool_id,
+                        self.owner_app_base_url,
+                        self.ses_from_address,
+                    ]
+                )
             ):
                 raise ValueError("Sender requires Matching, identity, Owner App and SES settings")
             if self.process_mode == "api" and not self.user_client_ids:

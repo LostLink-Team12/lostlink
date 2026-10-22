@@ -1,0 +1,35 @@
+# Non-secret placeholder inputs for `helm template` in CI. Shaped like the real
+# `terraform output -json application`; none of these resources need to exist.
+image:
+  tag: 0123456789abcdef0123456789abcdef01234567
+aws:
+  eventTopicArn: arn:aws:sns:ap-southeast-1:152174417545:lostlink-dev-domain-events
+  queueUrls:
+    matching: https://sqs.ap-southeast-1.amazonaws.com/152174417545/lostlink-dev-matching-events
+    item: https://sqs.ap-southeast-1.amazonaws.com/152174417545/lostlink-dev-item-events
+    notifications: https://sqs.ap-southeast-1.amazonaws.com/152174417545/lostlink-dev-notifications-events
+  mediaBucket: lostlink-dev-media-152174417545-ap-southeast-1
+cognito:
+  issuer: https://cognito-idp.ap-southeast-1.amazonaws.com/ap-southeast-1_EXAMPLE
+  userPoolId: ap-southeast-1_EXAMPLE
+  clients:
+    owner: ownerwebclient0000000000a
+    operator: operatorwebclient0000000b
+  machineClients:
+    item: itemmachineclient0000000c
+    claim: claimmachineclient000000d
+    matching: matchingmachineclient00e
+    notification: notificationmachine000f
+database:
+  caBundle: |
+    -----BEGIN CERTIFICATE-----
+    MIIBplaceholderNotARealCertificateUsedOnlyForTemplateRendering
+    -----END CERTIFICATE-----
+notification:
+  ownerAppBaseUrl: https://owner.lostlink.example
+  sesFromAddress: noreply@lostlink.example
+ingress:
+  enabled: true
+services:
+  delivery:
+    enabled: true
