@@ -1,0 +1,16 @@
+aws_account_id             = "152174417545"
+aws_region                 = "ap-southeast-1"
+node_network_mode          = "public" # Demo: no NAT; database stays private.
+node_instance_types        = ["t3.large"] # CPU only, 8 GiB; measure CLIP and monitoring memory.
+node_desired_size          = 1
+node_max_size              = 1 # Raise deliberately only if a scaling test needs another node.
+availability_zones         = ["ap-southeast-1a", "ap-southeast-1b"]
+eks_public_access_cidrs     = ["203.0.113.10/32"] # REPLACE with your actual public egress IPv4/32.
+eks_admin_principal_arns   = ["arn:aws:iam::152174417545:role/REPLACE_WITH_DEPLOYMENT_ROLE"]
+frontend_origins            = ["http://localhost:5173", "http://localhost:5174"]
+cognito_callback_urls      = ["http://localhost:5173/callback", "http://localhost:5174/callback"]
+cognito_logout_urls        = ["http://localhost:5173/", "http://localhost:5174/"]
+monthly_budget_usd         = 0 # REQUIRED: set the team's approved USD budget; zero is rejected.
+budget_notification_emails = ["REPLACE_WITH_YOUR_EMAIL@example.com"]
+# notification_sender_email = "verified-sender@your-domain.example"
+# single_nat_gateway = false # Per-AZ egress availability, with additional NAT charges.

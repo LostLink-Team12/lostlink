@@ -21,7 +21,7 @@ Presentation is on **Mon 26 Oct, 9:00 to 9:40am** (Team 12), so Phase 2 (22 to 2
 | B1 | `libs/`: Cognito JWT auth, tenant context, event publisher; DB schema and Alembic migrations | JIANG YIBAI | Sun 18 Oct | Used by every service |
 | B2 | venue-service and item-service: venue onboarding, staff roles, found-item CRUD, presigned S3 upload, enqueue embedding job | JIANG YIBAI | Mon 19 Oct | UC1 and UC2 via API |
 | B3 | claim-service (verification questions, venue approval, QR code) and notification-service (SES email on `match.found`) | JIANG YIBAI | Wed 21 Oct | UC4 and UC5 via API |
-| C1 | Terraform: VPC (2 AZ), EKS, ECR, RDS + pgvector, S3, SQS, SNS, Cognito; remote state; budget alarm | LU JINGXING | Sun 18 Oct | `terraform apply` creates dev |
+| C1 | Terraform: VPC (2 AZ), EKS, ECR, RDS + pgvector, S3, SQS, SNS, Cognito; remote state; budget alarm | LU JINGXING | Sun 18 Oct | Completed 22 Oct: dev applied; single CPU node Ready, private RDS + pgvector verified, remote state and USD 80 budget configured. See [deployment record](../infra/terraform/README.md). |
 | C2 | CI: tests, Trivy, image build and push to ECR through GitHub OIDC | LU JINGXING | Mon 19 Oct | Every merge to `main` pushes images |
 | C3 | CD: Helm charts, deploy to dev on merge, ALB ingress, metrics-server, KEDA, Prometheus and Grafana | LU JINGXING | Wed 21 Oct | Services reachable on dev URL with dashboards |
 | D1 | Demo dataset: about 5,000 openly licensed item photos with labels; seed script | ZHANG JI | Sun 18 Oct | Dataset in S3, seed script in `tests/data/` |

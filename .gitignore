@@ -17,6 +17,12 @@ build/
 *.tfstate
 *.tfstate.*
 *.tfvars
+*.tfplan
+*.tfbackend
+crash.log
+crash.*.log
+# Bootstrap uses local state for the first bucket creation, then migrates it.
+infra/terraform/bootstrap/remote-backend.tf
 .idea/
 .vscode/
 .DS_Store
