@@ -1,4 +1,17 @@
-# Load and scaling tests (owner: ZHANG JI)
+# Search validation and scaling tests
+
+## Issue #7 backend investigation
+
+`search_review.js` is the dedicated read-only 500 ms p95 investigation for Issue #7.
+It has separate warmup/measurement, required sample counts, text/photo/fused cases,
+known-result and stale-result assertions, and aggregate JSON evidence.
+See [the reproducible runbook](../../docs/search-review-performance.md) for local
+real-CLIP/pgvector/HTTP fixtures, AWS dev runs and the batch/cache decision criteria.
+`node --test tests/load/search_review.test.mjs` checks its contract without dependencies.
+CI also exercises the real pinned k6 runner against controlled HTTP failure cases;
+this checks the tooling, not application performance.
+
+## Issue #10 scaling demo (owner: ZHANG JI)
 
 k6 scripts used in the demo:
 
@@ -21,7 +34,7 @@ Default p95 < 5s is a smoke threshold, not a production performance target.
 The following scaling scenarios belong to the later scaling demo and are not yet implemented:
 
 - `search_load.js` - ramp owners searching across venues; shows HPA scaling the API pods and p95 latency
-- `bulk_import.js` - upload 5,000 found-item photos; SQS backlog makes KEDA scale the embedding workers out and back in
+- `bulk_import.js` - upload 5,000 found-item photos; PostgreSQL `work_jobs` backlog makes KEDA scale embedding task workers out and back in (SQS consumer scaling is a separate concern)
 
 ## Demo dataset and import (D1)
 

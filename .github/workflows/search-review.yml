@@ -1,0 +1,41 @@
+name: Issue 7 search review tooling
+
+on:
+  pull_request:
+    paths:
+      - 'tests/load/**'
+      - 'scripts/prepare_k6.py'
+      - 'scripts/run_search_review_local.py'
+      - '.github/workflows/search-review.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tests/load/**'
+      - 'scripts/prepare_k6.py'
+      - 'scripts/run_search_review_local.py'
+      - '.github/workflows/search-review.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runner-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: node --test tests/load/search_review.test.mjs
+      - run: python scripts/prepare_k6.py
+      - name: Verify real k6 failure gates against controlled HTTP responses
+        env:
+          LOSTLINK_TEST_K6: ${{ github.workspace }}/build/tools/k6/k6
+        run: python -m unittest discover -s tests/load -p test_search_review.py -v
