@@ -75,7 +75,8 @@ def aws_client(service: Literal["sns", "sqs", "cognito-idp"], settings: Settings
         region_name=settings.aws_region,
         config=Config(
             connect_timeout=2,
-            read_timeout=3,
+            # SQS long polling may wait 20 seconds before returning an empty queue.
+            read_timeout=25 if service == "sqs" else 3,
             retries={"mode": "standard", "total_max_attempts": 3},
         ),
         **options,

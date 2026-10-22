@@ -1,0 +1,30 @@
+name: C3 deployment contracts
+on:
+  pull_request:
+    paths: ['infra/helm/**', 'infra/deploy/**', '.github/workflows/c3.yml']
+  push:
+    branches: [main]
+    paths: ['infra/helm/**', 'infra/deploy/**', '.github/workflows/c3.yml']
+permissions:
+  contents: read
+jobs:
+  charts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install pinned Python dependencies
+        run: python -m pip install -r requirements-dev.lock ./libs PyYAML==6.0.3
+      - name: Install checksum-verified Helm
+        run: |
+          curl --fail --location --retry 3 -o "$RUNNER_TEMP/helm.tar.gz" https://get.helm.sh/helm-v4.3.1-linux-amd64.tar.gz
+          curl --fail --location --retry 3 -o "$RUNNER_TEMP/helm.sha256" https://get.helm.sh/helm-v4.3.1-linux-amd64.tar.gz.sha256sum
+          expected="$(cut -d ' ' -f 1 "$RUNNER_TEMP/helm.sha256")"
+          echo "$expected  $RUNNER_TEMP/helm.tar.gz" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/helm.tar.gz" -C "$RUNNER_TEMP"
+          echo "HELM_BIN=$RUNNER_TEMP/linux-amd64/helm" >> "$GITHUB_ENV"
+      - name: Validate process settings and all rendered application charts
+        run: python -m pytest -q infra/deploy/test_deployment.py

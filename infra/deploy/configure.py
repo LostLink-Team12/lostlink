@@ -51,8 +51,10 @@ class Cluster:
         self.command = [args.kubectl, "--kubeconfig", args.kubeconfig, "--context", "lostlink-dev"]
 
     def apply(self, obj):
-        run([*self.command, "apply", "--server-side", "--field-manager=lostlink-c3", "-f", "-"],
-            json.dumps(obj))
+        run(
+            [*self.command, "apply", "--server-side", "--field-manager=lostlink-c3", "-f", "-"],
+            json.dumps(obj),
+        )
 
     def get(self, kind, name, namespace="lostlink"):
         result = run(
@@ -83,6 +85,28 @@ class Cluster:
             [*self.command, "apply", "--server-side", "--field-manager=lostlink-c3", "-f", "-"],
             json.dumps(obj),
         )
+
+    def validate(self, session, data):
+        config = Config(
+            connect_timeout=5,
+            read_timeout=15,
+            retries={"mode": "standard", "total_max_attempts": 3},
+        )
+        sts, eks = session.client("sts", config=config), session.client("eks", config=config)
+        try:
+            account = data["application"]["value"]["kms_key_arn"].split(":")[4]
+            identity = sts.get_caller_identity()
+            if identity["Account"] != account or identity["Arn"].endswith(":root"):
+                raise RuntimeError("Use the dev account's non-root deployment identity")
+            endpoint = eks.describe_cluster(name=data["cluster_name"]["value"])["cluster"][
+                "endpoint"
+            ]
+            context = json.loads(run([*self.command, "config", "view", "--minify", "-o", "json"]))
+            if context["clusters"][0]["cluster"]["server"] != endpoint:
+                raise RuntimeError("Kubeconfig does not point to the Terraform EKS cluster")
+        finally:
+            sts.close()
+            eks.close()
 
 
 def certificates():
@@ -234,8 +258,13 @@ with psycopg.connect(user=d['username'],password=d['password'],host=d['host'],
     c.execute('ALTER ROLE lostlink_matching_monitor SET statement_timeout=5000')
     c.execute(sql.SQL('GRANT CONNECT ON DATABASE {} TO lostlink_matching_monitor').format(
         sql.Identifier(d['dbname'])))
+    c.execute('SET LOCAL ROLE lostlink_matching_migration')
     c.execute('GRANT USAGE ON SCHEMA matching TO lostlink_matching_monitor')
-    c.execute('GRANT SELECT ON matching.work_jobs TO lostlink_matching_monitor')
+    c.execute('GRANT SELECT(state,kind,available_at) '
+              'ON matching.work_jobs TO lostlink_matching_monitor')
+    c.execute('DROP POLICY IF EXISTS work_jobs_monitor ON matching.work_jobs')
+    c.execute('CREATE POLICY work_jobs_monitor ON matching.work_jobs FOR SELECT '
+              'TO lostlink_matching_monitor USING (true)')
 print('Read-only embedding monitor role configured')
 """
         cluster.apply(
@@ -360,6 +389,9 @@ def main():
         return
     data = outputs()
     cluster = Cluster(args)
+    session = boto3.Session(profile_name=args.profile, region_name="ap-southeast-1")
+    if args.action != "values":
+        cluster.validate(session, data)
     if args.action == "prepare":
         prepare(cluster, data)
     else:
@@ -367,7 +399,6 @@ def main():
         if args.action == "values":
             write_values(data, images)
         else:
-            session = boto3.Session(profile_name=args.profile, region_name="ap-southeast-1")
             monitor_role(cluster, data, session, images["venue"])
 
 

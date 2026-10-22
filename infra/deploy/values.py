@@ -47,6 +47,7 @@ def helm_values(outputs, images, *, origin, revision, proxy_image):
         common = {
             "ENVIRONMENT": "dev",
             "AWS_REGION": outputs["region"]["value"],
+            "AWS_DEFAULT_REGION": outputs["region"]["value"],
             "DB_POOL_SIZE": "1",
             "DB_MAX_OVERFLOW": "0",
             "JWT_LEEWAY_SECONDS": "30",
@@ -144,11 +145,11 @@ def helm_values(outputs, images, *, origin, revision, proxy_image):
                 "resources": {
                     "requests": {
                         "cpu": "500m" if model else "25m",
-                        "memory": "1400Mi" if model else "128Mi",
+                        "memory": "2500Mi" if model else "128Mi",
                     },
                     "limits": {
                         "cpu": "1500m" if model else "500m",
-                        "memory": "2400Mi" if model else "384Mi",
+                        "memory": "4Gi" if model else "384Mi",
                     },
                 },
             }

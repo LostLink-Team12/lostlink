@@ -4,6 +4,8 @@ $helm = Join-Path $repositoryRoot 'infra/terraform/.terraform/tools/helm/windows
 $env:AWS_PROFILE = 'lostlink-dev'
 $env:AWS_DEFAULT_REGION = 'ap-southeast-1'
 $env:KUBECONFIG = Join-Path $repositoryRoot 'infra/terraform/.terraform/validation/kubeconfig'
+$env:HELM_REPOSITORY_CONFIG = Join-Path $PSScriptRoot '.local/helm-repositories.yaml'
+$env:HELM_REPOSITORY_CACHE = Join-Path $PSScriptRoot '.local/helm-cache'
 foreach ($service in @('venue', 'item', 'matching', 'claim', 'notification')) {
     $chart = Join-Path $repositoryRoot "infra/helm/$service-service"
     & $helm dependency build $chart --skip-refresh

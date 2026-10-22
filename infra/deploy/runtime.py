@@ -23,6 +23,7 @@ def database_url(value):
 def main():
     client = boto3.client(
         "secretsmanager",
+        region_name=os.environ["AWS_REGION"],
         config=Config(
             connect_timeout=5,
             read_timeout=15,
