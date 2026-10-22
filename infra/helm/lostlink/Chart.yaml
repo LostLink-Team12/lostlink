@@ -1,0 +1,7 @@
+apiVersion: v2
+name: lostlink
+description: LostLink backend services, workers, autoscaling and in-cluster TLS on EKS
+type: application
+version: 0.1.0
+appVersion: "phase1"
+kubeVersion: ">=1.30.0-0"

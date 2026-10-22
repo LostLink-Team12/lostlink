@@ -1,0 +1,63 @@
+{{- /*
+Private CA for service-to-service HTTPS. Generated once and reused on upgrade through lookup,
+so a `helm upgrade` does not rotate certificates under running pods. `helm template` has no
+cluster access and therefore always renders fresh (throwaway) material.
+*/}}
+{{- $root := . }}
+{{- $ns := .Release.Namespace }}
+{{- $existingCa := lookup "v1" "Secret" $ns "lostlink-internal-ca" }}
+{{- $ca := dict }}
+{{- if $existingCa }}
+{{- $ca = buildCustomCert (index $existingCa.data "tls.crt") (index $existingCa.data "tls.key") }}
+{{- else }}
+{{- $ca = genCA "LostLink internal CA" (int .Values.tls.validityDays) }}
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: lostlink-internal-ca
+  labels:
+    app.kubernetes.io/part-of: lostlink
+  annotations:
+    helm.sh/resource-policy: keep
+type: kubernetes.io/tls
+data:
+  tls.crt: {{ $ca.Cert | b64enc }}
+  tls.key: {{ $ca.Key | b64enc }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lostlink-internal-ca
+  labels:
+    app.kubernetes.io/part-of: lostlink
+data:
+  ca.crt: |
+    {{- $ca.Cert | nindent 4 }}
+{{- range $name := keys .Values.services | sortAlpha }}
+{{- $svc := get $root.Values.services $name }}
+{{- if and $svc.enabled $svc.api }}
+{{- $secretName := printf "%s-service-tls" $name }}
+{{- $host := printf "%s-service" $name }}
+{{- $existing := lookup "v1" "Secret" $ns $secretName }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $secretName }}
+  labels:
+    {{- include "lostlink.labels" (dict "root" $root "service" $name "process" (printf "%s-api" $name)) | nindent 4 }}
+type: kubernetes.io/tls
+data:
+{{- if and $existingCa $existing }}
+  tls.crt: {{ index $existing.data "tls.crt" }}
+  tls.key: {{ index $existing.data "tls.key" }}
+{{- else }}
+{{- $dns := list $host (printf "%s.%s" $host $ns) (printf "%s.%s.svc" $host $ns) (printf "%s.%s.svc.%s" $host $ns $root.Values.tls.clusterDomain) }}
+{{- $cert := genSignedCert $host nil $dns (int $root.Values.tls.validityDays) $ca }}
+  tls.crt: {{ $cert.Cert | b64enc }}
+  tls.key: {{ $cert.Key | b64enc }}
+{{- end }}
+{{- end }}
+{{- end }}
