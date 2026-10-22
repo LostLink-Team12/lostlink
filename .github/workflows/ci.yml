@@ -166,7 +166,7 @@ jobs:
       - name: Render the KEDA operator trust configuration
         run: |
           helm repo add kedacore https://kedacore.github.io/charts
-          helm template keda kedacore/keda --version 2.17.2 -n keda \
+          helm template keda kedacore/keda --version 2.21.0 -n keda \
             -f infra/helm/keda-values.yaml > rendered-keda.yaml
           python infra/helm/tests/check_keda.py rendered-keda.yaml
       - uses: actions/setup-go@v6

@@ -1,4 +1,4 @@
-# Overlay for the separate kedacore/keda release (tested with chart 2.17.2).
+# Overlay for the separate kedacore/keda release (tested with chart 2.21.0).
 # First create the PUBLIC lostlink-rds-ca ConfigMap in namespace keda.
 # pgx, the PostgreSQL scaler's driver, reads PGSSLROOTCERT. Keep AWS system trust.
 env:

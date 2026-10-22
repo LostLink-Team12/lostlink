@@ -48,7 +48,7 @@ The 18 enabled processes match the IRSA identities in
    worker-mode validation fix in this PR. Use that full commit SHA as `image.tag`.
 3. Cluster add-ons:
    - `metrics-server` (EKS add-on) for the HPAs.
-   - KEDA ≥ 2.17 in namespace `keda`, with an IRSA role for `keda:keda-operator` that can
+   - KEDA 2.21.0 in namespace `keda`, with an IRSA role for `keda:keda-operator` that can
      read only `lostlink-dev/database/matching/worker` (Terraform below). This reuses the
      Matching worker login, whose RLS policy can count all jobs; a dedicated read-only
      scaler role needs a migration change and is tracked as a follow-up.
@@ -97,7 +97,7 @@ kubectl create namespace keda --dry-run=client -o yaml | kubectl apply -f -
 kubectl -n keda create configmap lostlink-rds-ca --from-file=ca-bundle.pem=global-bundle.pem `
   --dry-run=client -o yaml | kubectl apply -f -
 helm repo add kedacore https://kedacore.github.io/charts
-helm upgrade --install keda kedacore/keda -n keda --create-namespace --version ">=2.17.0 <3.0.0" `
+helm upgrade --install keda kedacore/keda -n keda --create-namespace --version 2.21.0 `
   -f infra/helm/keda-values.yaml `
   --set podIdentity.aws.irsa.enabled=true `
   --set podIdentity.aws.irsa.roleArn=<keda-operator role ARN>
@@ -120,7 +120,7 @@ kubectl -n lostlink get scaledobject matching-tasks -o yaml
 
 Before accepting the cloud deployment, check the operator's mounted file/environment,
 ScaledObject `Ready` condition, and a real backlog query. CI renders the pinned upstream
-2.17.2 chart with this overlay and verifies TLS through its actual pgx driver; this is
+2.21.0 chart with this overlay and verifies TLS through its actual pgx driver; this is
 not a substitute for live RDS/IAM/network acceptance.
 
 ## Deploy
@@ -167,10 +167,12 @@ KEDA, metrics-server, monitoring and node reservations. At the default HPA/KEDA 
 four model pods reserve 16 GiB before those other workloads. API rolling updates may
 need one further model pod (4 GiB surge); workers already use zero surge.
 
-Raise C1 `node_desired_size` and `node_max_size` deliberately before installation. Two
-`t3.large` nodes are only a baseline candidate; allow at least three for the four-model
-steady-state ceiling and additional capacity for rolling updates at that ceiling, or
-use larger nodes. These are planning bounds, not proof that an arbitrary pod placement
+Raise C1 `node_desired_size` and `node_max_size` deliberately before installation.
+An 8 GiB `t3.large` has less than 8 GiB allocatable after node reservations, so it can
+schedule only **one** 4 GiB model pod. Two such nodes are a baseline candidate; the
+four-model HPA/KEDA ceiling needs **four** such nodes, and an API surge at that ceiling
+needs a fifth model slot (or larger nodes). Even a baseline rolling API update needs
+a third slot. These are planning bounds, not proof that an arbitrary pod placement
 fits. Check actual allocatable memory, per-node free requests, CPU, pod limits and the
 monitoring footprint; keep a full 4 GiB slot available for an API surge:
 
