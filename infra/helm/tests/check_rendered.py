@@ -206,6 +206,8 @@ def main(path):
         query = trigger["metadata"]["query"]
         if trigger["type"] != "postgresql" or "matching.work_jobs" not in query:
             errors.append(f"{name}: KEDA must scale on the PostgreSQL backlog (ADR-0002)")
+        if trigger["metadata"].get("sslmode") != "verify-full":
+            errors.append(f"{name}: PostgreSQL must verify the CA and hostname")
     if "matching-tasks" not in scaled:
         errors.append("matching-tasks has no KEDA ScaledObject")
 

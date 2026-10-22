@@ -16,3 +16,21 @@
 {{- if and (ne $v.environment "dev") (ne $v.environment "prod") }}
 {{- fail "environment must be dev or prod for a cluster deployment" }}
 {{- end }}
+{{- if and $v.keda.enabled (ne $v.keda.sslmode "verify-full") }}
+{{- fail "keda.sslmode must be verify-full; mount the RDS CA in the operator using infra/helm/keda-values.yaml" }}
+{{- end }}
+{{- if $v.services.matching.enabled }}
+{{- range $process, $resources := dict "matching-api" $v.services.matching.api.resources "matching-tasks" $v.services.matching.workers.tasks.resources }}
+{{- range $kind := list "requests" "limits" }}
+{{- $memory := toString (get (get $resources $kind) "memory") }}
+{{- if not (regexMatch "^[0-9]+(Mi|Gi)$" $memory) }}
+{{- fail (printf "%s memory %s must use integer Mi or Gi" $process $kind) }}
+{{- end }}
+{{- $amount := int (regexFind "^[0-9]+" $memory) }}
+{{- if hasSuffix "Gi" $memory }}{{- $amount = mul $amount 1024 }}{{- end }}
+{{- if lt (int $amount) 4096 }}
+{{- fail (printf "%s memory %s must be at least 4Gi; the pinned CLIP model exceeds the old 1536Mi limit" $process $kind) }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

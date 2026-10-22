@@ -52,6 +52,8 @@ The 18 enabled processes match the IRSA identities in
      read only `lostlink-dev/database/matching/worker` (Terraform below). This reuses the
      Matching worker login, whose RLS policy can count all jobs; a dedicated read-only
      scaler role needs a migration change and is tracked as a follow-up.
+     Install with the RDS CA overlay below: the operator, rather than the Matching pod,
+     makes the scaler's PostgreSQL connection. LostLink enforces `sslmode=verify-full`.
    - Optional: AWS Load Balancer Controller, only if `ingress.enabled=true`.
 4. Pods need outbound HTTPS (public node subnets already provide it) for the model download.
 
@@ -90,12 +92,36 @@ resource "aws_iam_role_policy" "keda_operator" {
 ```
 
 ```powershell
+curl.exe -fsSLo global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+kubectl create namespace keda --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n keda create configmap lostlink-rds-ca --from-file=ca-bundle.pem=global-bundle.pem `
+  --dry-run=client -o yaml | kubectl apply -f -
 helm repo add kedacore https://kedacore.github.io/charts
 helm upgrade --install keda kedacore/keda -n keda --create-namespace --version ">=2.17.0 <3.0.0" `
+  -f infra/helm/keda-values.yaml `
   --set podIdentity.aws.irsa.enabled=true `
   --set podIdentity.aws.irsa.roleArn=<keda-operator role ARN>
 aws eks create-addon --cluster-name lostlink-dev --addon-name metrics-server
 ```
+
+`keda-values.yaml` mounts the public CA ConfigMap read-only and sets `PGSSLROOTCERT`,
+which the scaler's pgx driver uses with `verify-full` to validate the chain and RDS
+endpoint hostname. Use the actual RDS DNS endpoint in the database secret; a DNS alias
+or IP without a matching certificate must fail. Do not use `require`, `verify-ca`,
+`SSL_CERT_FILE`, or an unverified fallback to make a failed connection work. This does
+not add credentials to Kubernetes. The same overlay must be retained on KEDA upgrades.
+After changing the CA ConfigMap, restart the operator to reload its connection pool:
+
+```powershell
+kubectl -n keda rollout restart deployment/keda-operator
+kubectl -n keda rollout status deployment/keda-operator
+kubectl -n lostlink get scaledobject matching-tasks -o yaml
+```
+
+Before accepting the cloud deployment, check the operator's mounted file/environment,
+ScaledObject `Ready` condition, and a real backlog query. CI renders the pinned upstream
+2.17.2 chart with this overlay and verifies TLS through its actual pgx driver; this is
+not a substitute for live RDS/IAM/network acceptance.
 
 ## Deploy
 
@@ -126,12 +152,37 @@ kubectl -n lostlink port-forward svc/item-service 8443:443   # then curl -k http
 `/ready` returns 503 until configuration, migrations and dependencies are ready, so a pod
 that stays unready points at a missing permission or input; its log names the setting.
 
-## Capacity on the demo node
+## Capacity before deployment
 
-One `t3.large` (2 vCPU, 8 GiB). The 18 processes request about 1.0 vCPU and 4.7 GiB; the two
-CLIP processes take 1 GiB each. KEDA, metrics-server and system pods use most of the rest, so
-`maxReplicas` is 2 for Matching. For the load-test run, raise `node_max_size`/`node_desired_size`
-to 2 first (C1 README); KEDA scales pods, not EC2 nodes.
+Each CLIP process reserves **4 GiB** and has a **4 GiB limit**. The old 1536 MiB limit
+OOM-killed model loading/inference. Requests reserve the tested ceiling so scheduling
+does not rely on swap or overcommitting memory. The chart rejects lower requests/limits.
+CI checks both API and tasks imports, model loading, and text/photo/fused inference with
+16-million-pixel input, a read-only filesystem and swap disabled. This is a sequential
+smoke test, not a concurrency or performance sizing result.
+
+Two model pods alone reserve 8 GiB. **The original single `t3.large` cannot run this
+release.** Other application pods reserve about 2.7 GiB in addition, before kube-system,
+KEDA, metrics-server, monitoring and node reservations. At the default HPA/KEDA maxima,
+four model pods reserve 16 GiB before those other workloads. API rolling updates may
+need one further model pod (4 GiB surge); workers already use zero surge.
+
+Raise C1 `node_desired_size` and `node_max_size` deliberately before installation. Two
+`t3.large` nodes are only a baseline candidate; allow at least three for the four-model
+steady-state ceiling and additional capacity for rolling updates at that ceiling, or
+use larger nodes. These are planning bounds, not proof that an arbitrary pod placement
+fits. Check actual allocatable memory, per-node free requests, CPU, pod limits and the
+monitoring footprint; keep a full 4 GiB slot available for an API surge:
+
+```powershell
+kubectl get nodes -o custom-columns=NAME:.metadata.name,CPU:.status.allocatable.cpu,MEMORY:.status.allocatable.memory,PODS:.status.allocatable.pods
+kubectl describe nodes
+kubectl -n lostlink get pods,hpa,scaledobject
+```
+
+KEDA/HPA scale pods, not EC2 nodes. A Pending pod is a capacity problem to fix by providing
+capacity, not by reducing the memory below the verified floor. Recheck peak usage and
+headroom on dev under the intended concurrency, then remove demo capacity after use.
 
 ## Validation
 
@@ -139,6 +190,12 @@ CI job `helm-chart` runs `helm lint`, `helm template`, kubeconform (Kubernetes a
 schemas) and `tests/check_rendered.py`, which checks the rendered manifests against the C1
 IAM contract (no process asks for a secret its role cannot read), the backend startup
 settings for each process, HTTPS service URLs, autoscaling ownership and Ingress exposure.
+It also rejects weak scaler TLS and undersized CLIP memory. The upstream KEDA render
+check validates the operator CA mount/environment; `tests/pgx_tls` checks a trusted
+certificate/host succeeds, wrong CA and wrong host fail, a missing CA fails closed, and
+no plaintext fallback is configured. Run it locally with `go test -count=1 -v ./...`
+from that test-only module. The Matching image build runs `check_matching_memory.py`
+against the chart's memory limits with the pinned real model.
 
 ## Open items
 

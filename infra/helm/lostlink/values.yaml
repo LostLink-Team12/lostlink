@@ -86,7 +86,8 @@ keda:
   # KEDA reads the Matching worker credential with the KEDA operator's own IRSA role.
   # The role needs secretsmanager:GetSecretValue on this secret only (see README).
   secret: database/matching/worker
-  sslmode: require
+  # The operator must mount the RDS CA and set PGSSLROOTCERT; see keda-values.yaml.
+  sslmode: verify-full
   # The secret's numeric port field is not passed through KEDA's string extraction.
   port: "5432"
   pollingInterval: 15
@@ -205,8 +206,9 @@ services:
     api:
       model: true
       resources:
-        requests: {cpu: 250m, memory: 1Gi}
-        limits: {memory: 1536Mi}
+        # Reserve the tested ceiling, including model-load peaks and preprocessing.
+        requests: {cpu: 250m, memory: 4Gi}
+        limits: {memory: 4Gi}
       hpa: {minReplicas: 1, maxReplicas: 2}
       secretEnv:
         DATABASE_URL: {secret: database/matching/api, format: database}
@@ -228,8 +230,8 @@ services:
         model: true
         keda: true
         resources:
-          requests: {cpu: 250m, memory: 1Gi}
-          limits: {memory: 1536Mi}
+          requests: {cpu: 250m, memory: 4Gi}
+          limits: {memory: 4Gi}
         scale: {minReplicas: 1, maxReplicas: 2}
         secretEnv:
           WORKER_DATABASE_URL: {secret: database/matching/worker, format: database}
