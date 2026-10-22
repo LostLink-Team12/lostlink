@@ -160,7 +160,7 @@ def helm_values(outputs, images, *, origin, revision, proxy_image):
             "runtimeRevision": revision,
             "env": common,
             "processes": processes,
-            "hpa": {"maxReplicas": 2},
+            "hpa": {"maxReplicas": 8 if service == "matching" else 2},
             "keda": {"maxReplicas": 2},
             "migration": {"enabled": False},
         }

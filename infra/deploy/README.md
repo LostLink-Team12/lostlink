@@ -94,6 +94,18 @@ Use public clients with real Cognito code/PKCE login. Real user login, camera
 permissions and UC1–UC5 must be checked against the deployed environment; a
 successful unauthenticated route smoke does not establish these flows.
 
+`acceptance.py seed` creates isolated synthetic Cognito identities without sending
+invitations. Their random passwords remain in `lostlink-acceptance`, never local
+files or output. Trusted fixture email flags do not demonstrate mailbox ownership
+verification. For `acceptance.py flow`, pause `notification-tasks` first; the
+script refuses a running sender. It tests real code/PKCE, two-venue onboarding,
+S3 upload/sealing, CLIP embedding/search, report matching and the notification
+inbox, unverified-owner rejection, version conflicts, approval and QR payload
+handover. Close all synthetic fixture reports before restoring the sender. A
+failed run can leave fixture records; inspect them using that fixture's account.
+No existing person's password or group membership is changed. The fixture's
+temporary platform privilege is removed in a finalizer after onboarding.
+
 ## Monitoring and scaling acceptance
 
 Both monitoring UIs are ClusterIP-only. Use an explicit context and namespace:

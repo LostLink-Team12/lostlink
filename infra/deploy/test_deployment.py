@@ -138,3 +138,6 @@ def test_rendered_charts_have_probes_isolated_roles_and_postgres_scaler(generate
             assert trigger["type"] == "postgresql"
             assert "available_at <= now()" in trigger["metadata"]["query"]
             assert scaler["spec"]["minReplicaCount"] >= 1
+        for resource in resources:
+            if resource and resource["kind"] in {"HorizontalPodAutoscaler", "ScaledObject"}:
+                assert resource["metadata"]["labels"]["app.kubernetes.io/part-of"] == "lostlink"

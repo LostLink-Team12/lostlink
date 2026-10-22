@@ -1,6 +1,9 @@
 """Input/auth failures and vector invariants require no external infrastructure."""
 
 import base64
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -57,6 +60,50 @@ def test_missing_checkpoint_never_returns_fake_vectors(tmp_path):
     encoder = ClipEncoder(str(tmp_path / "missing.pt"), "0" * 64)
     with pytest.raises(EmbeddingError):
         encoder.encode("red backpack")
+
+
+def test_loaded_model_readiness_does_not_wait_for_inference():
+    encoder = ClipEncoder(None, None)
+    encoder.model = object()
+    executor = ThreadPoolExecutor(max_workers=1)
+    encoder.lock.acquire()
+    try:
+        executor.submit(encoder.ready).result(timeout=2)
+    finally:
+        encoder.lock.release()
+        executor.shutdown(wait=True)
+
+
+def test_probes_and_metrics_survive_exhausted_search_thread_pool():
+    import anyio.to_thread
+
+    started, released = threading.Event(), threading.Event()
+    db = SimpleNamespace(check_ready=lambda *_args: None)
+    app = create_app(
+        MatchingSettings(_env_file=None, user_client_ids=["owner"]),
+        token_verifier=object(), database=db, internal_database=db,
+        encoder=SimpleNamespace(ready=lambda: None), item_client=object(),
+    )
+
+    @app.get("/occupied-search-worker")
+    def occupied():
+        started.set()
+        released.wait(10)
+        return {"done": True}
+
+    async def one_worker():
+        anyio.to_thread.current_default_thread_limiter().total_tokens = 1
+
+    with TestClient(app) as client, ThreadPoolExecutor(max_workers=2) as executor:
+        client.portal.call(one_worker)
+        blocking = executor.submit(client.get, "/occupied-search-worker")
+        try:
+            assert started.wait(2)
+            for path in ["/health", "/ready", "/metrics"]:
+                assert executor.submit(client.get, path).result(timeout=2).status_code == 200
+        finally:
+            released.set()
+        assert blocking.result(timeout=2).status_code == 200
 
 
 def test_machine_client_fixed_url_and_item_identity():

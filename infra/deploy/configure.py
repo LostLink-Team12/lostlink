@@ -379,7 +379,7 @@ def main():
                     {
                         "c3_enabled": True,
                         "node_desired_size": 2,
-                        "node_max_size": 2,
+                        "node_max_size": 5,
                         "c3_origin_token": secrets.token_urlsafe(48),
                     }
                 ),

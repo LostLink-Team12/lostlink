@@ -147,9 +147,9 @@ resource "aws_cloudfront_distribution" "dev" {
     allowed_methods        = ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE"]
     cached_methods         = ["GET", "HEAD"]
     # CachingDisabled; authenticated API responses and config never enter cache.
-    cache_policy_id            = "413f160d-3a8c-4f02-82ce-1ab65c771688"
-    origin_request_policy_id   = "b689b0a8-53d0-40ab-baf2-68738e2966ac"
-    response_headers_policy_id = "67f7725c-6f97-4210-82d7-5512b31e9d03"
+    cache_policy_id            = data.aws_cloudfront_cache_policy.disabled[0].id
+    origin_request_policy_id   = data.aws_cloudfront_origin_request_policy.viewer[0].id
+    response_headers_policy_id = data.aws_cloudfront_response_headers_policy.security[0].id
     compress                   = true
   }
   restrictions {
@@ -162,6 +162,21 @@ resource "aws_cloudfront_distribution" "dev" {
       error_message = "CloudFront requires a random c3_origin_token."
     }
   }
+}
+
+data "aws_cloudfront_cache_policy" "disabled" {
+  count = local.c3_edge_enabled ? 1 : 0
+  name  = "Managed-CachingDisabled"
+}
+
+data "aws_cloudfront_origin_request_policy" "viewer" {
+  count = local.c3_edge_enabled ? 1 : 0
+  name  = "Managed-AllViewerExceptHostHeader"
+}
+
+data "aws_cloudfront_response_headers_policy" "security" {
+  count = local.c3_edge_enabled ? 1 : 0
+  name  = "Managed-SecurityHeadersPolicy"
 }
 
 output "c3" {

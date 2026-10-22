@@ -136,6 +136,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: {{ $name }}
+  labels: {app.kubernetes.io/part-of: lostlink, app.kubernetes.io/name: {{ $name }}}
 spec:
   scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: {{ $name }}}
   minReplicas: 1
@@ -155,6 +156,7 @@ apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
   name: {{ $name }}
+  labels: {app.kubernetes.io/part-of: lostlink, app.kubernetes.io/name: {{ $name }}}
 spec:
   scaleTargetRef: {name: {{ $name }}}
   pollingInterval: 15

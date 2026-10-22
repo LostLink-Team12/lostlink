@@ -1,5 +1,6 @@
 """Stateless Matching API. Durable jobs run in separate worker processes."""
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -70,11 +71,10 @@ def create_app(
     app.include_router(router)
 
     @app.get("/health", tags=["Operations"])
-    def health():
+    async def health():
         return {"status": "ok", "service": settings.service_name}
 
-    @app.get("/ready", tags=["Operations"])
-    def ready():
+    def readiness_checks():
         checks = {
             "identity": bool(app.state.token_verifier),
             "clients": bool(settings.user_client_ids),
@@ -102,8 +102,13 @@ def create_app(
             status_code=200 if ok else 503,
         )
 
+    @app.get("/ready", tags=["Operations"])
+    async def ready():
+        # Probes must not queue behind synchronous searches in AnyIO's worker pool.
+        return await asyncio.to_thread(readiness_checks)
+
     @app.get("/metrics", include_in_schema=False)
-    def prometheus():
+    async def prometheus():
         return Response(
             generate_latest(metrics.registry), headers={"Content-Type": CONTENT_TYPE_LATEST}
         )
