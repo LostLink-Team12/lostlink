@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 # Initialize the tool's shared/service import paths before loading the fixture apps.
 admin = importlib.import_module("scripts.backend_admin")
-import httpx  # noqa: E402
+import httpx2  # noqa: E402
 import uvicorn  # noqa: E402
 from item_app.config import ItemSettings  # noqa: E402
 from item_app.database import ItemDatabase  # noqa: E402
@@ -297,7 +297,7 @@ def run(args):
         )
         item_url = stack.enter_context(serve(item))
         client = stack.enter_context(
-            httpx.Client(timeout=10, follow_redirects=False, trust_env=False)
+            httpx2.Client(timeout=10, follow_redirects=False, trust_env=False)
         )
 
         def transport(url, headers):
