@@ -158,3 +158,48 @@ def test_sqs_transport_and_failures(event):
         with pytest.raises(ClientError):
             publisher.publish(event)
         stub.assert_no_pending_responses()
+
+
+def delivery_event(**changes):
+    data = {
+        "shipment_id": str(uuid4()),
+        "claim_id": str(uuid4()),
+        "item_id": str(uuid4()),
+        "owner_id": "owner-1",
+        "partner_id": "courier-a",
+        "from_state": "awaiting_pickup",
+        "to_state": "picked_up",
+        "actor": "system",
+        "version": 2,
+        "occurred_at": datetime.now(UTC).isoformat(),
+    }
+    data.update(changes)
+    return {
+        "event_type": "delivery.status_changed",
+        "source": "delivery-service",
+        "tenant_id": str(uuid4()),
+        "data": data,
+    }
+
+
+def test_delivery_status_event_roundtrip_and_creation_without_previous_state():
+    for envelope in [delivery_event(), delivery_event(from_state=None, version=1)]:
+        event = DomainEvent.model_validate(envelope)
+        assert decode_message(event.to_message()) == event
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"to_state": "lost"},
+        {"actor": "courier"},
+        {"version": 0},
+        {"partner_id": ""},
+        {"delivery_address": "1 Example Road"},
+    ],
+)
+def test_delivery_status_event_rejects_invalid_or_private_fields(changes):
+    with pytest.raises(ValidationError):
+        DomainEvent.model_validate(delivery_event(**changes))
+    with pytest.raises(ValidationError):
+        DomainEvent.model_validate({**delivery_event(), "source": "claim-service"})

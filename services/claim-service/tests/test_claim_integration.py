@@ -85,3 +85,26 @@ def test_claim_approval_qr_and_handover_main_flow(claim_env):
         f"/v1/claim-operations/{response.json()['operation_id']}", headers=headers("owner")
     ).json()
     assert finished["state"] == "completed" and finished["result_code"] == "handed_over"
+
+
+def test_courier_handover_is_published_for_seed2_delivery(claim_env):
+    env = claim_env
+    item_id = make_item(env)
+    claim = submit(env, item_id)
+    approve(env, claim)
+    approved = owner_claim(env, claim["id"])
+    assert approved["state"] == "approved"
+    token = issue_token(env, claim["id"])
+    invalid = scan(env, claim["id"], token["qr_payload"], version=approved["version"], mode="drone")
+    assert invalid.status_code == 422
+    response = scan(
+        env, claim["id"], token["qr_payload"], version=approved["version"], mode="courier"
+    )
+    assert response.status_code == 202, response.text
+    drain(env)
+    assert owner_claim(env, claim["id"])["state"] == "handed_over"
+    state, _ = item_state(env, item_id)
+    assert state == "handed_over"
+    events = claim_events(env, claim["id"])
+    assert [e.event_type for e in events] == ["claim.approved", "claim.handed_over"]
+    assert events[1].data["mode"] == "courier"

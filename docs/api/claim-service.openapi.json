@@ -1479,6 +1479,15 @@
             "maxLength": 200,
             "minLength": 20,
             "title": "Token"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "counter",
+              "courier"
+            ],
+            "title": "Mode",
+            "default": "counter"
           }
         },
         "additionalProperties": false,

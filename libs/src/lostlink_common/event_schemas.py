@@ -101,6 +101,33 @@ class ClaimCancelled(Payload):
     reason_code: ClaimCancellationReason
 
 
+ShipmentState = Literal[
+    "awaiting_pickup",
+    "picked_up",
+    "in_transit",
+    "out_for_delivery",
+    "delivery_failed",
+    "delivered",
+    "returned_to_venue",
+    "cancelled",
+]
+
+
+class DeliveryStatusChanged(Payload):
+    """Seed 2 shipment lifecycle change (ADR-0009); from_state is null on creation."""
+
+    shipment_id: UUID
+    claim_id: UUID
+    item_id: UUID
+    owner_id: str = Field(min_length=1, max_length=128)
+    partner_id: str = Field(min_length=1, max_length=128)
+    from_state: ShipmentState | None
+    to_state: ShipmentState
+    actor: Literal["system", "partner", "owner", "venue"]
+    version: int = Field(ge=1)
+    occurred_at: AwareDatetime
+
+
 EVENT_SCHEMAS: dict[str, tuple[type[Payload], str, bool]] = {
     "item.registered": (ItemRegistered, "item-service", True),
     "item.embedded": (ItemEmbedded, "embedding-worker", True),
@@ -112,4 +139,5 @@ EVENT_SCHEMAS: dict[str, tuple[type[Payload], str, bool]] = {
     "item.embedding_failed": (ItemEmbeddingFailed, "embedding-worker", True),
     "claim.handed_over": (ClaimHandedOver, "claim-service", True),
     "claim.cancelled": (ClaimCancelled, "claim-service", True),
+    "delivery.status_changed": (DeliveryStatusChanged, "delivery-service", True),
 }
