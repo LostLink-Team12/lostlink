@@ -259,12 +259,17 @@ workflow runs these checks without AWS credentials or OIDC permission.
 
 ### Scoped scanner exceptions
 
-Four resource-local Trivy exceptions document Phase 1 decisions:
+Five resource-local Trivy exceptions document Phase 1 decisions:
 
 - `AVD-AWS-0040` on the EKS cluster: a public management endpoint is needed for
   local operators, but its IPv4 CIDRs are explicit, validated and cannot be
   world-open. Nodes use the private endpoint. Move to private-only access when
   the team has VPN/SSM connectivity; remove the exception at that point.
+- `AVD-AWS-0041` on `public_access_cidrs`: the same deliberate operator access
+  uses an exact public IPv4 allowlist (currently one /32). The embedded check
+  flags any public IP, even that allowlisted address. Variable validation rejects
+  CIDRs wider than /24; do not replace this with unrestricted access. Remove the
+  exception along with public API access when private operator connectivity exists.
 - `AVD-AWS-0031` on ECR repositories: C2 retries publish the same commit tag, and
   the existing repository is mutable. Retain this behavior until C2 handles
   immutable-tag retries; then switch and remove the exception. This does not
@@ -283,6 +288,10 @@ egress and external TCP/443; it does not inherit the EKS primary group's broad
 egress. Tests reject broad API CIDRs and check these egress rules.
 
 ## Cleanup
+
+Application identities, credential bootstrap and V2 token-trigger instructions
+are in [APPLICATION.md](APPLICATION.md). C3 uses that document's process-specific
+roles and domain-event queues rather than the legacy C1 baseline outputs.
 
 Review a destroy plan before removing dev. First delete C3 ingress/load balancers
 and Kubernetes resources that create AWS dependencies. RDS deletion protection
