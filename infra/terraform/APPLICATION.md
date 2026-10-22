@@ -134,6 +134,16 @@ inputs, not credentials to guess here. Register the deployed entry paths with
 trailing `/` in Cognito; current local paths are `/owner-app/` and `/venue-portal/`
 on port 5173. S3 CORS permits POST from the exact configured origins.
 
+Before starting C3 workers, refine two existing backend startup validators:
+`ClaimSettings` currently requires machine/crypto settings even for its outbox
+process, and `NotificationSettings` requires sender settings even for its inbox
+consumer. Those processes do not use these credentials during their work. Split
+validation by worker mode, as Matching already does, so the processes can start
+with the restricted secret sets in `application-iam.tf`. Do not inject dummy
+values or grant unnecessary production secrets to bypass startup validation.
+This is an application deployment prerequisite; the AWS-only checks above do
+not demonstrate those processes' readiness.
+
 For the combined live infrastructure check, keep business consumers paused and
 the three development queues empty, then run `verify-app.py --probe-events` with
 the same Python dependencies. It validates JWT signatures and scopes, validates
