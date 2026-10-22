@@ -53,6 +53,12 @@ class MatchingWorker:
         self.storage, self.publisher = storage, publisher
         self.settings = settings or MatchingSettings(_env_file=None)
 
+    def threshold_for(self, report):
+        """Automatic-match cut-off; text-only reports use the lower calibrated threshold."""
+        if report.has_photo:
+            return self.settings.match_threshold
+        return self.settings.match_threshold_text
+
     def consume(self, event):
         if event.event_type not in {"item.registered", "item.catalog_changed"}:
             raise ProtocolError("Unsupported event")
@@ -274,7 +280,7 @@ class MatchingWorker:
                     row.model_version,
                     row,
                     self.settings.candidate_limit,
-                    self.settings.match_threshold,
+                    self.threshold_for(row),
                 ):
                     save_match(session, row, item, embedding, score)
             self.finish(job)
@@ -312,7 +318,7 @@ class MatchingWorker:
                     .where(Report.id == row.id)
                 )
                 score = max(-1.0, min(1.0, float(score)))
-                if score >= self.settings.match_threshold:
+                if score >= self.threshold_for(row):
                     save_match(session, row, item, embedding, score)
             if len(rows) == 50:
                 job.cursor = str(rows[-1].id)

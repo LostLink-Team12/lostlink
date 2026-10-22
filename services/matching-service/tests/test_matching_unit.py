@@ -169,3 +169,18 @@ def test_http_readiness_authentication_and_role_boundaries():
             ).status_code
             == 422
         )
+
+
+def test_automatic_match_threshold_depends_on_report_photo():
+    from types import SimpleNamespace
+
+    from matching_app.workers import MatchingWorker
+
+    settings = MatchingSettings(_env_file=None, match_threshold=0.78, match_threshold_text=0.63)
+    worker = MatchingWorker(None, settings=settings)
+    assert worker.threshold_for(SimpleNamespace(has_photo=True)) == 0.78
+    assert worker.threshold_for(SimpleNamespace(has_photo=False)) == 0.63
+    defaults = MatchingSettings(_env_file=None)
+    assert (defaults.match_threshold, defaults.match_threshold_text) == (0.78, 0.63)
+    with pytest.raises(ValidationError):
+        MatchingSettings(_env_file=None, match_threshold_text=1.5)
