@@ -43,7 +43,10 @@ resource "aws_eks_cluster" "this" {
     subnet_ids              = aws_subnet.private[*].id
     endpoint_private_access = true
     endpoint_public_access  = true
-    public_access_cidrs     = var.eks_public_access_cidrs
+    # Demo operator access is a validated /24-or-narrower allowlist, currently
+    # one /32. This rule flags any public CIDR, including that intentional IP.
+    # trivy:ignore:AVD-AWS-0041
+    public_access_cidrs = var.eks_public_access_cidrs
   }
   encryption_config {
     resources = ["secrets"]
