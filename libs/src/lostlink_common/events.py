@@ -5,18 +5,29 @@ deduplicate it. These transports do not make a database write and publish atomic
 """
 
 import json
+import logging
+from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import UUID, uuid4
 
 import boto3
 from botocore.config import Config
+from botocore.exceptions import (
+    ClientError,
+    ConnectionClosedError,
+    ConnectTimeoutError,
+    EndpointConnectionError,
+    ReadTimeoutError,
+)
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 from lostlink_common.config import Settings
 from lostlink_common.event_schemas import EVENT_SCHEMAS
 
 MAX_EVENT_BYTES = 240 * 1024
+SQS_READ_TIMEOUT_SECONDS = 25  # Longer than SQS's maximum 20-second long poll.
+logger = logging.getLogger("lostlink.events")
 
 
 class DomainEvent(BaseModel):
@@ -75,10 +86,65 @@ def aws_client(service: Literal["sns", "sqs", "cognito-idp"], settings: Settings
         region_name=settings.aws_region,
         config=Config(
             connect_timeout=2,
-            read_timeout=3,
+            read_timeout=SQS_READ_TIMEOUT_SECONDS if service == "sqs" else 3,
             retries={"mode": "standard", "total_max_attempts": 3},
         ),
         **options,
+    )
+
+
+def _sqs_request(operation: Callable, **kwargs) -> dict | None:
+    """SDK retries are bounded; the worker loop backs off before the next poll."""
+    try:
+        return operation(**kwargs)
+    except (ConnectionClosedError, ConnectTimeoutError, EndpointConnectionError, ReadTimeoutError):
+        logger.warning("sqs_transport_unavailable")
+    except ClientError as exc:
+        status = exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode", 0)
+        code = exc.response.get("Error", {}).get("Code", "")
+        if (
+            status not in {408, 429}
+            and status < 500
+            and code
+            not in {
+                "RequestTimeout",
+                "RequestTimeoutException",
+                "RequestThrottled",
+                "Throttling",
+                "ThrottlingException",
+                "ServiceUnavailable",
+                "InternalError",
+                "InternalFailure",
+            }
+        ):
+            raise  # AccessDenied, missing queues and invalid configuration need operator action.
+        logger.warning("sqs_service_unavailable")
+    return None
+
+
+def receive_messages(client, queue_url: str, *, wait_seconds: int = 10) -> list[dict]:
+    """An exhausted transient receive behaves like an empty poll, without logging payloads."""
+    if not 0 <= wait_seconds <= 20:
+        raise ValueError("SQS wait_seconds must be between 0 and 20")
+    result = _sqs_request(
+        client.receive_message,
+        QueueUrl=queue_url,
+        WaitTimeSeconds=wait_seconds,
+        VisibilityTimeout=60,
+        MaxNumberOfMessages=1,
+    )
+    return result.get("Messages", []) if result is not None else []
+
+
+def acknowledge_message(client, queue_url: str, receipt_handle: str) -> bool:
+    """A failed acknowledgement leaves a committed event available for inbox-safe replay."""
+    return (
+        _sqs_request(
+            client.delete_message,
+            QueueUrl=queue_url,
+            ReceiptHandle=receipt_handle,
+        )
+        is not None
     )
 
 

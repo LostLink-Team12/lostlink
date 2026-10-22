@@ -21,7 +21,11 @@ Default p95 < 5s is a smoke threshold, not a production performance target.
 The following scaling scenarios belong to the later scaling demo and are not yet implemented:
 
 - `search_load.js` - ramp owners searching across venues; shows HPA scaling the API pods and p95 latency
-- `bulk_import.js` - upload 5,000 found-item photos; SQS backlog makes KEDA scale the embedding workers out and back in
+- `bulk_import.js` - upload 5,000 found-item photos; PostgreSQL pending embedding jobs drive KEDA scaling of Matching tasks (ADR-0002 amendment)
+
+Search phase instrumentation and the 500 ms investigation criterion are documented
+in [the backend readiness checklist](../../docs/backend-readiness.md#搜索性能诊断准备).
+`smoke.js` keeps its 5-second smoke threshold; it is not the planned 500 ms load acceptance test.
 
 ## Demo dataset and import (D1)
 

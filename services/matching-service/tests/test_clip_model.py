@@ -1,7 +1,10 @@
 """Optional real model acceptance; no random or hash-based embedding substitute."""
 
 import io
+import json
 import os
+import statistics
+import time
 
 import pytest
 from matching_app.embedding import ClipEncoder, EmbeddingError
@@ -64,6 +67,38 @@ def test_real_clip_item_worker_pgvector_and_photo_search(matching_env):
     assert result.status_code == 200, result.text
     assert result.json()["items"][0]["item_id"] == str(item_id)
     assert result.json()["model_version"].startswith("clip-vit-b32-")
+    # Small local diagnostic only: real model/DB, injected auth and in-process Item HTTP.
+    # This is not a cloud/network p95 or throughput acceptance measurement.
+    timings = []
+    for _ in range(5):
+        started = time.perf_counter()
+        response = env.client.post(
+            "/v1/search",
+            headers=headers(),
+            json={"text": "a solid red square", "limit": 1},
+        )
+        timings.append((time.perf_counter() - started) * 1000)
+        assert response.status_code == 200, response.text
+        assert response.json()["items"][0]["item_id"] == str(item_id)
+    metrics = env.app.state.search_metrics
+    phases = {
+        sample.labels["phase"]: round(sample.value * 1000 / 6, 3)
+        for family in metrics.phase_seconds.collect()
+        for sample in family.samples
+        if sample.name == "lostlink_search_phase_duration_seconds_sum"
+    }
+    print(
+        "LOCAL_SEARCH_DIAGNOSTICS "
+        + json.dumps(
+            {
+                "scope": "local CPU real CLIP + PostgreSQL + ASGI; one synthetic item",
+                "warm_text_requests": len(timings),
+                "median_ms": round(statistics.median(timings), 3),
+                "max_ms": round(max(timings), 3),
+                "phase_mean_ms_photo_and_text_requests": phases,
+            }
+        )
+    )
     report = new_report(env, description="a solid red square")
     from matching_support import drain
 

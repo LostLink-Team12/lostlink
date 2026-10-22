@@ -20,9 +20,9 @@ serve it from S3 + CloudFront or another static host. The root `/` is not an ent
 
 ## Backend and Cognito configuration
 
-API calls match the generated contracts on `origin/phase1-backend` (reference commit
-`07890d9`). That backend must be deployed or merged separately; `main` currently
-contains only a service template. `.env.example` ports are examples, not service
+API calls use the generated backend contracts merged into `main` in PR #1.
+The backend processes must still be deployed and configured separately.
+`.env.example` ports are examples, not service
 discovery. For local development, the example uses `/api/venue`, `/api/item`,
 `/api/matching` and `/api/claim`; Vite forwards these prefixes to the corresponding
 `DEV_*_API_TARGET` and preserves the backend `/v1` path. Set targets to the ports

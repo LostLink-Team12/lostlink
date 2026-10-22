@@ -11,7 +11,7 @@ from datetime import timedelta
 from uuid import UUID, uuid4
 
 from lostlink_common.db import Database
-from lostlink_common.events import aws_client, decode_message
+from lostlink_common.events import acknowledge_message, aws_client, decode_message, receive_messages
 from lostlink_common.identity import (
     CognitoIdentityDirectory,
     EmailNotVerified,
@@ -133,12 +133,7 @@ class NotificationWorker:
             return code
 
     def poll(self, client, queue_url, *, wait_seconds=10):
-        messages = client.receive_message(
-            QueueUrl=queue_url,
-            WaitTimeSeconds=wait_seconds,
-            VisibilityTimeout=60,
-            MaxNumberOfMessages=1,
-        ).get("Messages", [])
+        messages = receive_messages(client, queue_url, wait_seconds=wait_seconds)
         for message in messages:
             try:
                 self.consume(decode_message(message["Body"]))
@@ -148,7 +143,7 @@ class NotificationWorker:
                     "notification_message_rejected", extra={"error_type": type(exc).__name__}
                 )
                 continue
-            client.delete_message(QueueUrl=queue_url, ReceiptHandle=message["ReceiptHandle"])
+            acknowledge_message(client, queue_url, message["ReceiptHandle"])
         return bool(messages)
 
     def claim(self):
