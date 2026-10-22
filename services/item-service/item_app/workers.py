@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 
 from lostlink_common.events import DomainEvent, SnsPublisher, aws_client, decode_message
 from lostlink_common.observability import configure_logging
+from lostlink_common.worker_health import heartbeat
 from pydantic import ValidationError
 from sqlalchemy import and_, func, or_, select, text
 
@@ -354,12 +355,27 @@ def main():
         if args.mode == "cleanup":
             from item_app.cleanup import cleanup
 
-            cleanup(db, worker.storage, settings.photo_bucket, stopped=stopped)
+            while not stopped.is_set():
+                cleanup(
+                    db,
+                    worker.storage,
+                    settings.photo_bucket,
+                    stopped=stopped,
+                    prefixes=settings.cleanup_prefixes,
+                )
+                heartbeat()
+                if args.once:
+                    break
+                for _ in range(120):
+                    if stopped.wait(30):
+                        break
+                    heartbeat()
             return
         while not stopped.is_set():
             worked = (
                 worker.poll(queue, settings.event_queue_url) if queue else worker.once(args.mode)
             )
+            heartbeat()
             if args.once:
                 break
             if not worked:

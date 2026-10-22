@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 
 from lostlink_common.events import DomainEvent, SnsPublisher, aws_client, decode_message
 from lostlink_common.observability import configure_logging
+from lostlink_common.worker_health import heartbeat
 from sqlalchemy import Float, and_, func, or_, select, text
 from sqlalchemy.dialects.postgresql import insert
 
@@ -422,6 +423,7 @@ def main():
             worked = (
                 worker.poll(queue, settings.event_queue_url) if queue else worker.once(args.mode)
             )
+            heartbeat()
             if args.once:
                 break
             if not worked:

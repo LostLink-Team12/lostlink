@@ -27,6 +27,26 @@ def settings(**values):
     return NotificationSettings(_env_file=None, **values)
 
 
+def test_deployed_consumer_starts_without_sender_secrets():
+    config = settings(
+        environment="dev",
+        process_mode="worker",
+        worker_mode="consume",
+        worker_database_url="postgresql+psycopg://notification_worker:x@db/lostlink",
+    )
+    assert config.machine_client_secret is None
+    assert config.ses_from_address is None
+    with pytest.raises(ValidationError):
+        settings(
+            environment="dev",
+            process_mode="worker",
+            worker_mode="tasks",
+            worker_database_url="postgresql+psycopg://notification_worker:x@db/lostlink",
+        )
+    with pytest.raises(ValidationError):
+        settings(environment="dev", process_mode="worker", worker_mode="consume")
+
+
 def test_template_escapes_content_and_uses_the_configured_origin_only():
     match_id = uuid4()
     message = render_match_found(

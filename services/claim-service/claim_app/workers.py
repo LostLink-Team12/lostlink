@@ -11,6 +11,7 @@ from uuid import UUID, uuid4
 from lostlink_common.db import Database
 from lostlink_common.events import DomainEvent, SnsPublisher, aws_client
 from lostlink_common.observability import configure_logging
+from lostlink_common.worker_health import heartbeat
 from sqlalchemy import and_, func, or_, select
 
 from claim_app.clients import ItemRejected, ItemUnavailable, make_item_client, make_token_provider
@@ -330,7 +331,7 @@ def main():
     parser.add_argument("--operator")
     parser.add_argument("--reason", choices=["dependency_restored", "manual_review"])
     args = parser.parse_args()
-    settings = ClaimSettings(process_mode="worker")
+    settings = ClaimSettings(process_mode="worker", worker_mode=args.mode)
     configure_logging(settings.service_name, settings.log_level)
     if not settings.worker_database_url:
         parser.error("WORKER_DATABASE_URL is required")
@@ -365,6 +366,7 @@ def main():
             worker.publisher = SnsPublisher(client, settings.event_topic_arn)
         while not stopped.is_set():
             worked = worker.once(args.mode)
+            heartbeat()
             if args.once:
                 break
             if not worked:

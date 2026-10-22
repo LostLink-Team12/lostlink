@@ -1,0 +1,166 @@
+{
+  "uid": "lostlink-c3-scaling",
+  "title": "LostLink C3 Scaling",
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "15s",
+  "timezone": "utc",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "API desired and ready replicas",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "kube_deployment_spec_replicas{namespace=\"lostlink\"}",
+          "refId": "A",
+          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+        },
+        {
+          "expr": "kube_deployment_status_replicas_available{namespace=\"lostlink\"}",
+          "refId": "B",
+          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Runnable embedding jobs",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "lostlink_embedding_runnable_jobs",
+          "refId": "A",
+          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+        },
+        {
+          "expr": "lostlink_embedding_leased_jobs",
+          "refId": "B",
+          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+        },
+        {
+          "expr": "lostlink_embedding_delayed_jobs",
+          "refId": "C",
+          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+        },
+        {
+          "expr": "lostlink_embedding_failed_jobs",
+          "refId": "D",
+          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "API p95 latency (seconds)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le,service) (rate(lostlink_http_request_duration_seconds_bucket[2m])))",
+          "refId": "A",
+          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "API error ratio",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum by (service) (rate(lostlink_http_requests_total{status=~\"5..\"}[2m])) / sum by(service) (rate(lostlink_http_requests_total[2m]))",
+          "refId": "A",
+          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "API request rate",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum by(service) (rate(lostlink_http_requests_total[2m]))",
+          "refId": "A",
+          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Scrape availability",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "up{job=~\"lostlink-api|embedding-backlog|kube-state-metrics\"}",
+          "refId": "A",
+          "legendFormat": "{{service}}{{deployment}}{{__name__}}"
+        }
+      ]
+    }
+  ]
+}

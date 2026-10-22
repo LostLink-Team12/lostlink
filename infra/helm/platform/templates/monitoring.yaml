@@ -1,0 +1,200 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata: {name: lostlink-prometheus}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata: {name: lostlink-prometheus}
+rules:
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata: {name: lostlink-prometheus}
+subjects:
+  - {kind: ServiceAccount, name: lostlink-prometheus}
+roleRef: {apiGroup: rbac.authorization.k8s.io, kind: Role, name: lostlink-prometheus}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: lostlink-prometheus}
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    scrape_configs:
+      - job_name: lostlink-api
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces: {names: [lostlink]}
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            regex: "true"
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_container_port_number]
+            regex: "8000"
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+            target_label: workload
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+      - job_name: embedding-backlog
+        static_configs: [{targets: ["embedding-metrics:9108"]}]
+      - job_name: kube-state-metrics
+        static_configs: [{targets: ["kube-state-metrics.kube-system.svc.cluster.local:8080"]}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: embedding-metrics
+  labels: {app.kubernetes.io/part-of: lostlink}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app.kubernetes.io/name: embedding-metrics}}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/part-of: lostlink, app.kubernetes.io/name: embedding-metrics}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 1000, runAsGroup: 1000, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: exporter
+          image: {{ required "metricsImage required" .Values.metricsImage | quote }}
+          command: [python, /deploy/backlog.py]
+          env:
+            - name: PG_CONNECTION
+              valueFrom: {secretKeyRef: {name: lostlink-backlog, key: connection}}
+            - {name: PYTHONDONTWRITEBYTECODE, value: "1"}
+          ports: [{name: metrics, containerPort: 9108}]
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 10m, memory: 64Mi}, limits: {cpu: 100m, memory: 128Mi}}
+          readinessProbe: {httpGet: {path: /metrics, port: metrics}, periodSeconds: 15, timeoutSeconds: 10}
+          volumeMounts:
+            - {name: runtime, mountPath: /deploy, readOnly: true}
+            - {name: trust, mountPath: /trust, readOnly: true}
+      volumes:
+        - {name: runtime, configMap: {name: lostlink-runtime}}
+        - {name: trust, configMap: {name: lostlink-trust}}
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata: {name: lostlink-backlog}
+spec:
+  secretTargetRef:
+    - {parameter: connection, name: lostlink-backlog, key: connection}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: embedding-metrics}
+spec:
+  selector: {app.kubernetes.io/name: embedding-metrics}
+  ports: [{name: metrics, port: 9108, targetPort: metrics}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  labels: {app.kubernetes.io/part-of: lostlink}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app.kubernetes.io/name: prometheus}}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/part-of: lostlink, app.kubernetes.io/name: prometheus}
+    spec:
+      serviceAccountName: lostlink-prometheus
+      securityContext: {runAsNonRoot: true, runAsUser: 65534, runAsGroup: 65534, fsGroup: 65534, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: prometheus
+          image: {{ .Values.prometheusImage | quote }}
+          args: [--config.file=/etc/prometheus/prometheus.yml, --storage.tsdb.path=/prometheus, --storage.tsdb.retention.time=24h, --storage.tsdb.retention.size=512MB]
+          ports: [{name: http, containerPort: 9090}]
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 100m, memory: 256Mi}, limits: {cpu: 500m, memory: 768Mi}}
+          readinessProbe: {httpGet: {path: /-/ready, port: http}}
+          livenessProbe: {httpGet: {path: /-/healthy, port: http}}
+          volumeMounts:
+            - {name: config, mountPath: /etc/prometheus, readOnly: true}
+            - {name: data, mountPath: /prometheus}
+      volumes:
+        - {name: config, configMap: {name: lostlink-prometheus}}
+        - {name: data, emptyDir: {sizeLimit: 1Gi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: prometheus}
+spec:
+  selector: {app.kubernetes.io/name: prometheus}
+  ports: [{name: http, port: 9090, targetPort: http}]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: lostlink-grafana-provisioning}
+data:
+  datasource.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        uid: prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+        editable: false
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: LostLink
+        options: {path: /dashboards}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  labels: {app.kubernetes.io/part-of: lostlink}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app.kubernetes.io/name: grafana}}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/part-of: lostlink, app.kubernetes.io/name: grafana}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 472, runAsGroup: 472, fsGroup: 472, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: grafana
+          image: {{ .Values.grafanaImage | quote }}
+          env:
+            - {name: GF_AUTH_ANONYMOUS_ENABLED, value: "false"}
+            - {name: GF_USERS_ALLOW_SIGN_UP, value: "false"}
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom: {secretKeyRef: {name: lostlink-grafana, key: password}}
+          ports: [{name: http, containerPort: 3000}]
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 50m, memory: 128Mi}, limits: {cpu: 500m, memory: 384Mi}}
+          readinessProbe: {httpGet: {path: /api/health, port: http}}
+          livenessProbe: {httpGet: {path: /api/health, port: http}}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/grafana}
+            - {name: tmp, mountPath: /tmp}
+            - {name: datasources, mountPath: /etc/grafana/provisioning/datasources, readOnly: true}
+            - {name: providers, mountPath: /etc/grafana/provisioning/dashboards, readOnly: true}
+            - {name: dashboards, mountPath: /dashboards, readOnly: true}
+      volumes:
+        - {name: data, emptyDir: {sizeLimit: 256Mi}}
+        - {name: tmp, emptyDir: {sizeLimit: 64Mi}}
+        - name: datasources
+          configMap: {name: lostlink-grafana-provisioning, items: [{key: datasource.yaml, path: datasource.yaml}]}
+        - name: providers
+          configMap: {name: lostlink-grafana-provisioning, items: [{key: dashboards.yaml, path: dashboards.yaml}]}
+        - {name: dashboards, configMap: {name: lostlink-dashboards}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: grafana}
+spec:
+  selector: {app.kubernetes.io/name: grafana}
+  ports: [{name: http, port: 3000, targetPort: http}]

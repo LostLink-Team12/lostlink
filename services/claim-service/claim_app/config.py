@@ -13,6 +13,7 @@ from sqlalchemy.engine import make_url
 class ClaimSettings(Settings):
     service_name: str = "claim-service"
     process_mode: Literal["api", "worker"] = "api"
+    worker_mode: Literal["tasks", "outbox"] = "tasks"
     worker_database_url: SecretStr | None = None
     user_client_ids: list[str] = Field(default_factory=list)
     venue_base_url: str | None = None
@@ -84,7 +85,9 @@ class ClaimSettings(Settings):
             raise ValueError("Claim access modes require distinct login roles")
         if bool(self.field_encryption_keys) != bool(self.field_encryption_active_key_id):
             raise ValueError("Configure encryption keys and the active key ID together")
-        if self.environment in {"dev", "prod"}:
+        if self.environment in {"dev", "prod"} and (
+            self.process_mode == "api" or self.worker_mode == "tasks"
+        ):
             required = [
                 self.item_base_url,
                 self.machine_token_url,

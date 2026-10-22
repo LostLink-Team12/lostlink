@@ -19,6 +19,7 @@ from lostlink_common.identity import (
     IdentityNotFound,
 )
 from lostlink_common.observability import configure_logging
+from lostlink_common.worker_health import heartbeat
 from sqlalchemy import and_, func, or_, select, text
 from sqlalchemy.dialects.postgresql import insert
 
@@ -370,7 +371,7 @@ def main():
     parser.add_argument("mode", choices=["consume", "tasks"])
     parser.add_argument("--once", action="store_true")
     args = parser.parse_args()
-    settings = NotificationSettings(process_mode="worker")
+    settings = NotificationSettings(process_mode="worker", worker_mode=args.mode)
     configure_logging(settings.service_name, settings.log_level)
     if not settings.worker_database_url:
         parser.error("WORKER_DATABASE_URL is required")
@@ -402,6 +403,7 @@ def main():
                 clients.append(worker.sender.client)
         while not stopped.is_set():
             worked = worker.poll(queue, settings.event_queue_url) if queue else worker.once()
+            heartbeat()
             if args.once:
                 break
             if not worked:
