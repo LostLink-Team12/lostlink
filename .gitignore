@@ -23,3 +23,6 @@ build/
 .models/
 # Local-only backend handoff and implementation records.
 docs/local/
+.tools/
+tests/load/generated/
+tests/load/results/
