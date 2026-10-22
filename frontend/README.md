@@ -49,7 +49,7 @@ owners need a verified email to claim. New venue onboarding requires a platform 
 and an existing Cognito subject for the initial administrator.
 
 Configure API/gateway CORS for the frontend origin, `Authorization`, `Content-Type`,
-`Idempotency-Key`, `If-Match` and GET/POST/OPTIONS. S3 CORS must allow POST from this
+`Idempotency-Key`, `If-Match` and GET/POST/PATCH/OPTIONS. S3 CORS must allow POST from this
 origin; the browser posts the exact presigned fields with the file last and sends no
 Cognito token to S3. Workers and embedding consumers must be running.
 
@@ -72,12 +72,31 @@ ID token authentication, refresh token storage or caller-selected tenant is used
   writes reuse their idempotency key. Registration retains its item/upload progress
   in memory for retry; keep the tab open with the same draft until completion.
 
-This implementation does not provide a staff management console, rejection/cancellation
-UI, QR scanner or full handover UI. Handover payload is currently displayed as text.
-Email `/matches/{id}` deep links are not implemented; the current backend contract
-has no public single-match endpoint. Owners can view matches from their report list.
-These are remaining UI/integration limitations, not proof of cloud end-to-end
-acceptance. No demo-only authentication bypass is shipped.
+Additional flows (issue #8):
+
+- Venue reviewers can reject submitted claims using all four contract reason codes.
+- Approved claims accept a camera QR scan or the original pasted payload. Owners
+  receive a locally generated QR image and payload text. Handover sends the payload
+  unchanged with If-Match, then polls until handed_over. Accepted operations remain
+  available for checking after a polling failure. Camera scanning requires HTTPS
+  (or localhost), camera permission and browser BarcodeDetector QR support; manual
+  payload entry remains available otherwise.
+- Venue administrators can list/add staff and update roles or active/suspended
+  status using PATCH and If-Match. Identity sync is asynchronous; affected users
+  must sign in again after sync. Server-side authorization remains authoritative.
+- Owners can close open lost reports with a reason and If-Match.
+- Email /matches/{match_id} links survive Cognito login and resolve using paginated
+  owner report/match APIs. Closed, stale and foreign matches show unavailable.
+  No internal notification endpoint is exposed to the browser.
+
+For production hosting, rewrite /matches/* to /matches/index.html with HTTP 200
+while preserving the browser URL. The build includes that entry; the Vite dev
+server already applies the rewrite. Static object hosting alone cannot serve
+arbitrary match IDs without this CDN/hosting rule. The resolver scans at most the
+API offset limit (10000) and directs larger accounts to their report list.
+
+These flows are covered by mocked API tests. Real Cognito, camera scanning and
+AWS integration still require testing against a deployed environment.
 
 ## Verification
 

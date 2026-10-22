@@ -33,3 +33,10 @@ See `services/README.md` for owners.
 
 All services run as stateless containers on Amazon EKS across 2 availability zones, behind API Gateway, WAF and Cognito.
 State lives in managed services: RDS PostgreSQL + pgvector, S3, SQS, SNS, ElastiCache, SES.
+
+For the student demo, the deployment verified on 22 Oct uses one CPU EKS worker
+and no NAT gateway to reduce short-term cost. The VPC/control plane spans two
+AZs; application workers are not highly available. RDS stays private. C3 ingress,
+scaling and monitoring are still pending; API Gateway, WAF and ElastiCache above
+describe the broader target, not resources already deployed by C1. See the
+[C1 deployment record and cost tradeoffs](../infra/terraform/README.md).

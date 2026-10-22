@@ -37,3 +37,24 @@ jobs:
           cache-dependency-path: tests/data/package-lock.json
       - run: npm ci --ignore-scripts
       - run: npm test
+
+  load-scripts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Install pinned k6 with release checksum
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/k6"
+          cd "$RUNNER_TEMP/k6"
+          curl --fail --location --retry 3 -O https://github.com/grafana/k6/releases/download/v1.6.0/k6-v1.6.0-linux-amd64.tar.gz
+          curl --fail --location --retry 3 -O https://github.com/grafana/k6/releases/download/v1.6.0/k6-v1.6.0-checksums.txt
+          grep ' k6-v1.6.0-linux-amd64.tar.gz$' k6-v1.6.0-checksums.txt | sha256sum --check
+          tar -xzf k6-v1.6.0-linux-amd64.tar.gz
+          echo "K6_BIN=$RUNNER_TEMP/k6/k6-v1.6.0-linux-amd64/k6" >> "$GITHUB_ENV"
+      - name: Run local contract integration and workload tests
+        run: node --test tests/load/*.test.mjs
