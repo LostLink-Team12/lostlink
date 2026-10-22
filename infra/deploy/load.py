@@ -251,8 +251,10 @@ def main():
                 "cooldown_and_drain_observed": True,
                 "historical_failed_jobs_before": failed_baseline,
                 "failed_jobs_after": values["failed"],
-                "prometheus_p95_window": "15m",
-                "search_latency_source": "search k6 summary",
+                "prometheus_p95_window": "15m" if args.mode == "search" else None,
+                "search_latency_source": "search k6 summary"
+                if args.mode == "search"
+                else "not measured by bulk k6; optional canary is separate",
             },
             indent=2,
         ),

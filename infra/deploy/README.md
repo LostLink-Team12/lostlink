@@ -101,6 +101,12 @@ only the service prefix and verifies TLS to ClusterIP APIs. It exposes no
 serves `/matches/index.html` with HTTP 200, preserving the browser's URL.
 S3 uploads remain direct presigned POSTs with no Cognito Authorization header.
 
+Matching reuses a verified SSL context for Item reads. Every request still
+performs a new HTTPS exchange with current authorization and Item state;
+responses are not cached. Restart Matching API/tasks after changing the CA
+trust bundle. Candidate scoring/sorting remains in PostgreSQL; complete dense
+vectors are no longer transferred for results that only need version metadata.
+
 Use public clients with real Cognito code/PKCE login. Real user login, camera
 permissions and UC1–UC5 must be checked against the deployed environment; a
 successful unauthenticated route smoke does not establish these flows.

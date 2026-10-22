@@ -375,7 +375,15 @@ def run_flow(cluster, data, client, users):
     )
     print("Real S3 seal, event delivery, CLIP embedding and available state passed", flush=True)
     search = api.call(
-        "matching", "/v1/search", owner, {"text": "red backpack", "venue_id": venues[0]}
+        "matching",
+        "/v1/search",
+        owner,
+        {
+            "text": "red backpack",
+            "venue_id": venues[0],
+            "photo_base64": base64.b64encode(photo).decode(),
+            "limit": 100,
+        },
     )
     if item_id not in [v["item_id"] for v in search["items"]]:
         raise RuntimeError("Embedded item is absent from real search")
@@ -391,14 +399,14 @@ def run_flow(cluster, data, client, users):
     )
     matches = api.wait(
         "matching",
-        f"/v1/lost-reports/{report['id']}/matches",
+        f"/v1/lost-reports/{report['id']}/matches?limit=100",
         owner,
         lambda v: any(m["item"]["item_id"] == item_id for m in v["items"]),
     )
     match_id = next(m["id"] for m in matches["items"] if m["item"]["item_id"] == item_id)
     notifications = api.wait(
         "notification",
-        "/v1/notifications",
+        "/v1/notifications?limit=100",
         owner,
         lambda v: any(n["match_id"] == match_id for n in v["items"]),
     )
@@ -489,9 +497,73 @@ def run_flow(cluster, data, client, users):
     )
 
 
+def text_match_flow(cluster, data, users):
+    """Verify the calibrated text-only path without sending fixture emails."""
+    sender = cluster.get("deployment", "notification-tasks")
+    if not sender or sender["spec"].get("replicas", 1) != 0:
+        raise RuntimeError("Pause notification-tasks before testing synthetic recipients")
+    origin = data["c3"]["value"]["frontend_origin"]
+    owner = login(
+        users["owner"],
+        data["application"]["value"]["web_client_id"],
+        data["cognito"]["value"]["login_domain"],
+        origin,
+    )
+    api = API(origin)
+    report = api.call(
+        "matching",
+        "/v1/lost-reports",
+        owner,
+        {"description": "backpack", "category": "Backpack"},
+    )
+    path = f"/v1/lost-reports/{report['id']}"
+    try:
+        matches = api.wait(
+            "matching", path + "/matches?limit=100", owner, lambda value: bool(value["items"])
+        )
+        between = [match for match in matches["items"] if 0.63 <= match["item"]["score"] < 0.78]
+        if not between:
+            raise RuntimeError("No real match demonstrates the separate calibrated text cutoff")
+        match_id = between[0]["id"]
+        api.wait(
+            "notification",
+            "/v1/notifications?limit=100",
+            owner,
+            lambda value: any(item["match_id"] == match_id for item in value["items"]),
+        )
+    finally:
+        current = api.call("matching", path, owner)
+        if current["state"] != "closed":
+            api.call(
+                "matching", path + "/close", owner, {"reason": "found"}, version=current["version"]
+            )
+        if api.call("matching", path, owner)["state"] != "closed":
+            raise RuntimeError("Keep sender paused: synthetic text report is not closed")
+    (LOCAL / "text-match-acceptance.json").write_text(
+        json.dumps(
+            {
+                "completed_at": datetime.now(UTC).isoformat(),
+                "origin": origin,
+                "report_id": report["id"],
+                "report_state": "closed",
+                "has_photo": False,
+                "text_cutoff": 0.63,
+                "photo_cutoff": 0.78,
+                "observed_score": between[0]["item"]["score"],
+                "notification_inbox_observed": True,
+                "email_delivery_tested": False,
+                "checks": api.checks,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    print("Real text-only cutoff and notification inbox passed; report closed", flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["seed", "flow", "staff-flow"])
+    parser.add_argument("action", choices=["seed", "flow", "staff-flow", "text-flow"])
     args = parser.parse_args()
     os.environ.update(AWS_PROFILE="lostlink-dev", AWS_DEFAULT_REGION="ap-southeast-1")
     data = outputs()
@@ -518,6 +590,8 @@ def main():
             run_flow(cluster, data, client, users)
         elif args.action == "staff-flow":
             staff_flow(cluster, data, users)
+        elif args.action == "text-flow":
+            text_match_flow(cluster, data, users)
         else:
             print(f"Prepared {len(users)} isolated Cognito fixtures without sending invitations")
     finally:

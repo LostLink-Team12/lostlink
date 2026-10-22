@@ -53,6 +53,34 @@ def test_unconfigured_text_cutoff_preserves_the_existing_single_threshold():
     assert settings.automatic_match_threshold(True) == 0.42
 
 
+def test_candidate_query_scores_in_database_without_returning_dense_vectors():
+    from matching_app.service import candidates
+    from sqlalchemy import Select
+    from sqlalchemy.dialects import postgresql
+
+    statements = []
+
+    def execute(query, *_args):
+        if isinstance(query, Select):
+            statements.append(str(query.compile(dialect=postgresql.dialect())))
+        return SimpleNamespace(all=lambda: [])
+
+    candidates(
+        SimpleNamespace(execute=execute),
+        [1.0] + [0.0] * 511,
+        "test",
+        Search(text="backpack"),
+        100,
+        0.25,
+    )
+    projection = statements[0].split("\nFROM", 1)[0]
+    # One occurrence computes the score; a second would return the raw vector.
+    assert projection.count("matching.item_vectors.embedding") == 1
+    for column in ["item_version", "tenant_id", "correlation_id", "model_version"]:
+        assert "matching.item_vectors." + column in projection
+    assert "ORDER BY matching.item_vectors.embedding <=>" in statements[0]
+
+
 @pytest.mark.parametrize("has_photo,expected", [(False, 0.63), (True, 0.78)])
 def test_new_report_matching_passes_its_modality_cutoff_to_candidate_selection(
     monkeypatch, has_photo, expected

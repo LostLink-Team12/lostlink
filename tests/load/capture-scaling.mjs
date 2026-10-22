@@ -7,7 +7,7 @@ const execute=promisify(execFile);
 export function summarizeKube(deployments,hpas,scaled) {
   return {
     deployments:deployments.items.map(d=>({name:d.metadata.name,desired:d.spec.replicas ?? 1,ready:d.status?.readyReplicas ?? 0,available:d.status?.availableReplicas ?? 0})),
-    hpas:hpas.items.map(h=>({name:h.metadata.name,target:h.spec.scaleTargetRef.name,current:h.status?.currentReplicas ?? null,desired:h.status?.desiredReplicas ?? null,conditions:(h.status?.conditions || []).map(c=>({type:c.type,status:c.status}))})),
+    hpas:hpas.items.map(h=>({name:h.metadata.name,target:h.spec.scaleTargetRef.name,current:h.status?.currentReplicas ?? null,desired:h.status?.desiredReplicas ?? null,currentMetrics:h.status?.currentMetrics || [],conditions:(h.status?.conditions || []).map(c=>({type:c.type,status:c.status}))})),
     scaledObjects:scaled.items.map(s=>({name:s.metadata.name,target:s.spec.scaleTargetRef.name,triggers:(s.spec.triggers || []).map(t=>t.type),conditions:(s.status?.conditions || []).map(c=>({type:c.type,status:c.status}))})),
   };
 }

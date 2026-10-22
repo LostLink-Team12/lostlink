@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from lostlink_common.events import DomainEvent
 from sqlalchemy import Float, select, text, update
+from sqlalchemy.orm import defer
 
 from matching_app.embedding import vector_literal
 from matching_app.errors import fail
@@ -85,6 +86,9 @@ def candidates(session, vector, model_version, filters, limit, min_score):
     )
     query = (
         select(Catalog, ItemVector, (1 - distance).label("score"))
+        # Scoring stays in PostgreSQL. Callers use freshness/version metadata,
+        # not the 100 x 512 dense values previously sent for every search.
+        .options(defer(ItemVector.embedding, raiseload=True))
         .join(ItemVector, ItemVector.item_id == Catalog.item_id)
         .where(
             Catalog.state == "available",
