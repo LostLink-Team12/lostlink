@@ -1,10 +1,11 @@
 """Build current application code and publish digest-pinned C3 images to ECR."""
 
 import argparse
-import base64
 import hashlib
 import json
+import os
 import subprocess
+import tempfile
 from pathlib import Path
 
 import boto3
@@ -25,21 +26,19 @@ def run(args, *, capture=False, data=None):
     ).stdout
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--profile", default="lostlink-dev")
-    parser.add_argument("--tag", required=True)
-    args = parser.parse_args()
+def build_images(args, docker_config):
     session = boto3.Session(profile_name=args.profile, region_name="ap-southeast-1")
     config = Config(
         connect_timeout=5, read_timeout=30, retries={"mode": "standard", "total_max_attempts": 3}
     )
     ecr = session.client("ecr", config=config)
     auth = ecr.get_authorization_token()["authorizationData"][0]
-    user, password = base64.b64decode(auth["authorizationToken"]).decode().split(":", 1)
-    run(
-        ["docker", "login", "--username", user, "--password-stdin", auth["proxyEndpoint"]],
-        data=password,
+    # Desktop's Windows credential helper is unavailable in noninteractive shells.
+    # This short-lived ECR token lives only in a restricted, ignored scratch folder
+    # and is removed on every exit. User Docker credentials are never changed.
+    Path(docker_config, "config.json").write_text(
+        json.dumps({"auths": {auth["proxyEndpoint"]: {"auth": auth["authorizationToken"]}}}),
+        encoding="utf-8",
     )
     registry = auth["proxyEndpoint"].removeprefix("https://")
     base = ecr.describe_images(
@@ -100,6 +99,20 @@ def main():
     )
     ecr.close()
     print("Published C3 images and saved digest manifest")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--profile", default="lostlink-dev")
+    parser.add_argument("--tag", required=True)
+    args = parser.parse_args()
+    LOCAL.mkdir(exist_ok=True)
+    endpoint = run(
+        ["docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}"], capture=True
+    ).strip()
+    with tempfile.TemporaryDirectory(prefix="docker-auth-", dir=LOCAL) as docker_config:
+        os.environ.update(DOCKER_CONFIG=docker_config, DOCKER_HOST=endpoint)
+        build_images(args, docker_config)
 
 
 if __name__ == "__main__":
