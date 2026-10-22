@@ -122,6 +122,11 @@ resource "aws_cloudfront_vpc_origin" "dev" {
   }
 }
 
+# Short-lived synthetic dev/demo distribution. A paid WAF policy is deferred
+# to production hardening; public APIs still require Cognito, and the origin
+# is private with restricted CloudFront ingress. This exception covers only
+# this dev distribution, not an internet-facing production service.
+# trivy:ignore:AVD-AWS-0011
 resource "aws_cloudfront_distribution" "dev" {
   count           = local.c3_edge_enabled ? 1 : 0
   enabled         = true

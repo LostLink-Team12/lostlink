@@ -1,4 +1,5 @@
 ﻿import http from 'k6/http';
+import { multipartPhoto } from './multipart.js';
 import { sleep } from 'k6';
 import exec from 'k6/execution';
 import { Counter, Rate } from 'k6/metrics';
@@ -6,7 +7,6 @@ import { SharedArray } from 'k6/data';
 import { sha256 } from 'k6/crypto';
 import { open as fsOpen, SeekMode } from 'k6/experimental/fs';
 import { apiBase, validRun, integer, importBatch, summary } from './workload.js';
-import { multipart } from './multipart.js';
 const base=apiBase(__ENV.ITEM_API_URL), runId=validRun(__ENV.RUN_ID);
 const rows=new SharedArray('import-manifest',()=>JSON.parse(open(__ENV.LOAD_MANIFEST || './generated/manifest.json')));
 const photos=await fsOpen(__ENV.LOAD_PHOTOS || './generated/photos.bin');
@@ -42,10 +42,9 @@ async function api(path, {body,key,version}={}) {
 }
 async function upload(target,photo) {
   apiBase(target.url.split('?')[0]);
-  const boundary='lostlink-'+exec.vu.idInTest+'-'+Date.now()+'-'+Math.random().toString(16).slice(2);
-  const body=multipart(target.fields,photo,boundary);
+  const form=multipartPhoto(target.fields,photo,'lostlink-'+sha256(`${Date.now()}:${__VU}:${__ITER}:${Math.random()}`,'hex').slice(0,40));
   for(let attempt=0;attempt<3;attempt++) {
-    const res=http.post(target.url,body,{headers:{'Content-Type':'multipart/form-data; boundary='+boundary},tags:{name:'s3-upload'},timeout:'60s',redirects:0});
+    const res=http.post(target.url,form.body,{headers:{'Content-Type':form.contentType},tags:{name:'s3-upload'},timeout:'60s',redirects:0});
     if ([200,201,204].includes(res.status)) return;
     if (!(res.status===0 || res.status===429 || res.status>=500) || attempt===2) throw Error('S3 upload failed (HTTP '+res.status+')');
     sleep(attempt+1);

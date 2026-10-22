@@ -150,7 +150,9 @@ Idempotency-Key/body/If-Match. Already confirmed states are skipped and counted
 separately in `photos_reused`. A fresh RUN_ID creates new demo inventory and new
 work; choose it deliberately for a new scaling demonstration. No cleanup/delete
 is automated. S3 uploads carry the presigned form fields and file last, without
-the Cognito Authorization header. Every accepted photo operation is polled to
+the Cognito Authorization header. The multipart body is explicitly byte-encoded
+by `multipart.js`: k6's object-to-form encoder does not preserve field order.
+Every accepted photo operation is polled to
 completed; terminal errors and timeouts fail the batch. Missing/partial iterations
 fail the exact `photos_confirmed == IMPORT_COUNT` threshold. Report confirmation
 and eventual search availability separately; 202 or S3 success is not embedding
