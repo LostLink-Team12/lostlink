@@ -53,7 +53,9 @@ notification:
   sesConfigurationSet: ""
 
 matching:
-  threshold: "0.25"
+  # Calibrated automatic-match cut-offs (#9): reports with a photo / text-only reports.
+  threshold: "0.78"
+  thresholdText: "0.63"
   model:
     url: https://openaipublic.azureedge.net/clip/models/40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af/ViT-B-32.pt
     sha256: 40d365715913c9da98579312b702a82c18be219cc2a73407c4526f58eba950af
@@ -220,6 +222,7 @@ services:
       env:
         ITEM_PHOTO_BUCKETS: '["{{ .Values.aws.mediaBucket }}"]'
         MATCH_THRESHOLD: "{{ .Values.matching.threshold }}"
+        MATCH_THRESHOLD_TEXT: "{{ .Values.matching.thresholdText }}"
     workers:
       tasks:
         model: true
@@ -238,6 +241,7 @@ services:
         env:
           ITEM_PHOTO_BUCKETS: '["{{ .Values.aws.mediaBucket }}"]'
           MATCH_THRESHOLD: "{{ .Values.matching.threshold }}"
+          MATCH_THRESHOLD_TEXT: "{{ .Values.matching.thresholdText }}"
       consume:
         secretEnv:
           WORKER_DATABASE_URL: {secret: database/matching/worker, format: database}
