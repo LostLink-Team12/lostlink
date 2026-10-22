@@ -1,4 +1,5 @@
 ﻿import http from 'k6/http';
+import { multipartPhoto } from './multipart.js';
 import { sleep } from 'k6';
 import exec from 'k6/execution';
 import { Counter, Rate } from 'k6/metrics';
@@ -41,8 +42,8 @@ async function api(path, {body,key,version}={}) {
 }
 async function upload(target,photo) {
   apiBase(target.url.split('?')[0]);
-  const body={...target.fields,file:http.file(photo,'photo.jpg','image/jpeg')};
-  const res=http.post(target.url,body,{tags:{name:'s3-upload'},timeout:'60s',redirects:0});
+  const form=multipartPhoto(target.fields,photo,'lostlink-'+sha256(`${Date.now()}:${__VU}:${__ITER}:${Math.random()}`,'hex').slice(0,40));
+  const res=http.post(target.url,form.body,{headers:{'Content-Type':form.contentType},tags:{name:'s3-upload'},timeout:'60s',redirects:0});
   if (![200,201,204].includes(res.status)) throw Error('S3 upload failed (HTTP '+res.status+')');
 }
 export async function setup() {

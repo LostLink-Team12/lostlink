@@ -17,9 +17,10 @@ function run(script,env) {
   });
 }
 test('real k6 executes search ramps, multipart uploads, poll, resume and failure thresholds against a local contract double', {skip:!k6,timeout:120000},async()=> {
-  let imports=0,uploads=0,confirmed=0,rejectSearch=false,uploadLeak=false,uploadHeaders=[],versionHeaders=[],keys=[],pendingReads=0;
-  const jobs=new Map(),items=new Map();
+  let imports=0,uploads=0,confirmed=0,rejectSearch=false,rejectUploads=false,uploadLeak=false,uploadHeaders=[],versionHeaders=[],keys=[],pendingReads=0;
+  const jobs=new Map(),items=new Map(),serverErrors=[];
   const server=createServer(async(req,res)=> {
+    try {
     const buffers=[];for await(const b of req)buffers.push(b);const raw=Buffer.concat(buffers);
     const send=(status,body)=>{res.writeHead(status,{'Content-Type':'application/json'});res.end(JSON.stringify(body));};
     if(req.url==='/v1/search')return send(rejectSearch?503:200,{items:[{item_id:'bag',score:0.6}],model_version:'clip-mock'});
@@ -35,17 +36,28 @@ test('real k6 executes search ramps, multipart uploads, poll, resume and failure
     }
     if(req.url.startsWith('/v1/items/')) {
       const id=decodeURIComponent(req.url.split('/')[3]);
-      if(req.url.endsWith('/uploads')) {versionHeaders.push(req.headers['if-match']);return send(201,{upload_id:'u-'+id,upload:{url:base+'/s3',fields:{key:'staging/'+id,policy:'signed-policy'}}});}
+      if(req.url.endsWith('/uploads')) {versionHeaders.push(req.headers['if-match']);return send(201,{upload_id:'u-'+id,upload:{url:base+'/s3',fields:{key:'staging/'+id,policy:'signed-policy','x-amz-signature':'test-signature','x-amz-meta-label':'?? caf?'}}});}
       if(req.url.endsWith('/confirm')){items.get(id).state='processing';return send(202,{operation_id:'op-'+id});}
       return send(200,items.get(id));
     }
     if(req.url==='/s3') {
+      if(rejectUploads)throw Error('Injected upload rejection');
       if(req.headers.authorization)uploadLeak=true;
-      const text=raw.toString('latin1');assert(text.indexOf('name="policy"')<text.indexOf('name="file"'));
+      const text=raw.toString('utf8'), fileAt=text.indexOf('name="file"');
+      assert(fileAt>=0,'file part is missing');
+      for(const name of ['key','policy','x-amz-signature','x-amz-meta-label']) {
+        const at=text.indexOf('name="'+name+'"');assert(at>=0 && at<fileAt,name+' must precede file');
+      }
+      assert(text.includes('?? caf?'),'presigned Unicode field changed');
+      const boundary=req.headers['content-type'].split('boundary=')[1];
+      const header=Buffer.from('--'+boundary+'\r\nContent-Disposition: form-data; name="file"; filename="photo.jpg"\r\nContent-Type: image/jpeg\r\n\r\n');
+      const start=raw.indexOf(header);assert(start>=0);
+      assert.deepEqual(raw.subarray(start+header.length),Buffer.concat([bytes,Buffer.from('\r\n--'+boundary+'--\r\n')]));
       uploadHeaders.push(req.headers['content-type']);uploads++;res.writeHead(204);return res.end();
     }
     if(req.url.startsWith('/v1/item-operations/')) {pendingReads++;if(pendingReads===1)return send(200,{state:'pending'});confirmed++;return send(200,{state:'completed'});}
     send(404,{});
+    } catch(error) { serverErrors.push(error.message); if(!res.headersSent)res.writeHead(500,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'Local contract assertion failed'})); }
   });
   await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
   const root=await mkdtemp(join(tmpdir(),'lostlink-k6-')),source=join(root,'source');await mkdir(source);
@@ -64,6 +76,12 @@ test('real k6 executes search ramps, multipart uploads, poll, resume and failure
     result=await run('tests/load/bulk_import.js',bulk);assert.equal(result.code,0,result.output);assert.equal(uploads,4);assert.deepEqual(keys.slice(2).sort(),initialKeys);
     assert.equal(JSON.parse(await readFile(join(root,'bulk.json'),'utf8')).metrics.photos_reused.values.count,4);
     rejectSearch=true;result=await run('tests/load/search_load.js',{...common,MATCHING_API_URL:base,MAX_VUS:'1',RAMP_DURATION:'1s',HOLD_DURATION:'1s',SUMMARY_PATH:join(root,'failed.json')});assert.notEqual(result.code,0);
+    assert(!result.output.includes(common.LOSTLINK_ACCESS_TOKEN));
+    assert.deepEqual(serverErrors,[]);
+    rejectUploads=true;
+    result=await run('tests/load/bulk_import.js',{...bulk,RUN_ID:'local-upload-failure'});
+    assert.notEqual(result.code,0,'Rejected upload must fail thresholds');
+    assert(serverErrors.length>0 && serverErrors.every(message=>message==='Injected upload rejection'));
     assert(!result.output.includes(common.LOSTLINK_ACCESS_TOKEN));
   } finally { server.closeAllConnections(); await new Promise(r=>server.close(r)); }
 });
