@@ -6,3 +6,9 @@
 - `ci/` - GitHub OIDC trust and ECR push policy templates. See [C2 setup and acceptance checks](../docs/ci.md).
 - `database/` - public role/environment mapping for the repeatable backend bootstrap,
   migration and preflight tools. See [the database/key operations guide](../docs/backend-database-tools.md).
+
+C1 Terraform implementation and the deployment/import runbook are in
+[`terraform/README.md`](terraform/README.md). The implemented Phase 1 stack uses
+one on-demand CPU node in public subnets and no NAT gateway by default; RDS
+remains private. The runbook documents
+the availability/cost tradeoffs and the boundary with C3.

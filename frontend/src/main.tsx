@@ -14,7 +14,7 @@ function App({ settings }: { settings: Config }) {
   const api = useMemo(() => createApi(settings.api, () => session && session.expiresAt > Date.now() ? session.accessToken : ''), [session, settings]);
   useEffect(() => {
     if (!/[?&](code|error)=/.test(location.search)) return;
-    const query = location.search; history.replaceState({}, '', location.pathname); setLoading(true);
+    const query = location.search; const target = sessionStorage.getItem('lostlink.returnPath'); sessionStorage.removeItem('lostlink.returnPath'); history.replaceState({}, '', target && /^\/matches\/[^/?#]+\/?$/.test(target) ? target : location.pathname); setLoading(true);
     finishLogin(config, query).then(setSession).catch(e => setError(e.message)).finally(() => setLoading(false));
   }, []);
   useEffect(() => {
@@ -25,7 +25,7 @@ function App({ settings }: { settings: Config }) {
   return <><header><a className="brand" href={isVenue ? '/venue-portal/' : '/owner-app/'}>Lost<span>Link</span></a><nav><a href="/owner-app/">Owner App</a><a href="/venue-portal/">Venue Portal</a>{session && <button className="secondary" onClick={() => {
     setSession(null); sessionStorage.removeItem('lostlink.pkce');
     const url = new URL('/logout', config.domain); url.search = new URLSearchParams({ client_id: config.clientId, logout_uri: config.redirectUri }).toString(); location.assign(url.href);
-  }}>Sign out</button>}</nav></header><main>{error && <p role="alert">{error}</p>}{session ? isVenue ? <VenueApp api={api} /> : <OwnerApp api={api} /> : <section><p className="eyebrow">CROSS-VENUE LOST & FOUND</p><h1>A way back to you.</h1><p>{isVenue ? 'Sign in to manage your venue’s found items and claims.' : 'Sign in to find an item, report a loss or check your claims.'}</p><button disabled={loading} onClick={() => { void beginLogin(config).then(url => location.assign(url)).catch(e => setError(e.message)); }}>{loading ? 'Signing in…' : 'Sign in with Cognito'}</button></section>}</main><footer>LostLink · Team 12 · Connecting people with their belongings</footer></>;
+  }}>Sign out</button>}</nav></header><main>{error && <p role="alert">{error}</p>}{session ? isVenue ? <VenueApp api={api} /> : <OwnerApp api={api} /> : <section><p className="eyebrow">CROSS-VENUE LOST & FOUND</p><h1>A way back to you.</h1><p>{isVenue ? 'Sign in to manage your venue’s found items and claims.' : 'Sign in to find an item, report a loss or check your claims.'}</p><button disabled={loading} onClick={() => { if (/^\/matches\/[^/?#]+\/?$/.test(location.pathname)) sessionStorage.setItem('lostlink.returnPath', location.pathname); void beginLogin(config).then(url => location.assign(url)).catch(e => setError(e.message)); }}>{loading ? 'Signing in…' : 'Sign in with Cognito'}</button></section>}</main><footer>LostLink · Team 12 · Connecting people with their belongings</footer></>;
 }
 const root = createRoot(document.getElementById('root')!);
 root.render(<p role="status">Loading settings…</p>);

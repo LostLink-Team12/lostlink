@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { HandoverCode, MatchLink, Members, ScanToken } from './MissingFlows';
 import { photoBase64, registerItem, validatePhoto, waitOperation } from './api.js';
 
-type Api = (service: string, path: string, options?: { body?: unknown; version?: number; key?: string; method?: string }) => Promise<any>;
+export type Api = (service: string, path: string, options?: { body?: unknown; version?: number; key?: string; method?: string }) => Promise<any>;
 type Item = { id?: string; item_id?: string; title: string; description: string; category: string; state?: string; score?: number; photo_url?: string; public_location_hint?: string };
 type Claim = { id: string; item_title: string; state: string; version: number; answers?: { question_id: string; prompt: string; answer: string }[]; active_operation_id?: string };
 type Question = { id: string; version: number; prompt: string };
@@ -9,7 +10,7 @@ const id = encodeURIComponent;
 const text = (data: FormData, key: string) => String(data.get(key) || '').trim();
 const file = (data: FormData) => { const value = data.get('photo') as File; return value?.size ? value : undefined; };
 
-function useAction() {
+export function useAction() {
   const [busy, setBusy] = useState(false), [message, setMessage] = useState(''), [error, setError] = useState('');
   const locked = useRef(false);
   const run = async (action: () => Promise<void>) => {
@@ -28,7 +29,7 @@ function Photo({ required = false }: { required?: boolean }) {
   return <label>Photo (JPEG, PNG or WebP)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" required={required} /></label>;
 }
 
-function PageList({ api, service, path, revision = 0, children }: { api: Api; service: string; path: string; revision?: number; children: (rows: any[]) => React.ReactNode }) {
+export function PageList({ api, service, path, revision = 0, children }: { api: Api; service: string; path: string; revision?: number; children: (rows: any[]) => React.ReactNode }) {
   const [page, setPage] = useState({ items: [] as any[], has_more: false }), [offset, setOffset] = useState(0), [error, setError] = useState(''), [loading, setLoading] = useState(true);
   useEffect(() => {
     let current = true; setLoading(true); setError('');
@@ -38,7 +39,7 @@ function PageList({ api, service, path, revision = 0, children }: { api: Api; se
   return <>{loading ? <p role="status">Loading…</p> : error ? <p role="alert">{error}</p> : <>{page.items.length ? children(page.items) : <p>No records yet.</p>}<div className="pagination"><button disabled={!offset} onClick={() => setOffset(x => x - 20)}>Previous</button><span>Page {offset / 20 + 1}</span><button disabled={!page.has_more} onClick={() => setOffset(x => x + 20)}>Next</button></div></>}</>;
 }
 
-function ItemCards({ items, choose }: { items: Item[]; choose?: (item: Item) => void }) {
+export function ItemCards({ items, choose }: { items: Item[]; choose?: (item: Item) => void }) {
   return <div className="cards">{items.map(item => <article key={item.item_id || item.id}>
     {item.photo_url && <img src={item.photo_url} alt={item.title} loading="lazy" />}
     <span className="tag">{item.category}</span><h3>{item.title}</h3><p>{item.description}</p>
@@ -78,13 +79,17 @@ export function OwnerApp({ api }: { api: Api }) {
         <div className="actions"><button disabled={action.busy} value="search">Search items</button><button disabled={action.busy} value="report" className="secondary">Save lost report</button></div>
       </form>{action.status}
     </section>
+    <MatchLink api={api} choose={choose} revision={revision} />
     {results && <section><h2>Search results</h2>{!results.length && <p>No matches. Try another description or save a lost report.</p>}{truncated && <p>Results may be incomplete. Narrow your filters.</p>}<ItemCards items={results} choose={choose} /></section>}
     {claim && <section><h2>Claim {claim.title}</h2><p>Tell the venue details only the owner would know.</p><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
       const contact = { ...(text(data, 'name') ? { name: text(data, 'name') } : {}), ...(text(data, 'phone') ? { phone: text(data, 'phone') } : {}) };
       await api('claim', '/v1/claims', { body: { item_id: claim.item_id, answers: claim.questions.map(q => ({ question_id: q.id, version: q.version, answer: text(data, q.id) })), ...(Object.keys(contact).length ? { contact } : {}) } });
       setClaim(null); setRevision(x => x + 1); action.setMessage('Claim submitted. The venue will review your answers.');
     }); }}>{claim.questions.map(q => <Field key={q.id} label={q.prompt} name={q.id} maxLength={1000} />)}<Field label="Contact name" name="name" required={false} maxLength={120} /><Field label="Phone" name="phone" type="tel" required={false} maxLength={32} /><button disabled={action.busy}>Submit claim</button><button type="button" className="secondary" onClick={() => setClaim(null)}>Cancel</button></form></section>}
-    <section><h2>My lost reports</h2><button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh records</button><PageList api={api} service="matching" path="/v1/lost-reports" revision={revision}>{rows => rows.map(report => <article key={report.id}><h3>{report.description}</h3><p>{report.state}</p><button onClick={() => setMatches(report.id)}>View matches</button></article>)}</PageList></section>
+    <section><h2>My lost reports</h2><button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh records</button><PageList api={api} service="matching" path="/v1/lost-reports" revision={revision}>{rows => rows.map(report => <article key={report.id}><h3>{report.description}</h3><p>{report.state}</p><button onClick={() => setMatches(report.id)}>View matches</button>{report.state === 'open' && <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
+      await api('matching', '/v1/lost-reports/' + id(report.id) + '/close', { body: { reason: text(data, 'reason') }, version: report.version });
+      setRevision(x => x + 1); action.setMessage('Lost report closed.');
+    }); }}><label>Closure reason<select name="reason"><option value="found">Found my item</option><option value="no_longer_needed">No longer needed</option></select></label><button disabled={action.busy}>Close lost report</button></form>}</article>)}</PageList></section>
     {matches && <section><h2>Report matches</h2><PageList api={api} service="matching" path={`/v1/lost-reports/${id(matches)}/matches`} revision={revision}>{rows => <ItemCards items={rows.map(row => row.item)} choose={choose} />}</PageList></section>}
     <section><h2>My claims</h2><PageList api={api} service="claim" path="/v1/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue={false} refresh={() => setRevision(x => x + 1)} />}</PageList></section>
   </>;
@@ -100,14 +105,24 @@ function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; ven
     setSelected(null); refresh(); action.setMessage('Claim approved.');
   });
   return <>{rows.map(row => <article key={row.id}><h3>{row.item_title}</h3><p>Status: {row.state}</p><button disabled={action.busy} aria-label={`${venue ? 'Review' : 'View'} ${row.item_title}`} onClick={() => void action.run(async () => { setQr(''); setSelected(await api('claim', `${path}/${id(row.id)}`)); })}>{venue ? 'Review claim' : 'View claim'}</button></article>)}
-    {selected && <article className="review"><h3>{selected.item_title}</h3><p>Status: {selected.state}</p>{selected.answers?.map(answer => <div key={answer.question_id}><strong>{answer.prompt}</strong><p>{answer.answer}</p></div>)}
-      {selected.active_operation_id && <button disabled={action.busy} onClick={() => void action.run(async () => { await waitOperation(api, 'claim', selected.active_operation_id!); setSelected(await api('claim', `${path}/${id(selected.id)}`)); refresh(); action.setMessage('Operation completed.'); })}>Check pending operation</button>}
-      {venue && selected.state === 'submitted' && <button disabled={action.busy} onClick={() => void approve()}>Approve claim</button>}
+    {selected && <article className="review"><h3>{selected.item_title}</h3><p>Status: {selected.state}</p><button disabled={action.busy} onClick={() => void action.run(async () => { setQr(''); setSelected(await api('claim', path + '/' + id(selected.id))); })}>Refresh claim details</button>{selected.answers?.map(answer => <div key={answer.question_id}><strong>{answer.prompt}</strong><p>{answer.answer}</p></div>)}
+      {selected.active_operation_id && <button disabled={action.busy} onClick={() => void action.run(async () => { const done = await waitOperation(api, 'claim', selected.active_operation_id!); if (selected.state === 'handover_pending' && done.claim_state !== 'handed_over') throw Error('Handover not completed. Refresh before continuing.'); setSelected(await api('claim', `${path}/${id(selected.id)}`)); refresh(); action.setMessage('Operation completed.'); })}>Check pending operation</button>}
+      {venue && selected.state === 'submitted' && <><button disabled={action.busy} onClick={() => void approve()}>Approve claim</button><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
+        const value = await api('claim', path + '/' + id(selected.id) + '/reject', { body: { reason_code: text(data, 'reason_code') }, version: selected.version });
+        setSelected(value); refresh(); action.setMessage('Claim rejected.');
+      }); }}><label>Rejection reason<select name="reason_code"><option value="answers_incorrect">Answers incorrect</option><option value="insufficient_detail">Insufficient detail</option><option value="duplicate">Duplicate</option><option value="other">Other</option></select></label><button disabled={action.busy}>Reject claim</button></form></>}
+      {venue && selected.state === 'approved' && <ScanToken busy={action.busy} submit={token => action.run(async () => {
+        const result = await api('claim', path + '/' + id(selected.id) + '/handover', { body: { token }, version: selected.version });
+        setSelected({ ...selected, state: 'handover_pending', active_operation_id: result.operation_id });
+        const done = await waitOperation(api, 'claim', result.operation_id);
+        if (done.claim_state !== 'handed_over') throw Error('Handover not completed. Refresh before continuing.');
+        setSelected(await api('claim', path + '/' + id(selected.id))); refresh(); action.setMessage('Item handed over.');
+      })} />}
       {!venue && selected.state === 'approved' && <button disabled={action.busy} onClick={() => void action.run(async () => {
         const value = await api('claim', `${path}/${id(selected.id)}/handover-token`, { body: {} });
         setQr(value.qr_payload); action.setMessage(`Handover code expires ${new Date(value.expires_at).toLocaleString()}. Show the code at the venue.`);
       })}>Get handover code</button>}
-      {qr && <p className="code">{qr}</p>}
+      {qr && <HandoverCode payload={qr} />}
     </article>}{action.status}</>;
 }
 
@@ -133,6 +148,7 @@ export function VenueApp({ api }: { api: Api }) {
     </form>{lockedForm && <p>Registration started. Keep this page open and retry with the same photo if the connection fails.</p>}{action.status}</section>
     <section><h2>Found items</h2><PageList api={api} service="item" path="/v1/items" revision={revision}>{rows => <ItemCards items={rows} />}</PageList></section>
     <section><h2>Claims to review</h2><PageList api={api} service="claim" path="/v1/venue/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue refresh={refresh} />}</PageList></section>
+    <Members api={api} />
     <section><details><summary>Venue onboarding (platform administrators)</summary><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
       await api('venue', '/v1/admin/venues', { body: { name: text(data, 'name'), slug: text(data, 'slug'), initial_admin_sub: text(data, 'admin') } }); action.setMessage('Venue created. The initial administrator must sign in again after identity sync.');
     }); }}><Field label="Venue name" name="name" maxLength={120} /><Field label="Venue slug" name="slug" maxLength={80} /><Field label="Initial administrator Cognito subject" name="admin" maxLength={128} /><button disabled={action.busy}>Create venue</button></form></details></section>

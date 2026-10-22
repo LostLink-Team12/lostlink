@@ -1,0 +1,1077 @@
+{
+  "source": "D1 Open Images validation subset",
+  "annotation": "Queries manually described from reviewed contact-sheet images; labels reflect source-object identity, not merely category similarity.",
+  "limitation": "Positive photo queries reuse item photos. No independent views, real owner queries or held-out evaluation are claimed.",
+  "photos": [
+    {
+      "image_id": "14d65997600bb7cd",
+      "photo_path": "match_photos/14d65997600bb7cd.jpg",
+      "sha256": "a78be4b22d9c9abd747581e5a960d52e55562a220feed5de16521889d1cde764",
+      "category": "Backpack",
+      "author": "Gustav Holmström",
+      "author_url": "https://www.flickr.com/people/hejgustav/",
+      "title": "Geocaching trip, Stenbäcken",
+      "source_url": "https://www.flickr.com/photos/hejgustav/3518626337",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "0040009ad56c2bc2",
+      "photo_path": "match_photos/0040009ad56c2bc2.jpg",
+      "sha256": "1ed9ec78e7f562611db672eae1ee7f4a824d4a19fd9580eb63295301063b4c90",
+      "category": "Handbag",
+      "author": "Emma",
+      "author_url": "https://www.flickr.com/people/tomandemma/",
+      "title": "Red-floral-pixie-bag",
+      "source_url": "https://www.flickr.com/photos/tomandemma/5405309020",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "04bed9439a2fb06f",
+      "photo_path": "match_photos/04bed9439a2fb06f.jpg",
+      "sha256": "f768a26ceb79b50e8afd0ba5d86034b39cba205402fa673c0063573678cacb81",
+      "category": "Handbag",
+      "author": "&quot;T&quot;eresa",
+      "author_url": "https://www.flickr.com/people/teresa-stanton/",
+      "title": "true fire airbrushed on leather purse hand bag",
+      "source_url": "https://www.flickr.com/photos/teresa-stanton/6318087279",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "002b0dc60b1068a9",
+      "photo_path": "match_photos/002b0dc60b1068a9.jpg",
+      "sha256": "be8cf6dc5d9ae1ccce68e7fb8198ea9e82dda1d79991af02f74b70997aff794a",
+      "category": "Suitcase",
+      "author": "Drew Coffman",
+      "author_url": "https://www.flickr.com/people/drewcoffman/",
+      "title": "Blue Suitcase",
+      "source_url": "https://www.flickr.com/photos/drewcoffman/4603358068",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "06e90333a82a8361",
+      "photo_path": "match_photos/06e90333a82a8361.jpg",
+      "sha256": "4dfe6598b6aaafe7c53a6ecdace0969ce8eb943fe12e2238604ab9090ae3c9be",
+      "category": "Suitcase",
+      "author": "Alan Levine",
+      "author_url": "https://www.flickr.com/people/cogdog/",
+      "title": "Alan's Box #3",
+      "source_url": "https://www.flickr.com/photos/cogdog/6129200964",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "12b999f7e3b75de1",
+      "photo_path": "match_photos/12b999f7e3b75de1.jpg",
+      "sha256": "cf9b593a4dba382e973154632272545ecbe89bca5eaba7b1e7d0920d8b05e44c",
+      "category": "Umbrella",
+      "author": "Bart Everson",
+      "author_url": "https://www.flickr.com/people/editor/",
+      "title": "Dinner",
+      "source_url": "https://www.flickr.com/photos/editor/7934159350",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "175aa1739edb9890",
+      "photo_path": "match_photos/175aa1739edb9890.jpg",
+      "sha256": "a84bb08fa81dfcdea366e7eda26f164913bdc4418c5fe4609b6f11d7c2a36692",
+      "category": "Umbrella",
+      "author": "OakleyOriginals",
+      "author_url": "https://www.flickr.com/people/oakleyoriginals/",
+      "title": "TGIF",
+      "source_url": "https://www.flickr.com/photos/oakleyoriginals/5042126836",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "012dc31b561d4214",
+      "photo_path": "match_photos/012dc31b561d4214.jpg",
+      "sha256": "63271fd4d75a503c800e24f299be062588f786957dfce59a18980166b7fcf863",
+      "category": "Mobile phone",
+      "author": "Phil Campbell",
+      "author_url": "https://www.flickr.com/people/clanlife/",
+      "title": "the htc hero android phone on trial, it ain't no iphone.",
+      "source_url": "https://www.flickr.com/photos/clanlife/4763513986",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "043f3655deab6e7c",
+      "photo_path": "match_photos/043f3655deab6e7c.jpg",
+      "sha256": "15f0597b1f7e41a40b2b3016bc87cc82f9f05f26de4b406e9f7a6606a3f3ec01",
+      "category": "Mobile phone",
+      "author": "David Goehring",
+      "author_url": "https://www.flickr.com/people/carbonnyc/",
+      "title": "Doodle Jumper",
+      "source_url": "https://www.flickr.com/photos/carbonnyc/4581311847",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "0421a6e230527185",
+      "photo_path": "match_photos/0421a6e230527185.jpg",
+      "sha256": "10c1668af6ce340ae33e57ba9dc6111f099214bd7e9f14a8f03dff414aaf63b8",
+      "category": "Laptop",
+      "author": "Esparta Palma",
+      "author_url": "https://www.flickr.com/people/esparta/",
+      "title": "Windows 7 + MacBook",
+      "source_url": "https://www.flickr.com/photos/esparta/3861904561",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "09ea349ee555b61d",
+      "photo_path": "match_photos/09ea349ee555b61d.jpg",
+      "sha256": "c7e9e1e0c77fdd3b1a840b763bd37ea60ca2ea71aa83015fa6a8782ad2f28e45",
+      "category": "Laptop",
+      "author": "Aaron Parecki",
+      "author_url": "https://www.flickr.com/people/aaronpk/",
+      "title": "IndieWebCamp 2011",
+      "source_url": "https://www.flickr.com/photos/aaronpk/5871553771",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "0908dd33cf950266",
+      "photo_path": "match_photos/0908dd33cf950266.jpg",
+      "sha256": "b5ba67e447c79ff25cdd01fb01d76e948fa8fc45322293f770ddd433dc67f4cc",
+      "category": "Headphones",
+      "author": "Orin Zebest",
+      "author_url": "https://www.flickr.com/people/orinrobertjohn/",
+      "title": "Quiet Now",
+      "source_url": "https://www.flickr.com/photos/orinrobertjohn/2559333952",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "1eeda2f2e8f31933",
+      "photo_path": "match_photos/1eeda2f2e8f31933.jpg",
+      "sha256": "2edc1abf1acfab445cb2cb6a6002dd86902872b8f9480fa815cd95f4fa85afd3",
+      "category": "Headphones",
+      "author": "Angel Arcones",
+      "author_url": "https://www.flickr.com/people/freddy-click-boy/",
+      "title": "Dia 83: Saber escuchar",
+      "source_url": "https://www.flickr.com/photos/freddy-click-boy/3202208642",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "01284dd8eaad0569",
+      "photo_path": "match_photos/01284dd8eaad0569.jpg",
+      "sha256": "29e8284ad7ea3756d280a618732a8ee9062b8c969c67ede7cf609498437a6751",
+      "category": "Camera",
+      "author": "naosuke ii",
+      "author_url": "https://www.flickr.com/people/ogwrnsk/",
+      "title": "IMG_6529",
+      "source_url": "https://www.flickr.com/photos/ogwrnsk/8553071111",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "022881fd81a5a8f7",
+      "photo_path": "match_photos/022881fd81a5a8f7.jpg",
+      "sha256": "fe880b504bfd1e4b7cb262ce80b60625abaadb1373345d9d0e3669f8bd6b5e82",
+      "category": "Camera",
+      "author": "Marc Lacoste",
+      "author_url": "https://www.flickr.com/people/croco/",
+      "title": "Lubitel 2",
+      "source_url": "https://www.flickr.com/photos/croco/252716102",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "182c1f2bfa4b4280",
+      "photo_path": "match_photos/182c1f2bfa4b4280.jpg",
+      "sha256": "b6f84420d26526e8cb76ee20715560a87acd3aea2cd6c1f90598a3a0629bb37d",
+      "category": "Mug",
+      "author": "Dan_Sai",
+      "author_url": "https://www.flickr.com/people/dan_sai/",
+      "title": "Crazy alien robot coffee machine from the future",
+      "source_url": "https://www.flickr.com/photos/dan_sai/3462798057",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "02deba0102b5ce2a",
+      "photo_path": "match_photos/02deba0102b5ce2a.jpg",
+      "sha256": "9ac761414d0c7188817fc0126406b7353d1b64256010dce3052360068f37eafb",
+      "category": "Bottle",
+      "author": "Shinji",
+      "author_url": "https://www.flickr.com/people/cinz/",
+      "title": "ck one",
+      "source_url": "https://www.flickr.com/photos/cinz/3462051499",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "128f92487d754a0c",
+      "photo_path": "match_photos/128f92487d754a0c.jpg",
+      "sha256": "c5583b69e5b55d852ba6fb9deaa8bfe77a2af39377527a9e1a4e9786b0d5b54e",
+      "category": "Computer mouse",
+      "author": "Jonathan Sulo",
+      "author_url": "https://www.flickr.com/people/jonathansulo/",
+      "title": "Logitech spöar Apple",
+      "source_url": "https://www.flickr.com/photos/jonathansulo/8411544430",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "398328305b2ed3d7",
+      "photo_path": "match_photos/398328305b2ed3d7.jpg",
+      "sha256": "dd0ab83c6fbcdc6bf0b1c0ef873b65f4e61672339adc4b4c4fbe2d0a608a970a",
+      "category": "Computer mouse",
+      "author": "Emilian Robert Vicol",
+      "author_url": "https://www.flickr.com/people/free-stock/",
+      "title": "Notebook-Mouse_26022-480x360",
+      "source_url": "https://www.flickr.com/photos/free-stock/4817557344",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "1735d6aa0d62cb00",
+      "photo_path": "match_photos/1735d6aa0d62cb00.jpg",
+      "sha256": "a1045bedc599d03e593d1130d79a96777fe57b2dc12daab763301a31c9e4fb1e",
+      "category": "Computer keyboard",
+      "author": "Eliazar Parra Cardenas",
+      "author_url": "https://www.flickr.com/people/eliazar/",
+      "title": "Spacebar gets ridiculously tiny with all the mode input keys. Entering Japanese is quite clumsy though not as clumsy as I imagined.",
+      "source_url": "https://www.flickr.com/photos/eliazar/3037733438",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    },
+    {
+      "image_id": "1f5cf6e96f0e0690",
+      "photo_path": "match_photos/1f5cf6e96f0e0690.jpg",
+      "sha256": "90c2430a5e76fdb53811d4c4822c059d74ea5e10ad1af4da38c626e7b8b1c64e",
+      "category": "Computer keyboard",
+      "author": "Cesar Cardoso",
+      "author_url": "https://www.flickr.com/people/cesarcardoso/",
+      "title": "Exposição Game On - CCBB/DF",
+      "source_url": "https://www.flickr.com/photos/cesarcardoso/6818950291",
+      "license": "https://creativecommons.org/licenses/by/2.0/",
+      "changes": "None; original Open Images validation image."
+    }
+  ],
+  "labels": [
+    {
+      "csv_row": 2,
+      "modality": "text",
+      "query_image_id": "14d65997600bb7cd",
+      "item_image_id": "14d65997600bb7cd",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 3,
+      "modality": "text",
+      "query_image_id": "14d65997600bb7cd",
+      "item_image_id": "0040009ad56c2bc2",
+      "is_match": 0,
+      "basis": "Visually different object and source category."
+    },
+    {
+      "csv_row": 4,
+      "modality": "photo",
+      "query_image_id": "14d65997600bb7cd",
+      "item_image_id": "14d65997600bb7cd",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 5,
+      "modality": "photo",
+      "query_image_id": "14d65997600bb7cd",
+      "item_image_id": "0040009ad56c2bc2",
+      "is_match": 0,
+      "basis": "Visually different object and source category."
+    },
+    {
+      "csv_row": 6,
+      "modality": "text+photo",
+      "query_image_id": "14d65997600bb7cd",
+      "item_image_id": "14d65997600bb7cd",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 7,
+      "modality": "text+photo",
+      "query_image_id": "14d65997600bb7cd",
+      "item_image_id": "0040009ad56c2bc2",
+      "is_match": 0,
+      "basis": "Visually different object and source category."
+    },
+    {
+      "csv_row": 8,
+      "modality": "text",
+      "query_image_id": "0040009ad56c2bc2",
+      "item_image_id": "0040009ad56c2bc2",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 9,
+      "modality": "text",
+      "query_image_id": "0040009ad56c2bc2",
+      "item_image_id": "04bed9439a2fb06f",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 10,
+      "modality": "photo",
+      "query_image_id": "0040009ad56c2bc2",
+      "item_image_id": "0040009ad56c2bc2",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 11,
+      "modality": "photo",
+      "query_image_id": "0040009ad56c2bc2",
+      "item_image_id": "04bed9439a2fb06f",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 12,
+      "modality": "text+photo",
+      "query_image_id": "0040009ad56c2bc2",
+      "item_image_id": "0040009ad56c2bc2",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 13,
+      "modality": "text+photo",
+      "query_image_id": "0040009ad56c2bc2",
+      "item_image_id": "04bed9439a2fb06f",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 14,
+      "modality": "text",
+      "query_image_id": "04bed9439a2fb06f",
+      "item_image_id": "04bed9439a2fb06f",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 15,
+      "modality": "text",
+      "query_image_id": "04bed9439a2fb06f",
+      "item_image_id": "0040009ad56c2bc2",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 16,
+      "modality": "photo",
+      "query_image_id": "04bed9439a2fb06f",
+      "item_image_id": "04bed9439a2fb06f",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 17,
+      "modality": "photo",
+      "query_image_id": "04bed9439a2fb06f",
+      "item_image_id": "0040009ad56c2bc2",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 18,
+      "modality": "text+photo",
+      "query_image_id": "04bed9439a2fb06f",
+      "item_image_id": "04bed9439a2fb06f",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 19,
+      "modality": "text+photo",
+      "query_image_id": "04bed9439a2fb06f",
+      "item_image_id": "0040009ad56c2bc2",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 20,
+      "modality": "text",
+      "query_image_id": "002b0dc60b1068a9",
+      "item_image_id": "002b0dc60b1068a9",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 21,
+      "modality": "text",
+      "query_image_id": "002b0dc60b1068a9",
+      "item_image_id": "06e90333a82a8361",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 22,
+      "modality": "photo",
+      "query_image_id": "002b0dc60b1068a9",
+      "item_image_id": "002b0dc60b1068a9",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 23,
+      "modality": "photo",
+      "query_image_id": "002b0dc60b1068a9",
+      "item_image_id": "06e90333a82a8361",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 24,
+      "modality": "text+photo",
+      "query_image_id": "002b0dc60b1068a9",
+      "item_image_id": "002b0dc60b1068a9",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 25,
+      "modality": "text+photo",
+      "query_image_id": "002b0dc60b1068a9",
+      "item_image_id": "06e90333a82a8361",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 26,
+      "modality": "text",
+      "query_image_id": "06e90333a82a8361",
+      "item_image_id": "06e90333a82a8361",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 27,
+      "modality": "text",
+      "query_image_id": "06e90333a82a8361",
+      "item_image_id": "002b0dc60b1068a9",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 28,
+      "modality": "photo",
+      "query_image_id": "06e90333a82a8361",
+      "item_image_id": "06e90333a82a8361",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 29,
+      "modality": "photo",
+      "query_image_id": "06e90333a82a8361",
+      "item_image_id": "002b0dc60b1068a9",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 30,
+      "modality": "text+photo",
+      "query_image_id": "06e90333a82a8361",
+      "item_image_id": "06e90333a82a8361",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 31,
+      "modality": "text+photo",
+      "query_image_id": "06e90333a82a8361",
+      "item_image_id": "002b0dc60b1068a9",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 32,
+      "modality": "text",
+      "query_image_id": "12b999f7e3b75de1",
+      "item_image_id": "12b999f7e3b75de1",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 33,
+      "modality": "text",
+      "query_image_id": "12b999f7e3b75de1",
+      "item_image_id": "175aa1739edb9890",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 34,
+      "modality": "photo",
+      "query_image_id": "12b999f7e3b75de1",
+      "item_image_id": "12b999f7e3b75de1",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 35,
+      "modality": "photo",
+      "query_image_id": "12b999f7e3b75de1",
+      "item_image_id": "175aa1739edb9890",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 36,
+      "modality": "text+photo",
+      "query_image_id": "12b999f7e3b75de1",
+      "item_image_id": "12b999f7e3b75de1",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 37,
+      "modality": "text+photo",
+      "query_image_id": "12b999f7e3b75de1",
+      "item_image_id": "175aa1739edb9890",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 38,
+      "modality": "text",
+      "query_image_id": "175aa1739edb9890",
+      "item_image_id": "175aa1739edb9890",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 39,
+      "modality": "text",
+      "query_image_id": "175aa1739edb9890",
+      "item_image_id": "12b999f7e3b75de1",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 40,
+      "modality": "photo",
+      "query_image_id": "175aa1739edb9890",
+      "item_image_id": "175aa1739edb9890",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 41,
+      "modality": "photo",
+      "query_image_id": "175aa1739edb9890",
+      "item_image_id": "12b999f7e3b75de1",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 42,
+      "modality": "text+photo",
+      "query_image_id": "175aa1739edb9890",
+      "item_image_id": "175aa1739edb9890",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 43,
+      "modality": "text+photo",
+      "query_image_id": "175aa1739edb9890",
+      "item_image_id": "12b999f7e3b75de1",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 44,
+      "modality": "text",
+      "query_image_id": "012dc31b561d4214",
+      "item_image_id": "012dc31b561d4214",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 45,
+      "modality": "text",
+      "query_image_id": "012dc31b561d4214",
+      "item_image_id": "043f3655deab6e7c",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 46,
+      "modality": "photo",
+      "query_image_id": "012dc31b561d4214",
+      "item_image_id": "012dc31b561d4214",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 47,
+      "modality": "photo",
+      "query_image_id": "012dc31b561d4214",
+      "item_image_id": "043f3655deab6e7c",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 48,
+      "modality": "text+photo",
+      "query_image_id": "012dc31b561d4214",
+      "item_image_id": "012dc31b561d4214",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 49,
+      "modality": "text+photo",
+      "query_image_id": "012dc31b561d4214",
+      "item_image_id": "043f3655deab6e7c",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 50,
+      "modality": "text",
+      "query_image_id": "043f3655deab6e7c",
+      "item_image_id": "043f3655deab6e7c",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 51,
+      "modality": "text",
+      "query_image_id": "043f3655deab6e7c",
+      "item_image_id": "012dc31b561d4214",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 52,
+      "modality": "photo",
+      "query_image_id": "043f3655deab6e7c",
+      "item_image_id": "043f3655deab6e7c",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 53,
+      "modality": "photo",
+      "query_image_id": "043f3655deab6e7c",
+      "item_image_id": "012dc31b561d4214",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 54,
+      "modality": "text+photo",
+      "query_image_id": "043f3655deab6e7c",
+      "item_image_id": "043f3655deab6e7c",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 55,
+      "modality": "text+photo",
+      "query_image_id": "043f3655deab6e7c",
+      "item_image_id": "012dc31b561d4214",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 56,
+      "modality": "text",
+      "query_image_id": "0421a6e230527185",
+      "item_image_id": "0421a6e230527185",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 57,
+      "modality": "text",
+      "query_image_id": "0421a6e230527185",
+      "item_image_id": "09ea349ee555b61d",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 58,
+      "modality": "photo",
+      "query_image_id": "0421a6e230527185",
+      "item_image_id": "0421a6e230527185",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 59,
+      "modality": "photo",
+      "query_image_id": "0421a6e230527185",
+      "item_image_id": "09ea349ee555b61d",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 60,
+      "modality": "text+photo",
+      "query_image_id": "0421a6e230527185",
+      "item_image_id": "0421a6e230527185",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 61,
+      "modality": "text+photo",
+      "query_image_id": "0421a6e230527185",
+      "item_image_id": "09ea349ee555b61d",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 62,
+      "modality": "text",
+      "query_image_id": "09ea349ee555b61d",
+      "item_image_id": "09ea349ee555b61d",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 63,
+      "modality": "text",
+      "query_image_id": "09ea349ee555b61d",
+      "item_image_id": "0421a6e230527185",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 64,
+      "modality": "photo",
+      "query_image_id": "09ea349ee555b61d",
+      "item_image_id": "09ea349ee555b61d",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 65,
+      "modality": "photo",
+      "query_image_id": "09ea349ee555b61d",
+      "item_image_id": "0421a6e230527185",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 66,
+      "modality": "text+photo",
+      "query_image_id": "09ea349ee555b61d",
+      "item_image_id": "09ea349ee555b61d",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 67,
+      "modality": "text+photo",
+      "query_image_id": "09ea349ee555b61d",
+      "item_image_id": "0421a6e230527185",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 68,
+      "modality": "text",
+      "query_image_id": "0908dd33cf950266",
+      "item_image_id": "0908dd33cf950266",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 69,
+      "modality": "text",
+      "query_image_id": "0908dd33cf950266",
+      "item_image_id": "1eeda2f2e8f31933",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 70,
+      "modality": "photo",
+      "query_image_id": "0908dd33cf950266",
+      "item_image_id": "0908dd33cf950266",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 71,
+      "modality": "photo",
+      "query_image_id": "0908dd33cf950266",
+      "item_image_id": "1eeda2f2e8f31933",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 72,
+      "modality": "text+photo",
+      "query_image_id": "0908dd33cf950266",
+      "item_image_id": "0908dd33cf950266",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 73,
+      "modality": "text+photo",
+      "query_image_id": "0908dd33cf950266",
+      "item_image_id": "1eeda2f2e8f31933",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 74,
+      "modality": "text",
+      "query_image_id": "01284dd8eaad0569",
+      "item_image_id": "01284dd8eaad0569",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 75,
+      "modality": "text",
+      "query_image_id": "01284dd8eaad0569",
+      "item_image_id": "022881fd81a5a8f7",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 76,
+      "modality": "photo",
+      "query_image_id": "01284dd8eaad0569",
+      "item_image_id": "01284dd8eaad0569",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 77,
+      "modality": "photo",
+      "query_image_id": "01284dd8eaad0569",
+      "item_image_id": "022881fd81a5a8f7",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 78,
+      "modality": "text+photo",
+      "query_image_id": "01284dd8eaad0569",
+      "item_image_id": "01284dd8eaad0569",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 79,
+      "modality": "text+photo",
+      "query_image_id": "01284dd8eaad0569",
+      "item_image_id": "022881fd81a5a8f7",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 80,
+      "modality": "text",
+      "query_image_id": "022881fd81a5a8f7",
+      "item_image_id": "022881fd81a5a8f7",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 81,
+      "modality": "text",
+      "query_image_id": "022881fd81a5a8f7",
+      "item_image_id": "01284dd8eaad0569",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 82,
+      "modality": "photo",
+      "query_image_id": "022881fd81a5a8f7",
+      "item_image_id": "022881fd81a5a8f7",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 83,
+      "modality": "photo",
+      "query_image_id": "022881fd81a5a8f7",
+      "item_image_id": "01284dd8eaad0569",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 84,
+      "modality": "text+photo",
+      "query_image_id": "022881fd81a5a8f7",
+      "item_image_id": "022881fd81a5a8f7",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 85,
+      "modality": "text+photo",
+      "query_image_id": "022881fd81a5a8f7",
+      "item_image_id": "01284dd8eaad0569",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 86,
+      "modality": "text",
+      "query_image_id": "182c1f2bfa4b4280",
+      "item_image_id": "182c1f2bfa4b4280",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 87,
+      "modality": "text",
+      "query_image_id": "182c1f2bfa4b4280",
+      "item_image_id": "02deba0102b5ce2a",
+      "is_match": 0,
+      "basis": "Visually different object and source category."
+    },
+    {
+      "csv_row": 88,
+      "modality": "photo",
+      "query_image_id": "182c1f2bfa4b4280",
+      "item_image_id": "182c1f2bfa4b4280",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 89,
+      "modality": "photo",
+      "query_image_id": "182c1f2bfa4b4280",
+      "item_image_id": "02deba0102b5ce2a",
+      "is_match": 0,
+      "basis": "Visually different object and source category."
+    },
+    {
+      "csv_row": 90,
+      "modality": "text+photo",
+      "query_image_id": "182c1f2bfa4b4280",
+      "item_image_id": "182c1f2bfa4b4280",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 91,
+      "modality": "text+photo",
+      "query_image_id": "182c1f2bfa4b4280",
+      "item_image_id": "02deba0102b5ce2a",
+      "is_match": 0,
+      "basis": "Visually different object and source category."
+    },
+    {
+      "csv_row": 92,
+      "modality": "text",
+      "query_image_id": "128f92487d754a0c",
+      "item_image_id": "128f92487d754a0c",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 93,
+      "modality": "text",
+      "query_image_id": "128f92487d754a0c",
+      "item_image_id": "398328305b2ed3d7",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 94,
+      "modality": "photo",
+      "query_image_id": "128f92487d754a0c",
+      "item_image_id": "128f92487d754a0c",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 95,
+      "modality": "photo",
+      "query_image_id": "128f92487d754a0c",
+      "item_image_id": "398328305b2ed3d7",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 96,
+      "modality": "text+photo",
+      "query_image_id": "128f92487d754a0c",
+      "item_image_id": "128f92487d754a0c",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 97,
+      "modality": "text+photo",
+      "query_image_id": "128f92487d754a0c",
+      "item_image_id": "398328305b2ed3d7",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 98,
+      "modality": "text",
+      "query_image_id": "1735d6aa0d62cb00",
+      "item_image_id": "1735d6aa0d62cb00",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 99,
+      "modality": "text",
+      "query_image_id": "1735d6aa0d62cb00",
+      "item_image_id": "1f5cf6e96f0e0690",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 100,
+      "modality": "photo",
+      "query_image_id": "1735d6aa0d62cb00",
+      "item_image_id": "1735d6aa0d62cb00",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 101,
+      "modality": "photo",
+      "query_image_id": "1735d6aa0d62cb00",
+      "item_image_id": "1f5cf6e96f0e0690",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    },
+    {
+      "csv_row": 102,
+      "modality": "text+photo",
+      "query_image_id": "1735d6aa0d62cb00",
+      "item_image_id": "1735d6aa0d62cb00",
+      "is_match": 1,
+      "basis": "Same D1 source image/object (duplicate-photo baseline)."
+    },
+    {
+      "csv_row": 103,
+      "modality": "text+photo",
+      "query_image_id": "1735d6aa0d62cb00",
+      "item_image_id": "1f5cf6e96f0e0690",
+      "is_match": 0,
+      "basis": "Visually different object/appearance in the same source category."
+    }
+  ]
+}
