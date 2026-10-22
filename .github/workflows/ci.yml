@@ -124,6 +124,59 @@ jobs:
       - run: python -m pip install -r requirements-dev.lock ./libs
       - run: python -m pytest -q -m integration
 
+  helm-chart:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      KUBECONFORM_VERSION: v0.8.0
+      KUBECONFORM_SHA256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.3.1
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install kubeconform
+        run: |
+          curl -fsSLo kubeconform.tgz "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          echo "${KUBECONFORM_SHA256}  kubeconform.tgz" | sha256sum -c -
+          tar -xzf kubeconform.tgz kubeconform
+      - name: Lint and render
+        run: |
+          helm lint infra/helm/lostlink -n lostlink -f infra/helm/tests/values-ci.yaml
+          helm template lostlink infra/helm/lostlink -n lostlink \
+            -f infra/helm/tests/values-ci.yaml > rendered.yaml
+          helm template lostlink infra/helm/lostlink -n lostlink \
+            -f infra/helm/tests/values-ci.yaml --set migrations.enabled=true > rendered-migrations.yaml
+      - name: Validate Kubernetes and KEDA schemas
+        run: |
+          ./kubeconform -strict -summary \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            rendered.yaml rendered-migrations.yaml
+      - name: Check IAM contract and startup settings
+        run: |
+          python -m pip install pyyaml==6.0.2
+          python infra/helm/tests/check_rendered.py rendered.yaml
+          python -m unittest discover -s infra/helm/tests -p 'test_*.py' -v
+      - name: Render the KEDA operator trust configuration
+        run: |
+          helm repo add kedacore https://kedacore.github.io/charts
+          helm template keda kedacore/keda --version 2.21.0 -n keda \
+            -f infra/helm/keda-values.yaml > rendered-keda.yaml
+          python infra/helm/tests/check_keda.py rendered-keda.yaml
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          cache-dependency-path: infra/helm/tests/pgx_tls/go.sum
+      - name: Verify PostgreSQL driver rejects wrong CA and hostname
+        working-directory: infra/helm/tests/pgx_tls
+        run: go test -mod=readonly -count=1 -v ./...
+
   security-scan:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -165,6 +218,10 @@ jobs:
           docker build --pull "${build_args[@]}" \
             --file "services/${SERVICE_NAME}/Dockerfile" \
             --tag "lostlink/${SERVICE_NAME}:${GITHUB_SHA}" .
+      - uses: actions/setup-python@v6
+        if: matrix.service == 'matching-service'
+        with:
+          python-version: "3.12"
       - name: Verify Matching image with the pinned CLIP model
         if: matrix.service == 'matching-service'
         run: |
@@ -173,32 +230,9 @@ jobs:
           # The image runs as appuser; the downloader creates a private temporary file.
           chmod 0755 "${model_dir}"
           chmod 0444 "${model_dir}/ViT-B-32.pt"
-          checkpoint_sha="$(python3 -c 'from scripts.prepare_clip_model import SHA256; print(SHA256)')"
-          docker run --rm --interactive --network none \
-            --mount "type=bind,src=${model_dir},dst=/models,readonly" \
-            --env CLIP_CHECKPOINT=/models/ViT-B-32.pt \
-            --env "CLIP_SHA256=${checkpoint_sha}" \
-            "lostlink/${SERVICE_NAME}:${GITHUB_SHA}" python - <<'PY'
-          import io
-          import math
-          import os
-
-          from PIL import Image
-
-          from matching_app.embedding import ClipEncoder
-
-          encoder = ClipEncoder(os.environ["CLIP_CHECKPOINT"], os.environ["CLIP_SHA256"], "cpu")
-          encoder.ready()
-          photo = io.BytesIO()
-          Image.new("RGB", (224, 224), "red").save(photo, format="PNG")
-          for text, image in [("red backpack", None), (None, photo.getvalue())]:
-              vector = encoder.encode(text, image)
-              if len(vector) != 512 or not all(math.isfinite(value) for value in vector):
-                  raise RuntimeError("CLIP must produce 512 finite values")
-              if not math.isclose(sum(value * value for value in vector), 1.0, abs_tol=1e-5):
-                  raise RuntimeError("CLIP must produce unit-length vectors")
-          print("Matching image loaded the pinned model and encoded text and photo offline")
-          PY
+          python -m pip install pyyaml==6.0.2
+          python infra/helm/tests/check_matching_memory.py \
+            --image "lostlink/${SERVICE_NAME}:${GITHUB_SHA}" --model-dir "${model_dir}"
       - name: Trivy image scan (OS and application dependencies)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:

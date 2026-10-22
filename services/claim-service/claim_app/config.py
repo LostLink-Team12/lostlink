@@ -13,7 +13,8 @@ from sqlalchemy.engine import make_url
 class ClaimSettings(Settings):
     service_name: str = "claim-service"
     process_mode: Literal["api", "worker"] = "api"
-    worker_mode: Literal["tasks", "outbox"] = "tasks"
+    # Outbox publishing needs only its database and topic, not Item or key access.
+    worker_mode: Literal["tasks", "outbox"] | None = None
     worker_database_url: SecretStr | None = None
     user_client_ids: list[str] = Field(default_factory=list)
     venue_base_url: str | None = None
@@ -85,9 +86,8 @@ class ClaimSettings(Settings):
             raise ValueError("Claim access modes require distinct login roles")
         if bool(self.field_encryption_keys) != bool(self.field_encryption_active_key_id):
             raise ValueError("Configure encryption keys and the active key ID together")
-        if self.environment in {"dev", "prod"} and (
-            self.process_mode == "api" or self.worker_mode == "tasks"
-        ):
+        publisher_only = self.process_mode == "worker" and self.worker_mode == "outbox"
+        if self.environment in {"dev", "prod"} and not publisher_only:
             required = [
                 self.item_base_url,
                 self.machine_token_url,

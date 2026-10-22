@@ -26,7 +26,8 @@ def https_url(value, *, allow_path=False):
 class NotificationSettings(Settings):
     service_name: str = "notification-service"
     process_mode: Literal["api", "worker"] = "api"
-    worker_mode: Literal["consume", "tasks"] = "tasks"
+    # The inbox consumer only records matches; only the sender needs Matching and SES.
+    worker_mode: Literal["consume", "tasks"] | None = None
     admin_database_url: SecretStr | None = None
     worker_database_url: SecretStr | None = None
     user_client_ids: list[str] = Field(default_factory=list)
@@ -86,7 +87,7 @@ class NotificationSettings(Settings):
                 raise ValueError("The capture sender is restricted to local/test environments")
             if (
                 self.process_mode == "worker"
-                and self.worker_mode == "tasks"
+                and self.worker_mode != "consume"
                 and not all(
                     [
                         self.matching_base_url,
