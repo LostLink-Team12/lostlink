@@ -290,7 +290,10 @@ jobs:
             --add-host kube-dns.kube-system.svc.cluster.local:127.0.0.1 \
             -v /etc/ssl/certs/ca-certificates.crt:/trust/combined.pem:ro \
             -p 127.0.0.1:18080:8080 "lostlink/frontend:${GITHUB_SHA}"
-          curl --fail --retry 6 --retry-connrefused --retry-delay 2 http://127.0.0.1:18080/health
+          if ! curl --fail --retry 6 --retry-all-errors --retry-delay 2 http://127.0.0.1:18080/health; then
+            docker logs "$name"
+            exit 1
+          fi
           for path in owner-app/ venue-portal/ matches/test; do
             curl --fail "http://127.0.0.1:18080/$path" | grep -q '/assets/'
           done
