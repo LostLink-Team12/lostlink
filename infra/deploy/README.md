@@ -45,12 +45,18 @@ skips superseded main builds before requesting AWS credentials.
 
 The separate main-only OIDC role `lostlink-dev-github-deploy` can describe the
 six required ECR images and manage endpoint access for only `lostlink-dev`.
+Its exact OIDC subject includes immutable owner/repository IDs:
+`repo:LostLink-Team12@343981760/lostlink@1423380955:ref:refs/heads/main`.
+Trust policy changes require an operator Terraform apply; merging Terraform
+source alone does not update AWS. See the
+[CD recovery handoff](../../docs/reviews/2026-10-23-cd-failure-recovery.md).
 Namespace RBAC permits patching only 20 named existing application/exporter
 Deployments and the `lostlink-runtime` / `lostlink-cd-state` ConfigMaps. It has
 no Secrets, RBAC, ServiceAccount, Job, pod-exec or database-master access.
 
 The runner leases its public IPv4 `/32` on the existing EKS endpoint allowlist;
-the `always()` cleanup removes only the added entry, preserving other operators'
+the `always()` cleanup skips AWS entirely when no lease was created; otherwise
+it removes only the added entry, preserving other operators'
 changes. A hard runner loss can prevent cleanup: remove that exact runner `/32`
 printed in the lease step, preserving the rest of the allowlist. No world-open
 CIDR is introduced. Terraform/network changes must not run concurrently with CD.

@@ -7,6 +7,7 @@ import re
 import subprocess
 import sys
 import time
+from contextlib import closing
 from pathlib import Path
 
 import boto3
@@ -194,17 +195,17 @@ def main():
     ]
     session = boto3.Session(region_name=args.region)
     config = Config(connect_timeout=5, read_timeout=30, retries={"mode": "standard"})
-    with session.client("sts", config=config) as sts:
+    with closing(session.client("sts", config=config)) as sts:
         if sts.get_caller_identity()["Account"] != args.account:
             raise RuntimeError("Wrong deployment account")
-    with session.client("eks", config=config) as eks:
+    with closing(session.client("eks", config=config)) as eks:
         endpoint = eks.describe_cluster(name="lostlink-dev")["cluster"]["endpoint"]
         current = json.loads(run([*kube, "config", "view", "--minify", "-o", "json"]))
         if current["clusters"][0]["cluster"]["server"] != endpoint:
             raise RuntimeError("Wrong Kubernetes endpoint")
     value = json.loads(run([*kube, "get", "configmap", STATE, "-o", "json"]))
     state = json.loads(value["data"]["state.json"])
-    with session.client("ecr", config=config) as ecr:
+    with closing(session.client("ecr", config=config)) as ecr:
         images = resolve_images(ecr, args.account, args.region, args.sha)
     deploy(args, kube, state, images)
     print("Dev release and HTTPS checks passed: " + args.sha)

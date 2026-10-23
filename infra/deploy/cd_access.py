@@ -4,6 +4,7 @@ import argparse
 import ipaddress
 import json
 import time
+from contextlib import closing
 from pathlib import Path
 from urllib.request import urlopen
 
@@ -74,10 +75,15 @@ def main():
     parser.add_argument("--region", default="ap-southeast-1")
     parser.add_argument("--lease", type=Path, required=True)
     args = parser.parse_args()
-    with boto3.client(
-        "eks",
-        region_name=args.region,
-        config=Config(connect_timeout=5, read_timeout=30, retries={"mode": "standard"}),
+    if args.action == "close" and not args.lease.exists():
+        print("No runner access lease; cleanup skipped")
+        return
+    with closing(
+        boto3.client(
+            "eks",
+            region_name=args.region,
+            config=Config(connect_timeout=5, read_timeout=30, retries={"mode": "standard"}),
+        )
     ) as eks:
         if args.action == "open":
             with urlopen("https://checkip.amazonaws.com", timeout=15) as response:
