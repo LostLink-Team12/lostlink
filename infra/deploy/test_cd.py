@@ -162,3 +162,32 @@ def test_already_allowed_runner_is_not_removed(monkeypatch, tmp_path):
     cd_access.open_access(client, "lostlink-dev", "8.8.8.8", path)
     cd_access.close_access(client, path)
     assert client.cidrs == ["8.8.8.0/24"]
+
+
+def test_rollout_failures_share_one_time_budget(monkeypatch):
+    ticks = iter([100, 101, 9999])
+    monkeypatch.setattr(cd.time, "monotonic", lambda: next(ticks))
+    calls = []
+
+    def command(args):
+        calls.append(args)
+        raise RuntimeError("unhealthy")
+
+    monkeypatch.setattr(cd, "run", command)
+    assert cd.wait_rollouts([], ["first", "second"]) == ["first", "second"]
+    assert calls[0][-1] == "--timeout=899s"
+    assert calls[1][-1] == "--timeout=1s"
+
+
+def test_image_resolution_requires_same_commit_for_every_image():
+    calls = []
+
+    class Registry:
+        def describe_images(self, **kwargs):
+            calls.append(kwargs)
+            return {"imageDetails": [{"imageDigest": "sha256:" + "a" * 64}]}
+
+    images = cd.resolve_images(Registry(), "123456789012", "ap-southeast-1", "b" * 40)
+    assert set(images) == {*cd.SERVICES, "frontend"}
+    assert all(c["imageIds"] == [{"imageTag": "b" * 40}] for c in calls)
+    assert all("@sha256:" in image for image in images.values())

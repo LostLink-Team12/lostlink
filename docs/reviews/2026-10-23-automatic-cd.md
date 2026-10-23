@@ -19,8 +19,11 @@ HPA/KEDA、资源、环境、身份与 TLS 配置继续由操作员维护；Deli
 - 真实 impersonation：patch `item-api` 和 CD state 允许；读测试 Secret、创建 Job、
   patch Grafana 均拒绝。服务器 dry-run 成功，未修改工作负载。
 - 当前源码迁移 hash 与已部署基线一致；20 个实际目标及容器名均校验通过。
-- 本地部署/CD 检查 21 passed（含新增 11 项），Terraform mock 16 passed；
+- 本地部署/CD 检查 23 passed（含新增 13 项），Terraform mock 16 passed；
   前端 28 tests 和生产构建通过；actionlint 1.7.12、Ruff、diff 检查通过。
+- AWS Access Analyzer 校验已应用身份策略，findings 为空。
+- 新增前端镜像扫描识别旧 Nginx/Alpine 镜像的已修复高危漏洞；升级到官方
+  1.30.6 alpine-slim，并固定 linux-amd64 digest，没有降低扫描门槛。
 
 ## 权限与故障边界
 
@@ -31,7 +34,8 @@ CreateAccessEntry/PassRole 扩展。
 
 GitHub runner 临时添加自己的 `/32`，结束时以 `always()` 清理，保留其他 CIDR。
 强制丢失 runner 仍可能阻止清理；操作员按日志中的精确 `/32` 清理，不整体覆盖 allowlist。
-工作负载/HTTPS 验证失败会还原旧 runtime 与镜像/修订并等待 rollout，失败仍报告失败；
+工作负载/HTTPS 验证失败会还原旧 runtime 与镜像/修订并等待 rollout；发布和回滚各有
+15 分钟共享等待预算，失败仍报告失败；
 回滚失败明确请求人工处理。Helm 历史镜像值可能落后于 CD，实际镜像与 CD state 才是发布记录。
 
 首次 GitHub OIDC → EKS 的完整自动发布需此变更合并 main 后执行；PR 中不会为了测试而

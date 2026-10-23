@@ -281,6 +281,19 @@ jobs:
         working-directory: frontend
       - name: Build frontend gateway
         run: docker build --pull -f infra/deploy/frontend.Dockerfile -t "lostlink/frontend:${GITHUB_SHA}" .
+      - name: Verify non-root read-only frontend runtime
+        run: |
+          name="lostlink-frontend-ci-${GITHUB_RUN_ID}"
+          trap 'docker rm -f "$name" >/dev/null 2>&1 || true' EXIT
+          docker run -d --name "$name" --user 1000:1000 --read-only \
+            --tmpfs /tmp:rw,nosuid,nodev,size=64m \
+            --add-host kube-dns.kube-system.svc.cluster.local:127.0.0.1 \
+            -v /etc/ssl/certs/ca-certificates.crt:/trust/combined.pem:ro \
+            -p 127.0.0.1:18080:8080 "lostlink/frontend:${GITHUB_SHA}"
+          curl --fail --retry 6 --retry-connrefused --retry-delay 2 http://127.0.0.1:18080/health
+          for path in owner-app/ venue-portal/ matches/test; do
+            curl --fail "http://127.0.0.1:18080/$path" | grep -q '/assets/'
+          done
       - name: Scan frontend image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:

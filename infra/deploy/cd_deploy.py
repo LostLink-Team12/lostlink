@@ -6,6 +6,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import boto3
@@ -26,7 +27,10 @@ STATE = "lostlink-cd-state"
 
 
 def run(command):
-    value = subprocess.run(command, capture_output=True, text=True, cwd=ROOT)
+    try:
+        value = subprocess.run(command, capture_output=True, text=True, cwd=ROOT, timeout=960)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("Deployment command timed out: " + command[0]) from None
     if value.returncode:
         raise RuntimeError("Deployment command failed: " + " ".join(command[:2]))
     return value.stdout
@@ -85,6 +89,18 @@ def patch(kube, kind, name, value, strategy="merge"):
     run([*kube, "patch", kind, name, "--type=" + strategy, "-p", json.dumps(value)])
 
 
+def wait_rollouts(kube, names):
+    deadline = time.monotonic() + 900
+    failures = []
+    for name in names:
+        remaining = max(1, int(deadline - time.monotonic()))
+        try:
+            run([*kube, "rollout", "status", "deployment/" + name, f"--timeout={remaining}s"])
+        except RuntimeError:
+            failures.append(name)
+    return failures
+
+
 def deploy(args, kube, state, images):
     require_migrated(state, migration_hashes(args.sha))
     runtime = {
@@ -112,9 +128,9 @@ def deploy(args, kube, state, images):
         for name, value in changes.items():
             changed.append(name)
             patch(kube, "deployment", name, value, "strategic")
-        for name in changes:
-            run([*kube, "rollout", "status", "deployment/" + name, "--timeout=900s"])
-            print("Ready: " + name, flush=True)
+        if pending := wait_rollouts(kube, changes):
+            raise RuntimeError("Rollout failed: " + ", ".join(pending))
+        print("All application rollouts ready", flush=True)
         run([sys.executable, "infra/deploy/smoke.py", "--origin", state["origin"]])
         patch(
             kube,
@@ -149,11 +165,7 @@ def deploy(args, kube, state, images):
                 )
             except RuntimeError:
                 failures.append(name)
-        for name in changed:
-            try:
-                run([*kube, "rollout", "status", "deployment/" + name, "--timeout=900s"])
-            except RuntimeError:
-                failures.append(name)
+        failures.extend(wait_rollouts(kube, changed))
         if failures:
             raise RuntimeError("Operator rollback required: " + ", ".join(failures)) from None
         raise
