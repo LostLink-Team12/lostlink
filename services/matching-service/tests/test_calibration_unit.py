@@ -55,3 +55,50 @@ def test_threshold_grid_is_inclusive_and_validated():
     assert threshold_grid(0.2, 0.25, 0.01) == [0.2, 0.21, 0.22, 0.23, 0.24, 0.25]
     with pytest.raises(ValueError):
         threshold_grid(0.3, 0.2, 0.01)
+
+
+@pytest.mark.parametrize("custom_range", [False, True])
+def test_cli_and_markdown_share_high_score_recommendations(
+    tmp_path, monkeypatch, capsys, custom_range
+):
+    import json
+    from pathlib import Path
+
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[3] / "scripts"))
+    from calibrate_match_threshold import main as calibrate
+    from calibration_summary import main as summarise
+
+    scores = tmp_path / "scores.csv"
+    scores.write_text(
+        "modality,score,is_match\ntext+photo,0.81,1\ntext+photo,0.70,0\n",
+        encoding="utf-8",
+    )
+    options = ["--start", "0.10", "--stop", "0.45"] if custom_range else []
+    assert calibrate(["--scores", str(scores), "--min-precision", "0.9", *options]) == 0
+    result = json.loads(capsys.readouterr().out)
+    report_path = tmp_path / "report.json"
+    report_path.write_text(json.dumps(result), encoding="utf-8")
+    assert summarise([str(scores), "--report", str(report_path)]) == 0
+    markdown = capsys.readouterr().out
+    assert "precision target 0.9" in markdown
+    if custom_range:
+        assert result["overall"] is None
+        assert "none reaches target" in markdown
+        assert "**0.71**" not in markdown
+        assert "| 0.71 |" not in markdown
+    else:
+        assert result["overall"]["threshold"] == pytest.approx(0.71)
+        assert result["modalities"]["text+photo"]["recommended"]["threshold"] == pytest.approx(0.71)
+        assert "**0.71** (P 1.00, R 1.00, TP 1, FP 0)" in markdown
+        assert "| 0.71 |" in markdown
+
+
+def test_summary_without_json_uses_the_same_default_grid(monkeypatch):
+    from pathlib import Path
+
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[3] / "scripts"))
+    from calibration_summary import summarise
+
+    scores = rows("photo", [(0.82, True), (0.73, False)])
+    assert "**0.74**" in summarise(scores, 0.8)
+    assert report(scores)["overall"]["threshold"] == pytest.approx(0.74)

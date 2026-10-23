@@ -1,0 +1,83 @@
+name: Match threshold calibration
+
+# Scores the labelled D1 pairs with the pinned CLIP model inside the real Matching image and
+# reports the lowest threshold per query modality that meets the precision target (#9).
+on:
+  workflow_dispatch:
+    inputs:
+      min_precision:
+        description: Precision target for the recommended threshold
+        default: "0.8"
+  pull_request:
+    paths:
+      - tests/data/match_pairs.csv
+      - tests/data/match_photos/**
+      - scripts/calibrate_match_threshold.py
+      - scripts/calibration_summary.py
+      - services/matching-service/tests/test_calibration_unit.py
+      - services/matching-service/matching_app/calibration.py
+      - services/matching-service/matching_app/embedding.py
+      - .github/workflows/calibration.yml
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      MIN_PRECISION: ${{ inputs.min_precision || '0.8' }}
+      IMAGE: lostlink/matching-service:calibration
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Validate inputs
+        run: |
+          [[ "${MIN_PRECISION}" =~ ^(0(\.[0-9]+)?|1(\.0+)?)$ ]] || { echo "min_precision must be in [0, 1]"; exit 1; }
+      - name: Build Matching image with ML dependencies
+        run: |
+          docker build --pull --build-arg SERVICE_DIR=services/matching-service \
+            --build-arg INSTALL_ML=true \
+            --file services/matching-service/Dockerfile --tag "${IMAGE}" .
+      - name: Download and verify the pinned CLIP checkpoint
+        run: |
+          model_dir="${RUNNER_TEMP}/clip"
+          python3 scripts/prepare_clip_model.py --destination "${model_dir}/ViT-B-32.pt"
+          chmod 0755 "${model_dir}"
+          chmod 0444 "${model_dir}/ViT-B-32.pt"
+          echo "MODEL_DIR=${model_dir}" >> "${GITHUB_ENV}"
+          echo "CLIP_SHA256=$(python3 -c 'from scripts.prepare_clip_model import SHA256; print(SHA256)')" >> "${GITHUB_ENV}"
+      - name: Score labelled pairs offline
+        run: |
+          out_dir="${RUNNER_TEMP}/calibration"
+          mkdir -p "${out_dir}"
+          chmod 0777 "${out_dir}"  # the image runs as appuser
+          docker run --rm --network none \
+            --mount "type=bind,src=${GITHUB_WORKSPACE},dst=/src,readonly" \
+            --mount "type=bind,src=${MODEL_DIR},dst=/models,readonly" \
+            --mount "type=bind,src=${out_dir},dst=/out" \
+            --workdir /src \
+            --env CLIP_CHECKPOINT=/models/ViT-B-32.pt \
+            --env "CLIP_SHA256=${CLIP_SHA256}" \
+            "${IMAGE}" python scripts/calibrate_match_threshold.py \
+              --pairs tests/data/match_pairs.csv \
+              --write-scores /out/match_scores.csv \
+              --min-precision "${MIN_PRECISION}" > "${out_dir}/report.json"
+          cat "${out_dir}/report.json"
+          echo "OUT_DIR=${out_dir}" >> "${GITHUB_ENV}"
+      - name: Summarise precision and recall by threshold
+        run: |
+          python3 scripts/calibration_summary.py "${OUT_DIR}/match_scores.csv" \
+            --report "${OUT_DIR}/report.json" --min-precision "${MIN_PRECISION}" \
+            | tee "${OUT_DIR}/summary.md" >> "${GITHUB_STEP_SUMMARY}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: match-threshold-calibration
+          path: ${{ env.OUT_DIR }}
+          retention-days: 30
