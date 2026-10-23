@@ -1,6 +1,6 @@
 # 后端接入指南
 
-更新时间：2026-10-21。维护人：JIANG YIBAI。
+更新时间：2026-10-22。维护人：JIANG YIBAI。
 
 本文汇总 Phase 1 后端已实现的服务、对外契约，以及各成员需要完成的接入工作。这里记录的是后端采用的约定和接入要求，并不表示队友已经确认，也不表示真实云端联调已经完成。接口细节以 [API 契约](api/README.md)和各服务 README 为准。
 
@@ -21,6 +21,8 @@
 | Partner API / Webhooks | Seed 2 合作方接口 | Phase 2，未实现 | 见第 5 节 |
 
 本地验证使用 Docker PostgreSQL/pgvector 与 LocalStack（S3/SNS/SQS）。真实 Cognito、SES、AWS IAM、EKS 部署与 5,000 张照片云端吞吐尚未验收。
+
+云端配置交接、逐项验收和搜索分段测量见[后端联调准备清单](backend-readiness.md)。该清单是联调材料，不代表 AWS 验收已通过。
 
 ## 2. 通用接口约定（前端与其他服务）
 

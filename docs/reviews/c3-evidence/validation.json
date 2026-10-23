@@ -1,8 +1,8 @@
 {
   "local": {
     "backend_unit": {
-      "passed": 238,
-      "deselected": 83,
+      "passed": 314,
+      "deselected": 111,
       "excluded_markers": [
         "integration",
         "model",
@@ -16,8 +16,9 @@
       "passed": 16
     },
     "load_tool_contracts": {
-      "passed": 11,
-      "small_batch_default_vu_regression": "real k6 passed"
+      "passed": 17,
+      "small_batch_default_vu_regression": "real k6 passed",
+      "includes": "C3 native k6 plus main search-review JavaScript contracts"
     },
     "frontend": {
       "passed": 28
@@ -29,6 +30,9 @@
       "internal_pool_size": 2
     },
     "acceptance_sender_safety": {
+      "passed": 5
+    },
+    "main_search_review_native_k6": {
       "passed": 5
     }
   },
@@ -46,5 +50,6 @@
     "source_commit": "c4fe5b91e0216b1061c181119083fe9fccd213f8"
   },
   "local_full_container_integration_rerun": false,
-  "deployed_backend_source_commit": "62c0f4d93466d31763a4d1493a8dcfa324ba3daf"
+  "deployed_backend_source_commit": "62c0f4d93466d31763a4d1493a8dcfa324ba3daf",
+  "merged_main_commit": "f385c80"
 }

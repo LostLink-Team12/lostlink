@@ -4,6 +4,8 @@
 - `helm/` - one `lostlink` chart for all services and workers (Deployments, Services, IRSA service accounts, HPA, KEDA ScaledObject, internal TLS). See [helm/README.md](helm/README.md).
 - Cost control: smallest instance sizes, Spot for worker nodes, `terraform destroy` when idle, AWS Budgets alarm.
 - `ci/` - GitHub OIDC trust and ECR push policy templates. See [C2 setup and acceptance checks](../docs/ci.md).
+- `database/` - public role/environment mapping for the repeatable backend bootstrap,
+  migration and preflight tools. See [the database/key operations guide](../docs/backend-database-tools.md).
 
 C1 Terraform implementation and the deployment/import runbook are in
 [`terraform/README.md`](terraform/README.md). The implemented Phase 1 stack uses

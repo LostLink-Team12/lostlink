@@ -19,6 +19,8 @@
 
 操作与版本见 [部署 runbook](../../infra/deploy/README.md)。镜像、业务、压测与截图证据
 放在本记录相邻的 `c3-evidence/`。未导出 Terraform state、口令、访问令牌或 presigned fields。
+收尾时同步了主线 #14/#18/#19；云端镜像仍明确对应 `62c0f4d` 的已验收构建。
+主线新增的错误契约、消费者恢复和搜索阶段诊断由合并后的本地/CI 回归覆盖，未冒称已部署压测。
 
 ## 实际完成的业务验证
 
@@ -138,13 +140,13 @@ max 9 → 5。最终 EKS ACTIVE、两节点 Ready、22 个 Deployment 全部就�
 
 ## 回归检查与实际限制
 
-- 后端单元：238 passed，83 deselected（integration/model/scale）；本地未重跑全套容器集成。
+- 同步最新主线后的后端单元：314 passed，111 deselected（integration/model/scale）；本地未重跑全套容器集成。
 - 部署真实 Settings + 五 charts 渲染及峰值连接预算：5 passed；发送器暂停安全检查另 5 passed。
   验收工具同时要求 Deployment 为零且没有运行中或终止中的 sender Pod，避免仅改副本数就开始报告测试。
 - Matching 与 Item 的真实隔离 pgvector 集成：23 passed、6 skipped（本地未启用 LocalStack 事件/媒体端点）；
   覆盖跨场馆、过滤、版本墓碑、持久化匹配、通知复核及 Item 内部池 2。临时测试容器已删除。
 - Terraform mock：16 passed，0 failed；没有使用真实 backend state。
-- 与当前主线合并后，压测工具 + 实际 k6 localhost 契约：11 passed。
+- 与当前主线合并后，压测工具 + 实际 k6 localhost 契约及 search-review 脚本：17 passed。
 - 前端此前 28 tests 和生产构建通过；两端真实 Cognito 浏览器登录通过。
 - Ruff check/format、Terraform fmt、git diff check 已检查；后续改动需在提交前复核。
 - Trivy 0.76.0 扫描当前 dev 模块且显式启用 C3：无未豁免 HIGH/CRITICAL。
