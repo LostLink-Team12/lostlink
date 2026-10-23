@@ -376,7 +376,7 @@ class ClaimService:
             fail(409, "token_replay_expired", "Issue a new handover code")
         return {**value, "qr_payload": payload}
 
-    def scan(self, principal, claim_id, version, raw_token, token_key):
+    def scan(self, principal, claim_id, version, raw_token, token_key, mode="counter"):
         token_claim, token_id, secret = parse_token(raw_token)
         if token_claim != claim_id:
             fail(409, "token_invalid", "Handover code is not valid for this claim")
@@ -410,7 +410,7 @@ class ClaimService:
                 tenant_id=claim.tenant_id,
                 owner_sub=claim.owner_sub,
                 token_id=token.id,
-                mode="counter",
+                mode=mode,
                 operator_sub=principal.subject,
                 state="pending",
             )

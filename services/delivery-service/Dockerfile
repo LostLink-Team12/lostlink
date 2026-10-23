@@ -6,6 +6,8 @@ COPY libs ./libs
 RUN pip install --no-cache-dir -r requirements.lock \
     && pip install --no-cache-dir --no-deps ./libs
 COPY services/delivery-service/delivery_app ./delivery_app
+COPY services/delivery-service/migrations ./migrations
+COPY services/delivery-service/alembic.ini .
 USER appuser
 EXPOSE 8000
 HEALTHCHECK CMD python -c "import urllib.request;urllib.request.urlopen('http://localhost:8000/health', timeout=3)"

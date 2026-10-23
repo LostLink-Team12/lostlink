@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
-from delivery_app.domain import Actor, Shipment, State
+from delivery_app.domain import Actor, Shipment, State, TransitionError
 from delivery_app.handlers import MissingAuthorization, on_claim_cancelled, on_claim_handed_over
 
 NOW = datetime(2026, 10, 22, 9, 0, tzinfo=UTC)
@@ -32,9 +32,43 @@ def test_courier_handover_marks_pickup_once():
     assert on_claim_handed_over(handed_over(updated), TENANT, updated) is None
 
 
-def test_counter_handover_is_ignored():
+def test_counter_handover_without_shipment_needs_no_delivery_action():
     value = shipment()
-    assert on_claim_handed_over(handed_over(value, "counter"), TENANT, value) is None
+    assert on_claim_handed_over(handed_over(value, "counter"), TENANT, None) is None
+
+
+def test_counter_handover_cancels_pending_shipment_once():
+    value = shipment()
+    payload = handed_over(value, "counter")
+    updated, change = on_claim_handed_over(payload, TENANT, value)
+    assert updated.state is State.CANCELLED and updated.version == value.version + 1
+    assert change.actor is Actor.SYSTEM and change.occurred_at == NOW
+    assert change.note == "collected_at_counter"
+    assert on_claim_handed_over(payload, TENANT, updated) is None
+
+
+def test_handover_without_mode_is_rejected_by_the_event_contract():
+    value = shipment()
+    payload = handed_over(value, "counter")
+    del payload["mode"]
+    with pytest.raises(ValueError):
+        on_claim_handed_over(payload, TENANT, value)
+
+
+def test_counter_handover_does_not_overwrite_courier_transport():
+    value, _ = shipment().transition(State.PICKED_UP, Actor.SYSTEM, NOW)
+    with pytest.raises(TransitionError):
+        on_claim_handed_over(handed_over(value, "counter"), TENANT, value)
+
+
+@pytest.mark.parametrize("field", ["claim_id", "item_id", "owner_id"])
+def test_counter_handover_must_match_the_authorized_shipment(field):
+    value = shipment()
+    payload = handed_over(value, "counter") | {field: str(uuid4())}
+    with pytest.raises(MissingAuthorization):
+        on_claim_handed_over(payload, TENANT, value)
+    with pytest.raises(MissingAuthorization):
+        on_claim_handed_over(handed_over(value, "counter"), uuid4(), value)
 
 
 def test_courier_handover_without_authorization_is_an_alarm():

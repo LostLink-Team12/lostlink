@@ -63,6 +63,8 @@ class Cancellation(Input):
 
 class HandoverScan(Input):
     token: str = Field(min_length=20, max_length=200)
+    # courier: the owner's authorized delivery partner collects the item (Seed 2, ADR-0009).
+    mode: Literal["counter", "courier"] = "counter"
 
 
 class PublicQuestion(BaseModel):

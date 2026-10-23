@@ -376,7 +376,7 @@ def handover(
         key,
         body.model_dump(),
         version,
-        lambda svc: svc.scan(principal, claim_id, version, body.token, token_key),
+        lambda svc: svc.scan(principal, claim_id, version, body.token, token_key, body.mode),
     )
 
 

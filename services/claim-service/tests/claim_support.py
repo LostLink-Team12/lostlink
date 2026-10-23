@@ -139,9 +139,10 @@ def issue_token(env, claim_id, actor="owner", key=None):
     return response.json()
 
 
-def scan(env, claim_id, token, venue="a", *, version, key=None):
+def scan(env, claim_id, token, venue="a", *, version, key=None, mode=None):
+    body = {"token": token} if mode is None else {"token": token, "mode": mode}
     return env.client.post(
         f"/v1/venue/claims/{claim_id}/handover",
         headers=headers(venue, version=version, key=key),
-        json={"token": token},
+        json=body,
     )

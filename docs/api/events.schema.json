@@ -192,6 +192,112 @@
         "type": "object"
       }
     },
+    "delivery.status_changed": {
+      "source": "delivery-service",
+      "tenant_required": true,
+      "data": {
+        "additionalProperties": false,
+        "description": "Seed 2 shipment lifecycle change (ADR-0009); from_state is null on creation.",
+        "properties": {
+          "shipment_id": {
+            "format": "uuid",
+            "title": "Shipment Id",
+            "type": "string"
+          },
+          "claim_id": {
+            "format": "uuid",
+            "title": "Claim Id",
+            "type": "string"
+          },
+          "item_id": {
+            "format": "uuid",
+            "title": "Item Id",
+            "type": "string"
+          },
+          "owner_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Owner Id",
+            "type": "string"
+          },
+          "partner_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Partner Id",
+            "type": "string"
+          },
+          "from_state": {
+            "anyOf": [
+              {
+                "enum": [
+                  "awaiting_pickup",
+                  "picked_up",
+                  "in_transit",
+                  "out_for_delivery",
+                  "delivery_failed",
+                  "delivered",
+                  "returned_to_venue",
+                  "cancelled"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From State"
+          },
+          "to_state": {
+            "enum": [
+              "awaiting_pickup",
+              "picked_up",
+              "in_transit",
+              "out_for_delivery",
+              "delivery_failed",
+              "delivered",
+              "returned_to_venue",
+              "cancelled"
+            ],
+            "title": "To State",
+            "type": "string"
+          },
+          "actor": {
+            "enum": [
+              "system",
+              "partner",
+              "owner",
+              "venue"
+            ],
+            "title": "Actor",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1,
+            "title": "Version",
+            "type": "integer"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shipment_id",
+          "claim_id",
+          "item_id",
+          "owner_id",
+          "partner_id",
+          "from_state",
+          "to_state",
+          "actor",
+          "version",
+          "occurred_at"
+        ],
+        "title": "DeliveryStatusChanged",
+        "type": "object"
+      }
+    },
     "item.catalog_changed": {
       "source": "item-service",
       "tenant_required": true,

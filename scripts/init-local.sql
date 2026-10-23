@@ -13,7 +13,8 @@ BEGIN
         'lostlink_matching_api', 'lostlink_matching_internal', 'lostlink_matching_worker',
         'lostlink_claim_api', 'lostlink_claim_worker',
         'lostlink_notification_api', 'lostlink_notification_admin',
-        'lostlink_notification_worker'
+        'lostlink_notification_worker',
+        'lostlink_delivery_api', 'lostlink_delivery_worker'
     ] LOOP
         IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = role_name) THEN
             EXECUTE format(
