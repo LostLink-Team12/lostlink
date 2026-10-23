@@ -39,19 +39,27 @@ export function PageList({ api, service, path, revision = 0, children }: { api: 
   return <>{loading ? <p role="status">Loading…</p> : error ? <p role="alert">{error}</p> : <>{page.items.length ? children(page.items) : <p>No records yet.</p>}<div className="pagination"><button disabled={!offset} onClick={() => setOffset(x => x - 20)}>Previous</button><span>Page {offset / 20 + 1}</span><button disabled={!page.has_more} onClick={() => setOffset(x => x + 20)}>Next</button></div></>}</>;
 }
 
-export function ItemCards({ items, choose }: { items: Item[]; choose?: (item: Item) => void }) {
+export function ItemCards({ items, choose, busy = false }: { items: Item[]; choose?: (item: Item) => void; busy?: boolean }) {
   return <div className="cards">{items.map(item => <article key={item.item_id || item.id}>
     {item.photo_url && <img src={item.photo_url} alt={item.title} loading="lazy" />}
     <span className="tag">{item.category}</span><h3>{item.title}</h3><p>{item.description}</p>
     {item.public_location_hint && <p>{item.public_location_hint}</p>}
     {item.score !== undefined && <p>Similarity {item.score.toFixed(3)}</p>}
     {item.state && <p>Status: {item.state}</p>}
-    {choose && <button onClick={() => choose(item)} aria-label={`Claim ${item.title}`}>This could be mine</button>}
+    {choose && <button disabled={busy} onClick={() => choose(item)} aria-label={`Claim ${item.title}`}>This could be mine</button>}
   </article>)}</div>;
 }
 
 export function OwnerApp({ api }: { api: Api }) {
-  const action = useAction();
+  const action = useAction(), claimAction = useAction();
+  const claimHeading = useRef<HTMLHeadingElement>(null);
+  const [claimItem, setClaimItem] = useState<Item | null>(null), [claimSubmitted, setClaimSubmitted] = useState(false);
+  useEffect(() => {
+    if (claimItem) {
+      claimHeading.current?.focus({ preventScroll: true });
+      claimHeading.current?.scrollIntoView?.({ block: 'start' });
+    }
+  }, [claimItem]);
   const [results, setResults] = useState<Item[] | null>(null), [truncated, setTruncated] = useState(false), [revision, setRevision] = useState(0);
   const [claim, setClaim] = useState<{ item_id: string; title: string; questions: Question[] } | null>(null);
   const [matches, setMatches] = useState<string | null>(null);
@@ -59,7 +67,12 @@ export function OwnerApp({ api }: { api: Api }) {
     const photo = file(data);
     return { ...(text(data, 'description') ? { text: text(data, 'description') } : {}), ...(photo ? { photo_base64: await photoBase64(photo) } : {}), ...(text(data, 'category') ? { category: text(data, 'category') } : {}), ...(text(data, 'venue') ? { venue_id: text(data, 'venue') } : {}), ...(text(data, 'from') ? { found_from: new Date(text(data, 'from')).toISOString() } : {}), ...(text(data, 'until') ? { found_until: new Date(text(data, 'until')).toISOString() } : {}) };
   };
-  const choose = (item: Item) => action.run(async () => { setClaim(await api('claim', `/v1/claim-questions?item_id=${id(item.item_id!)}`)); });
+  const choose = (item: Item) => claimAction.run(async () => {
+    setClaimItem(item); setClaim(null); setClaimSubmitted(false);
+    const itemId = item.item_id || item.id;
+    if (!itemId) throw Error('This item is missing its identifier. Search again.');
+    setClaim(await api('claim', `/v1/claim-questions?item_id=${id(itemId)}`));
+  });
   return <>
     <section><p className="eyebrow">OWNER APP</p><h1>Find what matters.</h1><p>Search found items across venues, or save a lost report for future matches.</p>
       <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); const mode = (e.nativeEvent as SubmitEvent).submitter?.getAttribute('value'); void action.run(async () => {
@@ -79,18 +92,24 @@ export function OwnerApp({ api }: { api: Api }) {
         <div className="actions"><button disabled={action.busy} value="search">Search items</button><button disabled={action.busy} value="report" className="secondary">Save lost report</button></div>
       </form>{action.status}
     </section>
-    <MatchLink api={api} choose={choose} revision={revision} />
-    {results && <section><h2>Search results</h2>{!results.length && <p>No matches. Try another description or save a lost report.</p>}{truncated && <p>Results may be incomplete. Narrow your filters.</p>}<ItemCards items={results} choose={choose} /></section>}
-    {claim && <section><h2>Claim {claim.title}</h2><p>Tell the venue details only the owner would know.</p><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
-      const contact = { ...(text(data, 'name') ? { name: text(data, 'name') } : {}), ...(text(data, 'phone') ? { phone: text(data, 'phone') } : {}) };
-      await api('claim', '/v1/claims', { body: { item_id: claim.item_id, answers: claim.questions.map(q => ({ question_id: q.id, version: q.version, answer: text(data, q.id) })), ...(Object.keys(contact).length ? { contact } : {}) } });
-      setClaim(null); setRevision(x => x + 1); action.setMessage('Claim submitted. The venue will review your answers.');
-    }); }}>{claim.questions.map(q => <Field key={q.id} label={q.prompt} name={q.id} maxLength={1000} />)}<Field label="Contact name" name="name" required={false} maxLength={120} /><Field label="Phone" name="phone" type="tel" required={false} maxLength={32} /><button disabled={action.busy}>Submit claim</button><button type="button" className="secondary" onClick={() => setClaim(null)}>Cancel</button></form></section>}
+    {claimItem && <section aria-labelledby="claim-heading">
+      <h2 id="claim-heading" ref={claimHeading} tabIndex={-1}>Claim {claimItem.title}</h2>
+      {claimAction.status}
+      {claim && <><p>Tell the venue details only the owner would know.</p><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void claimAction.run(async () => {
+        const contact = { ...(text(data, 'name') ? { name: text(data, 'name') } : {}), ...(text(data, 'phone') ? { phone: text(data, 'phone') } : {}) };
+        await api('claim', '/v1/claims', { body: { item_id: claim.item_id, answers: claim.questions.map(q => ({ question_id: q.id, version: q.version, answer: text(data, q.id) })), ...(Object.keys(contact).length ? { contact } : {}) } });
+        setClaim(null); setClaimSubmitted(true); setRevision(x => x + 1); claimAction.setMessage('Claim submitted. The venue will review your answers.');
+      }); }}>{claim.questions.map(q => <Field key={q.id} label={q.prompt} name={q.id} maxLength={1000} />)}<Field label="Contact name" name="name" required={false} maxLength={120} /><Field label="Phone" name="phone" type="tel" required={false} maxLength={32} /><button disabled={claimAction.busy}>Submit claim</button></form></>}
+      {!claim && !claimSubmitted && !claimAction.busy && <button onClick={() => void choose(claimItem)}>Retry loading questions</button>}
+      <button type="button" disabled={claimAction.busy} className="secondary" onClick={() => { setClaimItem(null); setClaim(null); }}>{claimSubmitted ? 'Close' : 'Cancel'}</button>
+    </section>}
+    <MatchLink api={api} choose={choose} revision={revision} busy={claimAction.busy || action.busy} />
+    {results && <section><h2>Search results</h2>{!results.length && <p>No matches. Try another description or save a lost report.</p>}{truncated && <p>Results may be incomplete. Narrow your filters.</p>}<ItemCards items={results} choose={choose} busy={claimAction.busy || action.busy} /></section>}
     <section><h2>My lost reports</h2><button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh records</button><PageList api={api} service="matching" path="/v1/lost-reports" revision={revision}>{rows => rows.map(report => <article key={report.id}><h3>{report.description}</h3><p>{report.state}</p><button onClick={() => setMatches(report.id)}>View matches</button>{report.state === 'open' && <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
       await api('matching', '/v1/lost-reports/' + id(report.id) + '/close', { body: { reason: text(data, 'reason') }, version: report.version });
       setRevision(x => x + 1); action.setMessage('Lost report closed.');
     }); }}><label>Closure reason<select name="reason"><option value="found">Found my item</option><option value="no_longer_needed">No longer needed</option></select></label><button disabled={action.busy}>Close lost report</button></form>}</article>)}</PageList></section>
-    {matches && <section><h2>Report matches</h2><PageList api={api} service="matching" path={`/v1/lost-reports/${id(matches)}/matches`} revision={revision}>{rows => <ItemCards items={rows.map(row => row.item)} choose={choose} />}</PageList></section>}
+    {matches && <section><h2>Report matches</h2><PageList api={api} service="matching" path={`/v1/lost-reports/${id(matches)}/matches`} revision={revision}>{rows => <ItemCards items={rows.map(row => row.item)} choose={choose} busy={claimAction.busy || action.busy} />}</PageList></section>}
     <section><h2>My claims</h2><PageList api={api} service="claim" path="/v1/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue={false} refresh={() => setRevision(x => x + 1)} />}</PageList></section>
   </>;
 }
