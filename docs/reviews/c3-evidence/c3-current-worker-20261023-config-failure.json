@@ -1,0 +1,14 @@
+{
+  "run_id": "c3-current-worker-20261023",
+  "stage": "k6 configuration validation before setup",
+  "import_count_requested": 256,
+  "batch_size": 50,
+  "iterations": 6,
+  "vus_requested": 10,
+  "k6_exit_code": 104,
+  "summary_available": false,
+  "bulk_mutations_started": false,
+  "collector_samples": 10,
+  "collector_errors": 0,
+  "fix": "Clamp VUs to the number of iterations; default 5000-photo/10-VU profile unchanged"
+}

@@ -71,7 +71,8 @@ test('real k6 executes search ramps, multipart uploads, poll, resume and failure
     let result=await run('tests/load/search_load.js',{...common,MATCHING_API_URL:base,MAX_VUS:'2',RAMP_DURATION:'1s',HOLD_DURATION:'1s',THINK_SECONDS:'0',SUMMARY_PATH:join(root,'search.json')});
     assert.equal(result.code,0,result.output);
     const search=JSON.parse(await readFile(join(root,'search.json'),'utf8'));assert(search.metrics.http_reqs.values.count>0);assert(search.metrics.http_req_duration.values['p(95)']>=0);
-    const bulk={...common,ITEM_API_URL:base,IMPORT_COUNT:'4',BATCH_SIZE:'2',IMPORT_VUS:'2',IMPORT_DURATION:'30s',LOAD_MANIFEST:join(root,'packed/manifest.json'),LOAD_PHOTOS:join(root,'packed/photos.bin'),SUMMARY_PATH:join(root,'bulk.json')};
+    // Default 10 VUs must clamp to the two batches, or k6 rejects configuration.
+    const bulk={...common,ITEM_API_URL:base,IMPORT_COUNT:'4',BATCH_SIZE:'2',IMPORT_DURATION:'30s',LOAD_MANIFEST:join(root,'packed/manifest.json'),LOAD_PHOTOS:join(root,'packed/photos.bin'),SUMMARY_PATH:join(root,'bulk.json')};
     result=await run('tests/load/bulk_import.js',bulk);assert.equal(result.code,0,result.output);assert.equal(uploads,4);assert.equal(confirmed,4);assert.equal(uploadLeak,false);assert(versionHeaders.every(x=>x==='"4"'));assert(uploadHeaders.every(x=>x.startsWith('multipart/form-data; boundary=')));
     const initialKeys=[...keys].sort();const metrics=JSON.parse(await readFile(join(root,'bulk.json'),'utf8')).metrics;assert.equal(metrics.photos_confirmed.values.count,4);
     result=await run('tests/load/bulk_import.js',bulk);assert.equal(result.code,0,result.output);assert.equal(uploads,4);assert.deepEqual(keys.slice(2).sort(),initialKeys);

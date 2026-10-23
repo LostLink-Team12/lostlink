@@ -1,0 +1,16 @@
+{
+  "origin": "https://d37mn7oo1kv0ok.cloudfront.net",
+  "observed_at": "2026-10-23T00:33:20.832462+00:00",
+  "checks": [
+    {
+      "use_case": "UC1",
+      "method": "real browser UI",
+      "action": "Change synthetic employee venue_staff -> venue_admin -> venue_staff",
+      "server_refreshed_intermediate_role": "venue_admin / active",
+      "server_refreshed_final_role": "venue_staff / active",
+      "screenshot": "browser-staff.png"
+    }
+  ],
+  "physical_camera_tested": false,
+  "mailbox_delivery_tested": false
+}

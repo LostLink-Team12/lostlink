@@ -187,6 +187,36 @@ def main():
         stop.write_text("stop\n", encoding="utf-8")
         collector.wait(timeout=120)
         capture_log.close()
+
+    def record_run():
+        (out / "run.json").write_text(
+            json.dumps(
+                {
+                    "started_at": started,
+                    "finished_at": datetime.now(UTC).isoformat(),
+                    "run_id": args.run_id,
+                    "summary_available": summary.exists(),
+                    "import_count": args.count if args.mode == "bulk" else None,
+                    "mode": args.mode,
+                    "origin": origin,
+                    "k6_exit_code": load.returncode,
+                    "collector_exit_code": collector.returncode,
+                    "cooldown_and_drain_observed": True,
+                    "historical_failed_jobs_before": failed_baseline,
+                    "failed_jobs_after": values["failed"],
+                    "prometheus_p95_window": "15m" if args.mode == "search" else None,
+                    "search_latency_source": "search k6 summary"
+                    if args.mode == "search"
+                    else "not measured by bulk k6; optional canary is separate",
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+    record_run()
+    if not summary.exists():
+        raise RuntimeError("k6 produced no summary; exit code and raw k6.log retained")
     run(
         [
             "node",
@@ -238,28 +268,7 @@ def main():
     text = json.dumps(evidence, indent=2).replace(token, "[redacted origin header]")
     text = re.sub(r"postgresql(?:\+psycopg)?://[^\s\"']+", "[redacted connection]", text)
     (out / "controller-events.json").write_text(text, encoding="utf-8")
-    (out / "run.json").write_text(
-        json.dumps(
-            {
-                "started_at": started,
-                "finished_at": datetime.now(UTC).isoformat(),
-                "run_id": args.run_id,
-                "mode": args.mode,
-                "origin": origin,
-                "k6_exit_code": load.returncode,
-                "collector_exit_code": collector.returncode,
-                "cooldown_and_drain_observed": True,
-                "historical_failed_jobs_before": failed_baseline,
-                "failed_jobs_after": values["failed"],
-                "prometheus_p95_window": "15m" if args.mode == "search" else None,
-                "search_latency_source": "search k6 summary"
-                if args.mode == "search"
-                else "not measured by bulk k6; optional canary is separate",
-            },
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
+    record_run()
     if load.returncode or collector.returncode:
         raise RuntimeError("Load thresholds or scaling collection failed; evidence retained")
     print(

@@ -1,11 +1,11 @@
 {
-  "source_commit": "1f7291b987a3f2efa95bfde18a49f141085b41b7",
+  "source_commit": "62c0f4d93466d31763a4d1493a8dcfa324ba3daf",
   "working_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "tag": "1f7291b987a3f2efa95bfde18a49f141085b41b7",
+  "tag": "62c0f4d93466d31763a4d1493a8dcfa324ba3daf",
   "ml_base": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/matching-service@sha256:5a89a4bdaf03239f6ce542396e4acde04edf124cf0989bc38272bac59908609f",
   "images": {
     "venue": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/venue-service@sha256:ee98501593e55c963b09f4e1d45ba76a0f5bf9e8b8c550dabb0e10dae27589ce",
-    "item": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/item-service@sha256:e7d21e5e83f28724a57c5433a2966cb8c368928480dab9c055e99fac660a840c",
+    "item": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/item-service@sha256:acdba8bdc6ce85399bda7b933dc2b5e65fd17692ecce8af0441ed425becfec26",
     "claim": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/claim-service@sha256:5b3d533f81dd0f7936eec88036032a434b324400d347e1cd706642bb82ac2547",
     "notification": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/notification-service@sha256:639d34bc75c7d79c092a309a140524331578d4714d4fa7f5a7d77d85660ebe1e",
     "matching": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/matching-service@sha256:3156021598351aa7bc15d43614215f1cf14dcf9c05a7f84af84b6cf6a6c6b871",
