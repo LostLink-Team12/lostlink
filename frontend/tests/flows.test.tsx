@@ -23,7 +23,7 @@ it('owner searches, answers public verification questions and submits a claim', 
 
 it('venue loads private answers, sends If-Match and waits for approval completion', async () => {
   const api = vi.fn(async (_service, path) => {
-    if (path === '/v1/venues/current') return { name: 'Campus' };
+    if (path === '/v1/session') return { venue: { name: 'Campus' }, can_manage_venue: true, can_manage_members: true, can_onboard_venues: false };
     if (path.startsWith('/v1/items?')) return { items: [] };
     if (path.startsWith('/v1/venue/claims?')) return { items: [{ id: 'c1', item_title: 'Blue bag', state: 'submitted' }] };
     if (path === '/v1/venue/claims/c1') return { id: 'c1', item_title: 'Blue bag', state: 'submitted', version: 4, answers: [{ question_id: 'q1', prompt: 'Inside?', answer: 'Notebook' }] };

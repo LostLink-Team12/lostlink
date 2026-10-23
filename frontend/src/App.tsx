@@ -146,15 +146,28 @@ function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; ven
     </article>}{action.status}</>;
 }
 
+type PortalAccess = { venue: { name: string } | null; can_manage_venue: boolean; can_manage_members: boolean; can_onboard_venues: boolean };
+
 export function VenueApp({ api }: { api: Api }) {
-  const action = useAction(), [revision, setRevision] = useState(0), [venue, setVenue] = useState('Venue Portal');
+  const action = useAction(), onboardingAction = useAction(), [revision, setRevision] = useState(0);
+  const [access, setAccess] = useState<PortalAccess | null>(null), [accessError, setAccessError] = useState(''), [accessAttempt, setAccessAttempt] = useState(0);
   const progress = useRef<Record<string, any>>({}), [lockedForm, setLockedForm] = useState(false);
   const draft = useRef<{ item: object; photo: File } | null>(null);
   const refresh = useCallback(() => setRevision(x => x + 1), []);
-  useEffect(() => { let current = true; api('venue', '/v1/venues/current').then(v => { if (current) setVenue(v.name); }).catch(() => {}); return () => { current = false; }; }, [api]);
+  useEffect(() => {
+    let current = true; setAccess(null); setAccessError('');
+    api('venue', '/v1/session').then(value => { if (current) setAccess(value); }).catch(e => { if (current) setAccessError(e instanceof Error ? e.message : 'Could not verify venue access.'); });
+    return () => { current = false; };
+  }, [api, accessAttempt]);
+  if (accessError) return <section><h1>Venue access unavailable</h1><p role="alert">Could not verify your venue access. {accessError}</p><button onClick={() => setAccessAttempt(x => x + 1)}>Retry access check</button><a href="/owner-app/">Go to Owner App</a></section>;
+  if (!access) return <section><h1>Venue Portal</h1><p role="status">Checking venue access…</p></section>;
+  const staff = access.can_manage_venue === true;
+  const administrator = staff && access.can_manage_members === true;
+  const platform = access.can_onboard_venues === true;
+  if (!staff && !platform) return <section><h1>Venue access required</h1><p>Your account does not have active venue access. Ask a venue administrator to add you, then sign in again after membership sync completes.</p><a href="/owner-app/">Go to Owner App</a><button onClick={() => setAccessAttempt(x => x + 1)}>Check access again</button></section>;
   return <>
-    <section><p className="eyebrow">VENUE PORTAL</p><h1>{venue}</h1><p>Register found items and help them get home.</p><button className="secondary" onClick={refresh}>Refresh records</button></section>
-    <section><h2>Register a found item</h2><form onSubmit={e => { e.preventDefault(); const form = e.currentTarget, data = new FormData(form); void action.run(async () => {
+    <section><p className="eyebrow">VENUE PORTAL</p><h1>{access.venue?.name || 'Venue Portal'}</h1><p>Register found items and help them get home.</p><button className="secondary" onClick={() => { refresh(); setAccessAttempt(x => x + 1); }}>Refresh records</button></section>
+    {staff && <><section><h2>Register a found item</h2><form onSubmit={e => { e.preventDefault(); const form = e.currentTarget, data = new FormData(form); void action.run(async () => {
       if (!draft.current) {
         validatePhoto(file(data), 10);
         draft.current = { photo: file(data)!, item: { title: text(data, 'title'), description: text(data, 'description'), category: text(data, 'category'), found_at: new Date(text(data, 'found_at')).toISOString(), public_location_hint: text(data, 'location') || null, verification_questions: [{ prompt: text(data, 'question'), reference_answer: text(data, 'answer') }] } };
@@ -167,10 +180,10 @@ export function VenueApp({ api }: { api: Api }) {
       <button disabled={action.busy}>{lockedForm ? 'Retry registration' : 'Register item'}</button>
     </form>{lockedForm && <p>Registration started. Keep this page open and retry with the same photo if the connection fails.</p>}{action.status}</section>
     <section><h2>Found items</h2><PageList api={api} service="item" path="/v1/items" revision={revision}>{rows => <ItemCards items={rows} />}</PageList></section>
-    <section><h2>Claims to review</h2><PageList api={api} service="claim" path="/v1/venue/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue refresh={refresh} />}</PageList></section>
-    <Members api={api} />
-    <section><details><summary>Venue onboarding (platform administrators)</summary><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
-      await api('venue', '/v1/admin/venues', { body: { name: text(data, 'name'), slug: text(data, 'slug'), initial_admin_sub: text(data, 'admin') } }); action.setMessage('Venue created. The initial administrator must sign in again after identity sync.');
-    }); }}><Field label="Venue name" name="name" maxLength={120} /><Field label="Venue slug" name="slug" maxLength={80} /><Field label="Initial administrator Cognito subject" name="admin" maxLength={128} /><button disabled={action.busy}>Create venue</button></form></details></section>
+    <section><h2>Claims to review</h2><PageList api={api} service="claim" path="/v1/venue/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue refresh={refresh} />}</PageList></section></>}
+    {administrator && <Members api={api} />}
+    {platform && <section><details><summary>Venue onboarding (platform administrators)</summary><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void onboardingAction.run(async () => {
+      await api('venue', '/v1/admin/venues', { body: { name: text(data, 'name'), slug: text(data, 'slug'), initial_admin_sub: text(data, 'admin') } }); onboardingAction.setMessage('Venue created. The initial administrator must sign in again after identity sync.');
+    }); }}><Field label="Venue name" name="name" maxLength={120} /><Field label="Venue slug" name="slug" maxLength={80} /><Field label="Initial administrator Cognito subject" name="admin" maxLength={128} /><button disabled={onboardingAction.busy}>Create venue</button></form>{onboardingAction.status}</details></section>}
   </>;
 }

@@ -108,3 +108,10 @@ class IdentityView(BaseModel):
     tenant_id: UUID | None
     role: Role | None
     membership_version: int | None
+
+
+class PortalAccess(BaseModel):
+    venue: VenueView | None
+    can_manage_venue: bool
+    can_manage_members: bool
+    can_onboard_venues: bool
