@@ -10,7 +10,9 @@ failed the image gate on CVE-2024-47874, CVE-2026-48818 and CVE-2026-54283.
 
 1. Discover `services/*/Dockerfile`. Service names must use lowercase letters,
    digits and single separating hyphens; each service needs `requirements.txt`.
-2. Run each service's tests on Python 3.12, and run a repository-wide Trivy scan
+2. Run each service's tests on Python 3.12, shared-library tests, Ruff, and
+   `python scripts/export_contracts.py --check` to reject stale API/event contracts.
+   Run a repository-wide Trivy scan
    for HIGH/CRITICAL vulnerabilities with fixes available, secrets and IaC issues.
 3. After both gates pass, build each service's Linux image and scan its OS and
    application dependencies with Trivy (HIGH/CRITICAL with fixes available).
@@ -24,8 +26,10 @@ failed the image gate on CVE-2024-47874, CVE-2026-48818 and CVE-2026-54283.
 
 Pull requests run tests, scans and builds without AWS configuration or OIDC write
 permission. Publishing runs on pushes to `main` and manual runs selected on
-`main`. No long-lived AWS access keys are needed. Missing AWS configuration fails
-the publishing job with an actionable error; it is not silently skipped.
+`main`. No long-lived AWS access keys are needed. Until `AWS_ROLE_ARN` is set,
+the publishing job is skipped. Once enabled, missing or invalid account/region/role
+configuration fails publishing with an actionable error. A green run with publishing
+skipped does not prove that images were uploaded or deployed.
 
 Images use the merge commit's full SHA:
 
@@ -77,8 +81,10 @@ setup; do not put AWS access keys in the repository or Actions secrets.
    `<AWS_ACCOUNT_ID>` and `<AWS_REGION>`. It allows login and image pushes only
    within `lostlink/*`; it cannot create repositories or deploy infrastructure.
 4. Provision one private ECR repository per discovered service in the same account
-   and region (C1/Terraform owns these). Currently this is
-   `lostlink/service-template`. For a manual bootstrap using AWS CLI:
+   and region (C1/Terraform owns these): `venue-service`, `item-service`,
+   `matching-service`, `claim-service`, `notification-service`, `delivery-service`
+   and `service-template`, each under `lostlink/`. The template is discovered by CI
+   but does not need a business deployment. For a manual bootstrap of one repository:
 
    ```bash
    aws ecr create-repository \

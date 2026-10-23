@@ -1,0 +1,110 @@
+[
+  {
+    "item_id": "6af4254e-9061-4772-812b-2d936ce42115",
+    "client_reference": "oi-validation-0caa8c505c01ce8b",
+    "original_sha256": "a2fc808eb317110c3ff708c00079a5d6485f7da1582866c185fa2a8723cb05c9",
+    "original_format": "MPO",
+    "original_frames": 2,
+    "original_size": [
+      2736,
+      3648
+    ],
+    "derived_sha256": "6a82d7651358c35eaf471a5b5234a38fba92eb1953006c00f40343c460e4600c",
+    "derived_size": [
+      1536,
+      2048
+    ],
+    "derived_bytes": 537175,
+    "final_state": "available"
+  },
+  {
+    "item_id": "d5921358-033c-4681-8280-77c19d8ab537",
+    "client_reference": "oi-validation-1366cde3b480a15c",
+    "original_sha256": "b8f8d7497c1907ee9824a9ff9f8417863cb974e7dbe7aa92d2f0b7d5f96b8eca",
+    "original_format": "MPO",
+    "original_frames": 2,
+    "original_size": [
+      4320,
+      2432
+    ],
+    "derived_sha256": "9de047156bd5d16f09c49e128cac8c6d1ebb7316252f7c4b4488b6fd33518393",
+    "derived_size": [
+      2048,
+      1153
+    ],
+    "derived_bytes": 432935,
+    "final_state": "available"
+  },
+  {
+    "item_id": "c332ecb4-a6b3-4e72-ab4a-83745c16a639",
+    "client_reference": "oi-validation-1d823ca1486d2cca",
+    "original_sha256": "4f8ff7153a5af41e52800668c2c981767987b12cc51e2a0e4471d0877bcd0702",
+    "original_format": "MPO",
+    "original_frames": 2,
+    "original_size": [
+      4320,
+      3240
+    ],
+    "derived_sha256": "15f52ff8c9124576dfe53579e9f6975e528ab4096120b4cdc77bc26d37790335",
+    "derived_size": [
+      2048,
+      1536
+    ],
+    "derived_bytes": 597714,
+    "final_state": "available"
+  },
+  {
+    "item_id": "ed7bd245-8474-4bc2-9ea9-fa70ee0f7eea",
+    "client_reference": "oi-validation-34f7030f1a9eb95f",
+    "original_sha256": "97799b842a4c4ce5caaf9b94c261587079f8a4fb9d2cd6d9f7503e19646ea356",
+    "original_format": "MPO",
+    "original_frames": 2,
+    "original_size": [
+      2816,
+      1880
+    ],
+    "derived_sha256": "0f04af0ecaae30f8782b539ada8ebb93c84a409c08114dee0e49c8c370afd8f0",
+    "derived_size": [
+      2048,
+      1367
+    ],
+    "derived_bytes": 377577,
+    "final_state": "available"
+  },
+  {
+    "item_id": "8e024dc7-7150-43b5-932b-ea905a731c06",
+    "client_reference": "oi-validation-454a2e427283ae9c",
+    "original_sha256": "0660f84eb0d3ea8b1e00563e7df53e2a8d003e9355658a77654d2ec20a0f4c87",
+    "original_format": "JPEG",
+    "original_frames": 1,
+    "original_size": [
+      7360,
+      4912
+    ],
+    "derived_sha256": "5728ece1f21847a73f3ef03580cb7d8296eb2d397440283ca677f70f57cb5003",
+    "derived_size": [
+      2048,
+      1367
+    ],
+    "derived_bytes": 544349,
+    "final_state": "available"
+  },
+  {
+    "item_id": "b239ff1d-7580-40ca-bc57-537ff84644da",
+    "client_reference": "oi-validation-7cb248b948969749",
+    "original_sha256": "71403fcc21d1ed31fda1f92f52d0316000ae0ab1053850695039b258c19feb49",
+    "original_format": "MPO",
+    "original_frames": 2,
+    "original_size": [
+      5472,
+      3648
+    ],
+    "derived_sha256": "544155c1a6e5050ec8d467ce6258b9c84380aaaecc0575020454b2f913991927",
+    "derived_size": [
+      2048,
+      1365
+    ],
+    "derived_bytes": 332424,
+    "final_state": "available"
+  }
+]

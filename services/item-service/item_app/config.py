@@ -12,6 +12,7 @@ class ItemSettings(Settings):
     service_name: str = "item-service"
     process_mode: Literal["api", "worker"] = "api"
     internal_database_url: SecretStr | None = None
+    internal_db_pool_size: int | None = Field(default=None, ge=1, le=50)
     worker_database_url: SecretStr | None = None
     user_client_ids: list[str] = Field(default_factory=list)
     claim_client_ids: list[str] = Field(default_factory=list)
@@ -21,6 +22,9 @@ class ItemSettings(Settings):
     machine_client_id: str | None = None
     machine_client_secret: SecretStr | None = None
     photo_bucket: str | None = Field(default=None, min_length=3, max_length=63)
+    cleanup_prefixes: list[Literal["staging/", "sealed/"]] = Field(
+        default_factory=lambda: ["staging/", "sealed/"]
+    )
 
     @field_validator("internal_database_url", "worker_database_url")
     @classmethod

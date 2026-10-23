@@ -1,0 +1,12 @@
+service: item
+image: ""
+proxyImage: ""
+runtimeRevision: ""
+env: {}
+processes: {}
+hpa:
+  maxReplicas: 2
+keda:
+  maxReplicas: 2
+migration:
+  enabled: false

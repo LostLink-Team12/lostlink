@@ -8,8 +8,16 @@ import threading
 from datetime import timedelta
 from uuid import UUID, uuid4
 
-from lostlink_common.events import DomainEvent, SnsPublisher, aws_client, decode_message
+from lostlink_common.events import (
+    DomainEvent,
+    SnsPublisher,
+    acknowledge_message,
+    aws_client,
+    decode_message,
+    receive_messages,
+)
 from lostlink_common.observability import configure_logging
+from lostlink_common.worker_health import heartbeat
 from sqlalchemy import Float, and_, func, or_, select, text
 from sqlalchemy.dialects.postgresql import insert
 
@@ -53,12 +61,6 @@ class MatchingWorker:
         self.storage, self.publisher = storage, publisher
         self.settings = settings or MatchingSettings(_env_file=None)
 
-    def threshold_for(self, report):
-        """Automatic-match cut-off; text-only reports use the lower calibrated threshold."""
-        if report.has_photo:
-            return self.settings.match_threshold
-        return self.settings.match_threshold_text
-
     def consume(self, event):
         if event.event_type not in {"item.registered", "item.catalog_changed"}:
             raise ProtocolError("Unsupported event")
@@ -97,12 +99,7 @@ class MatchingWorker:
         return "accepted"
 
     def poll(self, client, queue_url, *, wait_seconds=10):
-        messages = client.receive_message(
-            QueueUrl=queue_url,
-            WaitTimeSeconds=wait_seconds,
-            VisibilityTimeout=60,
-            MaxNumberOfMessages=1,
-        ).get("Messages", [])
+        messages = receive_messages(client, queue_url, wait_seconds=wait_seconds)
         for message in messages:
             try:
                 self.consume(decode_message(message["Body"]))
@@ -110,7 +107,7 @@ class MatchingWorker:
                 logger.warning("index_message_rejected", extra={"error_type": type(exc).__name__})
                 continue
             # The inbox and durable job are committed before acknowledging SQS.
-            client.delete_message(QueueUrl=queue_url, ReceiptHandle=message["ReceiptHandle"])
+            acknowledge_message(client, queue_url, message["ReceiptHandle"])
         return bool(messages)
 
     def claim(self, model):
@@ -280,7 +277,7 @@ class MatchingWorker:
                     row.model_version,
                     row,
                     self.settings.candidate_limit,
-                    self.threshold_for(row),
+                    self.settings.automatic_match_threshold(row.has_photo),
                 ):
                     save_match(session, row, item, embedding, score)
             self.finish(job)
@@ -318,7 +315,7 @@ class MatchingWorker:
                     .where(Report.id == row.id)
                 )
                 score = max(-1.0, min(1.0, float(score)))
-                if score >= self.threshold_for(row):
+                if score >= self.settings.automatic_match_threshold(row.has_photo):
                     save_match(session, row, item, embedding, score)
             if len(rows) == 50:
                 job.cursor = str(rows[-1].id)
@@ -428,6 +425,7 @@ def main():
             worked = (
                 worker.poll(queue, settings.event_queue_url) if queue else worker.once(args.mode)
             )
+            heartbeat()
             if args.once:
                 break
             if not worked:

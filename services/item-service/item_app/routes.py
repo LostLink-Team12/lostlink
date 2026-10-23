@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from fastapi.responses import JSONResponse
 from lostlink_common.auth import Principal, get_principal
+from lostlink_common.errors import error_responses
 from sqlalchemy import select
 
 from item_app import imports
@@ -32,7 +33,7 @@ from item_app.service import ItemService, item_view
 from item_app.storage import StorageError
 from item_app.transactions import idempotent
 
-router = APIRouter()
+router = APIRouter(responses=error_responses(401, 403, 422, 500, 503))
 Actor = Annotated[Principal, Depends(get_principal)]
 Key = Annotated[str | None, Header(alias="Idempotency-Key")]
 Version = Annotated[str | None, Header(alias="If-Match")]
@@ -104,7 +105,13 @@ def locate(request, principal, item_id, scope):
         return row.tenant_id
 
 
-@router.post("/v1/items", status_code=201, response_model=ItemView, tags=["Items"])
+@router.post(
+    "/v1/items",
+    status_code=201,
+    response_model=ItemView,
+    tags=["Items"],
+    responses=error_responses(409, 428),
+)
 def create(body: NewItem, request: Request, principal: Employee, key: Key = None):
     return write(
         request,
@@ -143,7 +150,9 @@ def list_items(
         }
 
 
-@router.get("/v1/items/{item_id}", response_model=ItemDetail, tags=["Items"])
+@router.get(
+    "/v1/items/{item_id}", response_model=ItemDetail, tags=["Items"], responses=error_responses(404)
+)
 def detail(item_id: UUID, request: Request, response: Response, principal: Employee):
     with database(request).context(
         subject=principal.subject, tenant_id=principal.tenant_id
@@ -154,7 +163,12 @@ def detail(item_id: UUID, request: Request, response: Response, principal: Emplo
         return service.detail(item)
 
 
-@router.patch("/v1/items/{item_id}", response_model=ItemView, tags=["Items"])
+@router.patch(
+    "/v1/items/{item_id}",
+    response_model=ItemView,
+    tags=["Items"],
+    responses=error_responses(404, 409, 412, 428),
+)
 def change(
     item_id: UUID,
     body: ItemChange,
@@ -174,7 +188,12 @@ def change(
     )
 
 
-@router.post("/v1/items/{item_id}/withdraw", response_model=ItemView, tags=["Items"])
+@router.post(
+    "/v1/items/{item_id}/withdraw",
+    response_model=ItemView,
+    tags=["Items"],
+    responses=error_responses(404, 409, 412, 428),
+)
 def withdraw(
     item_id: UUID,
     body: Withdrawal,
@@ -199,6 +218,7 @@ def withdraw(
     status_code=201,
     response_model=outputs.UploadView,
     tags=["Photos"],
+    responses=error_responses(404, 409, 412, 428),
 )
 def upload(
     item_id: UUID,
@@ -243,6 +263,7 @@ def upload(
     status_code=202,
     response_model=outputs.AcceptedOperation,
     tags=["Photos"],
+    responses=error_responses(404, 409, 428),
 )
 def confirm(item_id: UUID, upload_id: UUID, request: Request, principal: Employee, key: Key = None):
     return write(
@@ -261,6 +282,7 @@ def confirm(item_id: UUID, upload_id: UUID, request: Request, principal: Employe
     status_code=202,
     response_model=outputs.ProcessingView,
     tags=["Items"],
+    responses=error_responses(404, 409, 412, 428),
 )
 def retry(
     item_id: UUID, request: Request, principal: Employee, key: Key = None, version: Version = None
@@ -277,7 +299,10 @@ def retry(
 
 
 @router.get(
-    "/v1/item-operations/{operation_id}", response_model=outputs.OperationView, tags=["Operations"]
+    "/v1/item-operations/{operation_id}",
+    response_model=outputs.OperationView,
+    tags=["Operations"],
+    responses=error_responses(404),
 )
 def operation(operation_id: UUID, request: Request, principal: Employee):
     with database(request).context(
@@ -296,7 +321,11 @@ def operation(operation_id: UUID, request: Request, principal: Employee):
 
 
 @router.post(
-    "/v1/item-imports", status_code=202, response_model=outputs.ImportView, tags=["Imports"]
+    "/v1/item-imports",
+    status_code=202,
+    response_model=outputs.ImportView,
+    tags=["Imports"],
+    responses=error_responses(409, 428),
 )
 def submit_import(body: ImportRequest, request: Request, principal: Employee, key: Key = None):
     return write(
@@ -310,7 +339,12 @@ def submit_import(body: ImportRequest, request: Request, principal: Employee, ke
     )
 
 
-@router.get("/v1/item-imports/{job_id}", response_model=outputs.ImportStatus, tags=["Imports"])
+@router.get(
+    "/v1/item-imports/{job_id}",
+    response_model=outputs.ImportStatus,
+    tags=["Imports"],
+    responses=error_responses(404),
+)
 def import_status(
     job_id: UUID,
     request: Request,
@@ -329,6 +363,7 @@ def import_status(
     status_code=202,
     response_model=outputs.ImportView,
     tags=["Imports"],
+    responses=error_responses(404, 409, 428),
 )
 def repair_import(
     job_id: UUID, body: ImportRepair, request: Request, principal: Employee, key: Key = None
@@ -348,6 +383,7 @@ def repair_import(
     "/internal/v1/items/{item_id}/claim-context",
     response_model=outputs.ClaimContext,
     tags=["Internal"],
+    responses=error_responses(404),
 )
 def claim_context(item_id: UUID, request: Request, principal: Actor):
     tenant = locate(request, principal, item_id, "items.context")
@@ -378,6 +414,7 @@ def claim_context(item_id: UUID, request: Request, principal: Actor):
     "/internal/v1/items/{item_id}/index-context",
     response_model=outputs.IndexContext,
     tags=["Internal"],
+    responses=error_responses(404),
 )
 def index_context(item_id: UUID, request: Request, principal: Actor):
     tenant = locate(request, principal, item_id, "items.index")
@@ -416,6 +453,7 @@ def reserve_write(request, principal, item_id, operation, key, body, callback):
     "/internal/v1/items/{item_id}/reservations",
     response_model=ReservationView,
     tags=["Reservations"],
+    responses=error_responses(404, 409, 428),
 )
 def reserve(
     item_id: UUID, body: ReserveRequest, request: Request, principal: Actor, key: Key = None
@@ -435,6 +473,7 @@ def reserve(
     "/internal/v1/items/{item_id}/reservations/{claim_id}",
     response_model=ReservationView,
     tags=["Reservations"],
+    responses=error_responses(404),
 )
 def reservation_status(item_id: UUID, claim_id: UUID, request: Request, principal: Actor):
     tenant = locate(request, principal, item_id, "items.reserve")
@@ -452,6 +491,7 @@ def reservation_status(item_id: UUID, claim_id: UUID, request: Request, principa
     "/internal/v1/items/{item_id}/reservations/{claim_id}/release",
     response_model=ReservationView,
     tags=["Reservations"],
+    responses=error_responses(404, 409, 428),
 )
 def release(
     item_id: UUID,
@@ -476,6 +516,7 @@ def release(
     "/internal/v1/items/{item_id}/reservations/{claim_id}/commit-handover",
     response_model=ReservationView,
     tags=["Reservations"],
+    responses=error_responses(404, 409, 428),
 )
 def handover(
     item_id: UUID,

@@ -1,0 +1,32 @@
+{
+  "source_commit": "e75c73725ec562d82375d9d9273240e1da63c616",
+  "network": "none",
+  "read_only_root": true,
+  "swap_disabled": true,
+  "cpu_limit": 1,
+  "image_manifest": "image-digests-memory-test.json",
+  "results": [
+    {
+      "process": "api",
+      "peak_rss_mib": 2741.33984375,
+      "cgroup_peak_bytes": null,
+      "inference": "text/photo/fused"
+    },
+    {
+      "process": "tasks",
+      "peak_rss_mib": 2732.86328125,
+      "cgroup_peak_bytes": null,
+      "inference": "text/photo/fused"
+    },
+    {
+      "process": "api",
+      "limit_bytes": 4294967296,
+      "oom_killed": false
+    },
+    {
+      "process": "tasks",
+      "limit_bytes": 4294967296,
+      "oom_killed": false
+    }
+  ]
+}

@@ -1,12 +1,14 @@
 """Recovery, races, QR attacks and access boundaries against real Venue/Item/PostgreSQL."""
 
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 import pytest
 from alembic import command
 from claim_app.clients import ItemRejected
 from claim_app.models import ClaimOperation, HandoverToken
+from claim_app.service import ClaimService
 from claim_support import (
     approve,
     claim_events,
@@ -122,11 +124,18 @@ def test_item_content_change_rejects_stale_approval_without_reserving(claim_env)
     assert item_state(env, item_id)[1] == []
 
 
-def test_cancel_during_approval_releases_and_late_reserve_cannot_win(claim_env):
+@pytest.mark.parametrize("clock_skew_seconds", [0, 3600, -3600])
+def test_cancel_during_approval_releases_and_late_reserve_cannot_win(
+    claim_env, monkeypatch, clock_skew_seconds
+):
     env = claim_env
     item_id = make_item(env)
     claim = submit(env, item_id)
     accepted = approve(env, claim, run=False)
+    # Only the cancelling API's clock changes; workers schedule using PostgreSQL time.
+    monkeypatch.setattr(
+        ClaimService, "now", lambda self: datetime.now(UTC) + timedelta(seconds=clock_skew_seconds)
+    )
     cancelled = env.client.post(
         f"/v1/claims/{claim['id']}/cancel",
         headers=headers(version=accepted["version"]),

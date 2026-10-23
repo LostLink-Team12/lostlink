@@ -1,0 +1,14 @@
+LostLink {{ .Chart.AppVersion }} installed into namespace {{ .Release.Namespace }} (image tag {{ .Values.image.tag }}).
+
+Check rollout:
+  kubectl -n {{ .Release.Namespace }} get deploy,pods,hpa,scaledobject
+  kubectl -n {{ .Release.Namespace }} logs deploy/matching-api -c fetch-model
+
+APIs are HTTPS inside the cluster. For a quick check without the ALB:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/item-service 8443:443
+  curl -k https://localhost:8443/ready
+{{- if .Values.ingress.enabled }}
+
+Public endpoint:
+  kubectl -n {{ .Release.Namespace }} get ingress lostlink-public
+{{- end }}

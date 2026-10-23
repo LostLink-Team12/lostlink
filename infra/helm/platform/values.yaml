@@ -1,0 +1,7 @@
+frontendImage: ""
+metricsImage: ""
+prometheusImage: prom/prometheus:v3.7.3
+grafanaImage: grafana/grafana:12.2.1
+albSecurityGroup: ""
+subnets: []
+originToken: ""

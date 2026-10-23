@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from uuid import uuid4
 
 import pytest
@@ -8,11 +9,35 @@ from lostlink_common.events import (
     DomainEvent,
     SnsPublisher,
     SqsPublisher,
+    acknowledge_message,
     aws_client,
     decode_message,
+    receive_messages,
 )
 
 pytestmark = pytest.mark.integration
+
+
+def test_empty_queue_can_long_poll_then_receive_and_acknowledge():
+    endpoint = os.getenv("LOSTLINK_TEST_AWS_ENDPOINT")
+    if not endpoint:
+        pytest.skip("Set LOSTLINK_TEST_AWS_ENDPOINT to a LocalStack URL")
+    settings = Settings(_env_file=None, environment="test", aws_endpoint_url=endpoint)
+    sqs = aws_client("sqs", settings)
+    queue = sqs.create_queue(QueueName=f"lostlink-long-poll-{uuid4().hex}")["QueueUrl"]
+    try:
+        for _ in range(2):
+            started = time.monotonic()
+            assert receive_messages(sqs, queue) == []
+            assert time.monotonic() - started >= 8
+        sqs.send_message(QueueUrl=queue, MessageBody="transport probe")
+        messages = receive_messages(sqs, queue)
+        assert len(messages) == 1 and messages[0]["Body"] == "transport probe"
+        assert acknowledge_message(sqs, queue, messages[0]["ReceiptHandle"])
+        assert receive_messages(sqs, queue, wait_seconds=1) == []
+    finally:
+        sqs.delete_queue(QueueUrl=queue)
+        sqs.close()
 
 
 def test_localstack_sns_and_sqs_roundtrip():

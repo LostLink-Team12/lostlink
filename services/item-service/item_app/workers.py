@@ -8,8 +8,16 @@ import threading
 from datetime import timedelta
 from uuid import UUID, uuid4
 
-from lostlink_common.events import DomainEvent, SnsPublisher, aws_client, decode_message
+from lostlink_common.events import (
+    DomainEvent,
+    SnsPublisher,
+    acknowledge_message,
+    aws_client,
+    decode_message,
+    receive_messages,
+)
 from lostlink_common.observability import configure_logging
+from lostlink_common.worker_health import heartbeat
 from pydantic import ValidationError
 from sqlalchemy import and_, func, or_, select, text
 
@@ -254,19 +262,14 @@ class ItemWorker:
             return code
 
     def poll(self, client, queue_url, *, wait_seconds=10):
-        messages = client.receive_message(
-            QueueUrl=queue_url,
-            WaitTimeSeconds=wait_seconds,
-            VisibilityTimeout=60,
-            MaxNumberOfMessages=1,
-        ).get("Messages", [])
+        messages = receive_messages(client, queue_url, wait_seconds=wait_seconds)
         for message in messages:
             try:
                 self.consume(decode_message(message["Body"]))
             except Exception as exc:
                 logger.warning("item_message_rejected", extra={"error_type": type(exc).__name__})
                 continue
-            client.delete_message(QueueUrl=queue_url, ReceiptHandle=message["ReceiptHandle"])
+            acknowledge_message(client, queue_url, message["ReceiptHandle"])
         return bool(messages)
 
     def retry_failed(self, mode, job_id, operator, reason):
@@ -354,12 +357,27 @@ def main():
         if args.mode == "cleanup":
             from item_app.cleanup import cleanup
 
-            cleanup(db, worker.storage, settings.photo_bucket, stopped=stopped)
+            while not stopped.is_set():
+                cleanup(
+                    db,
+                    worker.storage,
+                    settings.photo_bucket,
+                    stopped=stopped,
+                    prefixes=settings.cleanup_prefixes,
+                )
+                heartbeat()
+                if args.once:
+                    break
+                for _ in range(120):
+                    if stopped.wait(30):
+                        break
+                    heartbeat()
             return
         while not stopped.is_set():
             worked = (
                 worker.poll(queue, settings.event_queue_url) if queue else worker.once(args.mode)
             )
+            heartbeat()
             if args.once:
                 break
             if not worked:

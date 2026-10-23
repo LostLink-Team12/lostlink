@@ -1,0 +1,185 @@
+{{- $root := . }}
+{{- if ne .Release.Namespace "lostlink" }}
+{{- fail "Install into namespace lostlink: Terraform IRSA trust is bound to system:serviceaccount:lostlink:<process>" }}
+{{- end }}
+{{- $_ := required "database.caBundle is required (--set-file database.caBundle=global-bundle.pem)" .Values.database.caBundle }}
+{{- range $name := keys .Values.services | sortAlpha }}
+{{- $svc := get $root.Values.services $name }}
+{{- if $svc.enabled }}
+{{- $processes := dict }}
+{{- if $svc.api }}{{- $_ := set $processes "api" $svc.api }}{{- end }}
+{{- range $mode, $worker := $svc.workers }}{{- $_ := set $processes $mode $worker }}{{- end }}
+{{- range $mode := keys $processes | sortAlpha }}
+{{- $p := get $processes $mode }}
+{{- $process := printf "%s-%s" $name $mode }}
+{{- $labels := dict "root" $root "service" $name "process" $process }}
+{{- $isApi := eq $mode "api" }}
+{{- $resources := $p.resources | default (ternary $root.Values.defaults.apiResources $root.Values.defaults.resources $isApi) }}
+{{- $irsa := ne (toString ($p.serviceAccount | default dict).irsa) "false" }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $process }}
+  labels:
+    {{- include "lostlink.labels" $labels | nindent 4 }}
+  {{- if $irsa }}
+  annotations:
+    eks.amazonaws.com/role-arn: {{ include "lostlink.roleArn" (list $root $process) | quote }}
+    eks.amazonaws.com/sts-regional-endpoints: "true"
+  {{- end }}
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $process }}
+  labels:
+    {{- include "lostlink.labels" $labels | nindent 4 }}
+spec:
+  {{- $autoscaled := or (and $isApi $root.Values.hpa.enabled) (and $p.keda $root.Values.keda.enabled) }}
+  {{- if not $autoscaled }}
+  replicas: {{ $p.replicas | default 1 }}
+  {{- end }}
+  revisionHistoryLimit: 3
+  {{- if not $isApi }}
+  # Workers lease durable jobs, so a replacement may overlap the old pod safely; keep the
+  # single-node demo from needing surge capacity for model-sized pods.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxSurge: 0, maxUnavailable: 1}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "lostlink.selector" $labels | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "lostlink.labels" $labels | nindent 8 }}
+      {{- if $isApi }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/scheme: https
+        prometheus.io/path: /metrics
+        prometheus.io/port: "8443"
+      {{- end }}
+    spec:
+      serviceAccountName: {{ $process }}
+      # IRSA uses its own projected token; the Kubernetes API token is not needed.
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ $root.Values.podSecurity.runAsUser }}
+        runAsGroup: {{ $root.Values.podSecurity.runAsGroup }}
+        fsGroup: {{ $root.Values.podSecurity.runAsGroup }}
+        seccompProfile: {type: RuntimeDefault}
+      initContainers:
+        - name: trust-bundle
+          image: {{ include "lostlink.image" (list $root $svc) }}
+          imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+          command: [python, /opt/lostlink/scripts/trust_bundle.py, /etc/lostlink/internal-ca/ca.crt, /etc/lostlink/trust/ca-bundle.pem]
+          securityContext:
+            {{- include "lostlink.containerSecurity" . | nindent 12 }}
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {memory: 64Mi}
+          volumeMounts:
+            - {name: scripts, mountPath: /opt/lostlink/scripts, readOnly: true}
+            - {name: internal-ca, mountPath: /etc/lostlink/internal-ca, readOnly: true}
+            - {name: trust, mountPath: /etc/lostlink/trust}
+        {{- if $p.model }}
+        - name: fetch-model
+          image: {{ include "lostlink.image" (list $root $svc) }}
+          imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+          command: [python, /opt/lostlink/scripts/fetch_model.py]
+          env:
+            - {name: MODEL_URL, value: {{ $root.Values.matching.model.url | quote }}}
+            - {name: MODEL_SHA256, value: {{ $root.Values.matching.model.sha256 | quote }}}
+            - {name: MODEL_PATH, value: {{ $root.Values.matching.model.path | quote }}}
+          securityContext:
+            {{- include "lostlink.containerSecurity" . | nindent 12 }}
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {memory: 128Mi}
+          volumeMounts:
+            - {name: scripts, mountPath: /opt/lostlink/scripts, readOnly: true}
+            - {name: models, mountPath: {{ dir $root.Values.matching.model.path }}}
+        {{- end }}
+      containers:
+        - name: {{ $mode }}
+          image: {{ include "lostlink.image" (list $root $svc) }}
+          imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+          {{- if $isApi }}
+          command:
+            - python
+            - -m
+            - lostlink_common.secret_env
+            - --
+            - uvicorn
+            - {{ printf "%s.main:app" $svc.module }}
+            - --host=0.0.0.0
+            - --port=8443
+            - --ssl-certfile=/etc/lostlink/tls/tls.crt
+            - --ssl-keyfile=/etc/lostlink/tls/tls.key
+            - --no-access-log
+            - --timeout-graceful-shutdown=20
+          ports:
+            - {name: https, containerPort: 8443, protocol: TCP}
+          startupProbe:
+            httpGet: {path: /health, port: https, scheme: HTTPS}
+            periodSeconds: 5
+            failureThreshold: {{ ternary 60 24 (not (empty $p.model)) }}
+          livenessProbe:
+            httpGet: {path: /health, port: https, scheme: HTTPS}
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            # /ready returns 503 until configuration, migrations and dependencies are ready.
+            httpGet: {path: /ready, port: https, scheme: HTTPS}
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          {{- else }}
+          command: [python, -m, lostlink_common.secret_env, --, python, -m, {{ printf "%s.workers" $svc.module }}, {{ $mode }}]
+          {{- end }}
+          env:
+            {{- include "lostlink.env" (dict "root" $root "name" $name "svc" $svc "mode" $mode "p" $p) | nindent 12 }}
+          securityContext:
+            {{- include "lostlink.containerSecurity" . | nindent 12 }}
+          resources:
+            {{- toYaml $resources | nindent 12 }}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+            - {name: trust, mountPath: /etc/lostlink/trust, readOnly: true}
+            - {name: rds-ca, mountPath: /etc/lostlink/rds, readOnly: true}
+            {{- if $isApi }}
+            - {name: tls, mountPath: /etc/lostlink/tls, readOnly: true}
+            {{- end }}
+            {{- if $p.model }}
+            - {name: models, mountPath: {{ dir $root.Values.matching.model.path }}, readOnly: true}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {sizeLimit: 256Mi}
+        - name: trust
+          emptyDir: {sizeLimit: 2Mi}
+        - name: scripts
+          configMap: {name: lostlink-scripts, defaultMode: 0444}
+        - name: internal-ca
+          configMap: {name: lostlink-internal-ca}
+        - name: rds-ca
+          configMap: {name: rds-ca-bundle}
+        {{- if $isApi }}
+        - name: tls
+          secret: {secretName: {{ printf "%s-service-tls" $name }}, defaultMode: 0440}
+        {{- end }}
+        {{- if $p.model }}
+        - name: models
+          emptyDir: {sizeLimit: {{ $root.Values.matching.model.sizeLimit }}}
+        {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

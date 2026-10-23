@@ -1,5 +1,6 @@
 """Cognito V2 pre-token trigger backed by a read-only, subject-scoped DB role."""
 
+import logging
 from functools import lru_cache
 
 from venue_app.config import VenueSettings
@@ -7,6 +8,7 @@ from venue_app.database import VenueDatabase
 from venue_app.service import resolve_identity
 
 MANAGED_ROLES = {"venue_admin", "venue_staff"}
+logger = logging.getLogger("lostlink.venue.trigger")
 
 
 def customize_token(event, resolver, *, user_pool_id, user_client_ids):
@@ -48,7 +50,8 @@ def customize_token(event, resolver, *, user_pool_id, user_client_ids):
 
 @lru_cache(maxsize=1)
 def dependencies():
-    settings = VenueSettings(process_mode="trigger")
+    # Lambda configuration comes from its environment, never a bundled/local .env file.
+    settings = VenueSettings(process_mode="trigger", _env_file=None)
     if not settings.identity_database_url or not settings.cognito_user_pool_id:
         raise RuntimeError("Token trigger requires identity database and user pool configuration")
     database = VenueDatabase(
@@ -60,15 +63,20 @@ def dependencies():
 def handler(event, _context):
     if event.get("triggerSource") == "TokenGeneration_ClientCredentials":
         return event
-    settings, database = dependencies()
+    try:
+        settings, database = dependencies()
 
-    def resolver(subject):
-        with database.context(subject=subject) as session:
-            return resolve_identity(session, subject)
+        def resolver(subject):
+            with database.context(subject=subject) as session:
+                return resolve_identity(session, subject)
 
-    return customize_token(
-        event,
-        resolver,
-        user_pool_id=settings.cognito_user_pool_id,
-        user_client_ids=settings.user_client_ids + settings.platform_client_ids,
-    )
+        return customize_token(
+            event,
+            resolver,
+            user_pool_id=settings.cognito_user_pool_id,
+            user_client_ids=settings.user_client_ids + settings.platform_client_ids,
+        )
+    except Exception as exc:
+        # Lambda logs uncaught exceptions. Do not expose SQL parameters or configuration values.
+        logger.error("token_customization_failed", extra={"error_type": type(exc).__name__})
+        raise RuntimeError("Token customization unavailable") from None
