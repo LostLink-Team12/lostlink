@@ -36,7 +36,7 @@ docker-compose.yml  local dependencies (Postgres+pgvector, Redis, LocalStack)
 - AI matching: open-source CLIP (ViT-B/32) embeddings, PostgreSQL `pgvector`
 - AWS: EKS, RDS PostgreSQL, S3, SQS, SNS, ElastiCache Redis, Cognito, SES, API Gateway, WAF
 - Delivery: GitHub Actions, Trivy, Docker, Amazon ECR, Helm, Terraform
-- Scaling: HPA for APIs, KEDA on SQS queue depth for embedding workers
+- Scaling: HPA for APIs, KEDA on PostgreSQL pending embedding jobs for Matching tasks
 - Frontend: React + Vite + TypeScript
 - Tests: pytest, k6
 

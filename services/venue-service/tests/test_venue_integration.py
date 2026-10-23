@@ -20,6 +20,7 @@ from psycopg import sql
 from sqlalchemy import create_engine, func, select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import DBAPIError
+from venue_app import workers as venue_workers
 from venue_app.config import VenueSettings
 from venue_app.database import VenueDatabase
 from venue_app.main import create_app
@@ -416,6 +417,39 @@ def test_identity_jobs_skip_obsolete_versions_and_retry_external_failures(env):
         headers=headers("admin-a"),
     )
     assert response.status_code == 200 and response.json()["state"] == "completed"
+
+
+@pytest.mark.parametrize("clock_skew_seconds", [-3600, 0, 3600])
+@pytest.mark.parametrize("model,mode", [(OutboxEvent, "outbox"), (IdentityJob, "identity")])
+def test_worker_scheduling_uses_database_clock(env, monkeypatch, clock_skew_seconds, model, mode):
+    onboard(env)
+
+    class HostClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime.now(tz) + timedelta(seconds=clock_skew_seconds)
+
+    # Inject the host-clock name to catch accidental reintroduction of datetime.now.
+    monkeypatch.setattr(venue_workers, "datetime", HostClock, raising=False)
+    runner = JobRunner(env.db["worker"])
+    with env.db["worker"].context() as session:
+        before_claim = session.scalar(select(func.now()))
+    first = runner.claim(model)
+    assert first is not None
+    with env.db["worker"].context() as session:
+        after_claim = session.scalar(select(func.now()))
+        assert before_claim + timedelta(seconds=60) <= first.lease_until
+        assert first.lease_until <= after_claim + timedelta(seconds=60)
+    runner.finish(model, first, "pending", "dependency_unavailable")
+    with env.db["worker"].context() as session:
+        row = session.get(model, first.id)
+        now = session.scalar(select(func.now()))
+        assert after_claim + timedelta(seconds=1) <= row.available_at
+        assert row.available_at <= now + timedelta(seconds=2)
+        row.state = "failed"
+    runner.retry_failed(mode, first.id, "operator", "dependency_restored")
+    replay = runner.claim(model)
+    assert replay is not None and replay.id == first.id
 
 
 def test_outbox_leases_recovery_and_cas_prevent_stale_acknowledgement(env):

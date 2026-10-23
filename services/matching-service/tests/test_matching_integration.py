@@ -34,6 +34,43 @@ from sqlalchemy.exc import DBAPIError
 pytestmark = pytest.mark.integration
 
 
+def test_search_diagnostics_count_live_checks_without_changing_filtering(matching_env):
+    env = matching_env
+    red = index_item(env)
+    blue = index_item(env, "b", "blue backpack")
+    original = env.item_client.context
+
+    def current(item_id):
+        context = original(item_id)
+        return context.model_copy(update={"state": "handed_over"}) if item_id == red else context
+
+    env.item_client.context = current
+    response = env.client.post(
+        "/v1/search",
+        json={"text": "red backpack", "limit": 1},
+        headers=headers(),
+    )
+    assert response.status_code == 200, response.text
+    assert [item["item_id"] for item in response.json()["items"]] == [str(blue)]
+    metrics = env.client.get("/metrics").text
+    for phase in ("encode", "candidates", "item_context"):
+        assert f'lostlink_search_phase_duration_seconds_count{{phase="{phase}"}} 1.0' in metrics
+    assert "lostlink_search_item_context_calls_total 2.0" in metrics
+    assert "lostlink_search_candidates_sum 2.0" in metrics
+    assert "lostlink_search_results_sum 1.0" in metrics
+    assert str(red) not in metrics and str(blue) not in metrics
+
+    def unavailable(item_id):
+        raise MembershipUnavailable()
+
+    env.item_client.context = unavailable
+    assert env.client.post("/v1/search", json={"text": "red"}, headers=headers()).status_code == 503
+    metrics = env.client.get("/metrics").text
+    assert 'lostlink_search_phase_duration_seconds_count{phase="item_context"} 2.0' in metrics
+    assert "lostlink_search_item_context_calls_total 3.0" in metrics
+    assert "lostlink_search_results_count 1.0" in metrics
+
+
 def test_report_ownership_idempotency_etag_and_private_event_payload(matching_env):
     env = matching_env
     key = uuid4().hex
