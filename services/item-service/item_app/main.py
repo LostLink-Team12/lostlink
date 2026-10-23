@@ -44,7 +44,10 @@ def create_app(
             ]:
                 url = getattr(settings, f"{name}_url")
                 if supplied is None and url:
-                    db = ItemDatabase(settings.model_copy(update={"database_url": url}))
+                    overrides = {"database_url": url}
+                    if name == "internal_database" and settings.internal_db_pool_size is not None:
+                        overrides["db_pool_size"] = settings.internal_db_pool_size
+                    db = ItemDatabase(settings.model_copy(update=overrides))
                     setattr(application.state, name, db)
                     owned.append(db)
             if storage is None and settings.photo_bucket:

@@ -1,0 +1,41 @@
+{
+  "collected_at": "2026-10-22T17:42:06.956326+00:00",
+  "instances": [
+    {
+      "InstanceId": "i-037b367bdc4e11ba7",
+      "CpuCredits": "unlimited"
+    },
+    {
+      "InstanceId": "i-022ef01ee1e15a3dd",
+      "CpuCredits": "unlimited"
+    },
+    {
+      "InstanceId": "i-065d2bc1a79e90bc3",
+      "CpuCredits": "unlimited"
+    },
+    {
+      "InstanceId": "i-046feeb4ffc22810e",
+      "CpuCredits": "unlimited"
+    },
+    {
+      "InstanceId": "i-0de6a3177eae6e406",
+      "CpuCredits": "unlimited"
+    },
+    {
+      "InstanceId": "i-0a541c46432c03c04",
+      "CpuCredits": "unlimited"
+    },
+    {
+      "InstanceId": "i-0e278523deb83b58d",
+      "CpuCredits": "unlimited"
+    },
+    {
+      "InstanceId": "i-07c7701012fbef707",
+      "CpuCredits": "unlimited"
+    },
+    {
+      "InstanceId": "i-09d0107ca101e9911",
+      "CpuCredits": "unlimited"
+    }
+  ]
+}

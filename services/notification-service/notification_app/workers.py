@@ -19,6 +19,7 @@ from lostlink_common.identity import (
     IdentityNotFound,
 )
 from lostlink_common.observability import configure_logging
+from lostlink_common.worker_health import heartbeat
 from sqlalchemy import and_, func, or_, select, text
 from sqlalchemy.dialects.postgresql import insert
 
@@ -397,6 +398,7 @@ def main():
                 clients.append(worker.sender.client)
         while not stopped.is_set():
             worked = worker.poll(queue, settings.event_queue_url) if queue else worker.once()
+            heartbeat()
             if args.once:
                 break
             if not worked:

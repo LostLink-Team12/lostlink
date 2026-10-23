@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from lostlink_common.events import DomainEvent
 from sqlalchemy import Float, select, text, update
+from sqlalchemy.orm import defer
 
 from matching_app.embedding import vector_literal
 from matching_app.errors import fail
@@ -103,8 +104,28 @@ def candidates(session, vector, model_version, filters, limit, min_score):
         query = query.where(Catalog.found_at <= filters.found_until)
     # Higher ef_search improves filtered recall on the pgvector 0.7 local image too.
     session.execute(text("SET LOCAL hnsw.ef_search = 200"))
+    if any((filters.category, filters.venue_id, filters.found_from, filters.found_until)):
+        # pgvector 0.7 cannot iteratively scan highly selective filters. Retain
+        # exact filtered retrieval rather than silently losing eligible hits.
+        bounded = query.order_by(distance, Catalog.item_id).limit(limit)
+    else:
+        # pgvector requires the raw distance to be the only inner ordering key.
+        # A secondary ID here forces a full vector scan and sort. Keep all
+        # eligibility/RLS filters before the bound, then stabilize that set.
+        nearest = (
+            query.with_only_columns(
+                Catalog.item_id.label("candidate_id"), distance.label("candidate_distance")
+            )
+            .order_by(distance)
+            .limit(limit)
+            .subquery()
+        )
+        bounded = query.join(nearest, Catalog.item_id == nearest.c.candidate_id).order_by(
+            nearest.c.candidate_distance, Catalog.item_id
+        )
     rows = session.execute(
-        query.order_by(distance, Catalog.item_id).limit(limit),
+        # Scoring stays in PostgreSQL; only freshness/version metadata is read.
+        bounded.options(defer(ItemVector.embedding, raiseload=True)),
         {"query_vector": vector_literal(vector)},
     ).all()
     return [

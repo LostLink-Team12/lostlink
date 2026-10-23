@@ -1,0 +1,22 @@
+{
+  "eks_status": "ACTIVE",
+  "scaling": {
+    "minSize": 1,
+    "maxSize": 5,
+    "desiredSize": 2
+  },
+  "asg_desired": 2,
+  "instances": [
+    {
+      "id": "i-022ef01ee1e15a3dd",
+      "state": "InService",
+      "protected": false
+    },
+    {
+      "id": "i-09d0107ca101e9911",
+      "state": "InService",
+      "protected": false
+    }
+  ],
+  "non_ready_pods_observed": "Non-ready pods: []"
+}

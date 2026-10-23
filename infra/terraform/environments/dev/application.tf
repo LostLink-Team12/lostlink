@@ -76,8 +76,8 @@ resource "aws_cognito_user_pool_client" "operator" {
   allowed_oauth_flows                  = ["code"]
   allowed_oauth_scopes                 = ["openid", "email", "profile"]
   supported_identity_providers         = ["COGNITO"]
-  callback_urls                        = var.cognito_callback_urls
-  logout_urls                          = var.cognito_logout_urls
+  callback_urls                        = local.callback_urls
+  logout_urls                          = local.logout_urls
   explicit_auth_flows                  = ["ALLOW_USER_SRP_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"]
   prevent_user_existence_errors        = "ENABLED"
   enable_token_revocation              = true

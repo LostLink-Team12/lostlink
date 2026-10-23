@@ -73,3 +73,13 @@ test('valid capture preserves real series and report never claims missing thresh
   assert.equal(report.http_requests,4);assert.equal(report.p95_ms,null);assert.equal(report.thresholds_passed,false);
   assert.match(await readFile(join(root,'report/report.html'),'utf8'),/tasks ready/);
 });
+
+test('bulk capture can stop gracefully without requiring a search latency series',async()=> {
+  const out=await mkdtemp(join(tmpdir(),'lostlink-stop-'));
+  const stopFile=join(out,'stop');await writeFile(stopFile,'stop');
+  const queries=[];
+  const result=await capture({context:'test',namespace:'lostlink',selector:'app=test',prometheus:'http://127.0.0.1:9090',backlogQuery:'queue',out,seconds:120,stopFile,includeSearchP95:false},{execute:async(_cmd,args)=>({stdout:JSON.stringify({items:args.includes('deployments')?[{metadata:{name:'tasks'},spec:{replicas:1},status:{readyReplicas:1}}]:args.includes('hpa')?[{metadata:{name:'tasks'},spec:{scaleTargetRef:{name:'tasks'}}}]:[{metadata:{name:'tasks'},spec:{scaleTargetRef:{name:'tasks'},triggers:[{type:'postgresql'}]}}]})}),fetch:async url=>{queries.push(url.searchParams.get('query'));return {ok:true,json:async()=>({status:'success',data:{resultType:'vector',result:[{metric:{},value:[0,'0']}]}})}},pause:async()=>{throw Error('Should stop before waiting')}});
+  assert.equal(result.samples,1);assert.equal(result.incomplete,false);assert.deepEqual(queries,['queue']);
+  assert.match(await readFile(join(out,'scaling.csv'),'utf8'),/embedding_backlog/);
+  assert.doesNotMatch(await readFile(join(out,'scaling.csv'),'utf8'),/p95_seconds/);
+});

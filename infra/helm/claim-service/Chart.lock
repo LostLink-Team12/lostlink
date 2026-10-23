@@ -1,0 +1,6 @@
+dependencies:
+- name: lostlink-common
+  repository: file://../lostlink-common
+  version: 0.1.0
+digest: sha256:7c6b0df3f2ffbac13e216c783001ab49b0dcd517116691864b367bcea7923b23
+generated: "2026-10-22T20:06:17.0606235+08:00"

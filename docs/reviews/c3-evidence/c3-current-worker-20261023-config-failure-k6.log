@@ -1,0 +1,1 @@
+time="2026-10-23T08:49:20+08:00" level=error msg="There were problems with the specified script configuration:\n\t- scenario bulk has configuration errors: the number of iterations (6) can't be less than the number of VUs (10)"

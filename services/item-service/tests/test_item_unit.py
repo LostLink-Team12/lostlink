@@ -13,6 +13,38 @@ from lostlink_common.events import DomainEvent
 from pydantic import ValidationError
 
 
+@pytest.mark.parametrize("internal_pool,expected", [(None, 1), (2, 2)])
+def test_internal_pool_can_grow_without_growing_the_user_pool(monkeypatch, internal_pool, expected):
+    opened, closed = [], []
+
+    class DatabaseSpy:
+        def __init__(self, settings):
+            self.settings = settings
+            opened.append(settings)
+
+        def close(self):
+            closed.append(self.settings)
+
+    monkeypatch.setattr("item_app.main.ItemDatabase", DatabaseSpy)
+    api_url = "postgresql+psycopg://item_api:pw@localhost/lostlink"
+    internal_url = "postgresql+psycopg://item_internal:pw@localhost/lostlink"
+    settings = ItemSettings(
+        _env_file=None,
+        database_url=api_url,
+        internal_database_url=internal_url,
+        db_pool_size=1,
+        db_max_overflow=0,
+        internal_db_pool_size=internal_pool,
+    )
+    with TestClient(create_app(settings)) as client:
+        assert client.get("/health").status_code == 200
+        assert [s.database_url.get_secret_value() for s in opened] == [api_url, internal_url]
+        assert [s.db_pool_size for s in opened] == [1, expected]
+        assert all(s.db_max_overflow == 0 for s in opened)
+        assert settings.db_pool_size == 1
+    assert len(closed) == 2
+
+
 def valid_item():
     return {
         "title": "Blue umbrella",

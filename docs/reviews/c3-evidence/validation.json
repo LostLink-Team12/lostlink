@@ -1,0 +1,55 @@
+{
+  "local": {
+    "backend_unit": {
+      "passed": 314,
+      "deselected": 111,
+      "excluded_markers": [
+        "integration",
+        "model",
+        "scale"
+      ]
+    },
+    "deployment_contracts": {
+      "passed": 5
+    },
+    "terraform_mock": {
+      "passed": 16
+    },
+    "load_tool_contracts": {
+      "passed": 17,
+      "small_batch_default_vu_regression": "real k6 passed",
+      "includes": "C3 native k6 plus main search-review JavaScript contracts"
+    },
+    "frontend": {
+      "passed": 28
+    },
+    "matching_and_item_database_integration": {
+      "passed": 23,
+      "skipped": 6,
+      "skip_reason": "LocalStack event/media endpoint not configured",
+      "internal_pool_size": 2
+    },
+    "acceptance_sender_safety": {
+      "passed": 5
+    },
+    "main_search_review_native_k6": {
+      "passed": 5
+    }
+  },
+  "remote_ci": {
+    "passed_checks": 25,
+    "skipped_checks": 1,
+    "skipped_job": "publish-image (PR policy)",
+    "runs": [
+      39881122889,
+      39881122830,
+      39881122838,
+      39881122844
+    ],
+    "includes_real_container_integration": true,
+    "source_commit": "c4fe5b91e0216b1061c181119083fe9fccd213f8"
+  },
+  "local_full_container_integration_rerun": false,
+  "deployed_backend_source_commit": "62c0f4d93466d31763a4d1493a8dcfa324ba3daf",
+  "merged_main_commit": "f385c80"
+}

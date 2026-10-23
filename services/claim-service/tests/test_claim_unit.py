@@ -63,6 +63,26 @@ def test_token_format_and_keyed_hash():
     assert secret not in first
 
 
+def test_deployed_outbox_starts_without_api_or_task_secrets():
+    config = settings(
+        environment="dev",
+        process_mode="worker",
+        worker_mode="outbox",
+        worker_database_url="postgresql+psycopg://claim_worker:x@db/lostlink",
+    )
+    assert config.machine_client_secret is None
+    assert config.field_encryption_keys is None
+    with pytest.raises(ValidationError):
+        settings(
+            environment="dev",
+            process_mode="worker",
+            worker_mode="tasks",
+            worker_database_url="postgresql+psycopg://claim_worker:x@db/lostlink",
+        )
+    with pytest.raises(ValidationError):
+        settings(environment="dev", process_mode="worker", worker_mode="outbox")
+
+
 def item_client(status, body):
     calls = []
 

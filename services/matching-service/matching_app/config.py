@@ -27,7 +27,13 @@ class MatchingSettings(Settings):
     clip_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     clip_device: Literal["cpu", "cuda"] = "cpu"
     match_threshold: float = Field(default=0.25, ge=-1, le=1)
+    match_threshold_text: float | None = Field(default=None, ge=-1, le=1)
     candidate_limit: int = Field(default=100, ge=20, le=100)
+
+    def automatic_match_threshold(self, has_photo: bool) -> float:
+        if not has_photo and self.match_threshold_text is not None:
+            return self.match_threshold_text
+        return self.match_threshold
 
     @field_validator("internal_database_url", "worker_database_url")
     @classmethod

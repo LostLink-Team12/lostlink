@@ -13,6 +13,7 @@ import boto3
 from botocore.config import Config
 from lostlink_common.events import DomainEvent, SnsPublisher, aws_client
 from lostlink_common.observability import configure_logging
+from lostlink_common.worker_health import heartbeat
 from sqlalchemy import and_, func, or_, select
 
 from venue_app.config import VenueSettings
@@ -222,6 +223,7 @@ def main():
             )
         while not stopped.is_set():
             worked = runner.once(args.mode)
+            heartbeat()
             if args.once:
                 break
             if not worked:

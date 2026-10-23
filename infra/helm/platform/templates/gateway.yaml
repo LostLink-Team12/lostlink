@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels: {app.kubernetes.io/part-of: lostlink}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels: {app.kubernetes.io/name: frontend}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/part-of: lostlink, app.kubernetes.io/name: frontend}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 1000, runAsGroup: 1000, fsGroup: 1000, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: gateway
+          image: {{ required "frontendImage required" .Values.frontendImage | quote }}
+          ports: [{name: http, containerPort: 8080}]
+          securityContext: {allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: {drop: [ALL]}}
+          resources: {requests: {cpu: 25m, memory: 48Mi}, limits: {cpu: 500m, memory: 128Mi}}
+          readinessProbe: {httpGet: {path: /health, port: http}, periodSeconds: 10}
+          livenessProbe: {httpGet: {path: /health, port: http}, periodSeconds: 20}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+            - {name: trust, mountPath: /trust, readOnly: true}
+            - {name: public-config, mountPath: /public-config, readOnly: true}
+      volumes:
+        - {name: tmp, emptyDir: {sizeLimit: 32Mi}}
+        - {name: trust, configMap: {name: lostlink-trust}}
+        - {name: public-config, configMap: {name: lostlink-public-config}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  selector: {app.kubernetes.io/name: frontend}
+  ports: [{name: http, port: 80, targetPort: http}]
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: lostlink
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/security-groups: {{ required "ALB security group required" .Values.albSecurityGroup | quote }}
+    alb.ingress.kubernetes.io/subnets: {{ join "," .Values.subnets | quote }}
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    alb.ingress.kubernetes.io/conditions.frontend: {{ list (dict "field" "http-header" "httpHeaderConfig" (dict "httpHeaderName" "X-LostLink-Origin" "values" (list (required "random origin token required" .Values.originToken)))) | toJson | quote }}
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: {name: frontend, port: {number: 80}}

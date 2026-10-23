@@ -52,7 +52,7 @@ resource "aws_s3_bucket_cors_configuration" "media" {
   bucket = aws_s3_bucket.media.id
   cors_rule {
     allowed_methods = ["POST"]
-    allowed_origins = var.frontend_origins
+    allowed_origins = local.frontend_origins
     allowed_headers = ["Content-Type", "x-amz-*"]
     expose_headers  = ["ETag"]
     max_age_seconds = 3600

@@ -1,0 +1,638 @@
+[
+  {
+    "reason": "Scheduled",
+    "type": "Normal",
+    "count": null,
+    "firstTimestamp": null,
+    "lastTimestamp": null,
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-fl245",
+      "namespace": "lostlink",
+      "resourceVersion": "238879",
+      "uid": "b619004a-f241-4dfc-a623-e617a2f558b9"
+    },
+    "message": "Successfully assigned lostlink/matching-api-7d956ddf8f-fl245 to ip-10-42-0-69.ap-southeast-1.compute.internal"
+  },
+  {
+    "reason": "Pulled",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:45:17Z",
+    "lastTimestamp": "2026-10-22T14:45:17Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.initContainers{model}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-fl245",
+      "namespace": "lostlink",
+      "resourceVersion": "238880",
+      "uid": "b619004a-f241-4dfc-a623-e617a2f558b9"
+    },
+    "message": "Container image \"152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/matching-service@sha256:40174a2b9709ea2ed21a902d0c27fd532f04d2fc3e2d4793ff708b4df4abe721\" already present on machine and can be accessed by the pod"
+  },
+  {
+    "reason": "Created",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:45:17Z",
+    "lastTimestamp": "2026-10-22T14:45:17Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.initContainers{model}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-fl245",
+      "namespace": "lostlink",
+      "resourceVersion": "238880",
+      "uid": "b619004a-f241-4dfc-a623-e617a2f558b9"
+    },
+    "message": "Container created"
+  },
+  {
+    "reason": "Started",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:45:17Z",
+    "lastTimestamp": "2026-10-22T14:45:17Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.initContainers{model}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-fl245",
+      "namespace": "lostlink",
+      "resourceVersion": "238880",
+      "uid": "b619004a-f241-4dfc-a623-e617a2f558b9"
+    },
+    "message": "Container started"
+  },
+  {
+    "reason": "Pulled",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:45:23Z",
+    "lastTimestamp": "2026-10-22T14:45:23Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{app}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-fl245",
+      "namespace": "lostlink",
+      "resourceVersion": "238880",
+      "uid": "b619004a-f241-4dfc-a623-e617a2f558b9"
+    },
+    "message": "Container image \"152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/matching-service@sha256:40174a2b9709ea2ed21a902d0c27fd532f04d2fc3e2d4793ff708b4df4abe721\" already present on machine and can be accessed by the pod"
+  },
+  {
+    "reason": "Created",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:45:23Z",
+    "lastTimestamp": "2026-10-22T14:45:23Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{app}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-fl245",
+      "namespace": "lostlink",
+      "resourceVersion": "238880",
+      "uid": "b619004a-f241-4dfc-a623-e617a2f558b9"
+    },
+    "message": "Container created"
+  },
+  {
+    "reason": "Started",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:45:23Z",
+    "lastTimestamp": "2026-10-22T14:45:23Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{app}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-fl245",
+      "namespace": "lostlink",
+      "resourceVersion": "238880",
+      "uid": "b619004a-f241-4dfc-a623-e617a2f558b9"
+    },
+    "message": "Container started"
+  },
+  {
+    "reason": "Pulled",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:45:23Z",
+    "lastTimestamp": "2026-10-22T14:45:23Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{tls}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-fl245",
+      "namespace": "lostlink",
+      "resourceVersion": "238880",
+      "uid": "b619004a-f241-4dfc-a623-e617a2f558b9"
+    },
+    "message": "Container image \"nginxinc/nginx-unprivileged@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03\" already present on machine and can be accessed by the pod"
+  },
+  {
+    "reason": "Created",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:45:23Z",
+    "lastTimestamp": "2026-10-22T14:45:23Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{tls}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-fl245",
+      "namespace": "lostlink",
+      "resourceVersion": "238880",
+      "uid": "b619004a-f241-4dfc-a623-e617a2f558b9"
+    },
+    "message": "Container created"
+  },
+  {
+    "reason": "Started",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:45:24Z",
+    "lastTimestamp": "2026-10-22T14:45:24Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{tls}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-fl245",
+      "namespace": "lostlink",
+      "resourceVersion": "238880",
+      "uid": "b619004a-f241-4dfc-a623-e617a2f558b9"
+    },
+    "message": "Container started"
+  },
+  {
+    "reason": "Unhealthy",
+    "type": "Warning",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:45:24Z",
+    "lastTimestamp": "2026-10-22T14:45:24Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{tls}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-fl245",
+      "namespace": "lostlink",
+      "resourceVersion": "238880",
+      "uid": "b619004a-f241-4dfc-a623-e617a2f558b9"
+    },
+    "message": "Readiness probe failed: Get \"https://10.42.0.99:8443/health\": dial tcp 10.42.0.99:8443: connect: connection refused"
+  },
+  {
+    "reason": "Unhealthy",
+    "type": "Warning",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:45:24Z",
+    "lastTimestamp": "2026-10-22T14:45:24Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{tls}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-fl245",
+      "namespace": "lostlink",
+      "resourceVersion": "238880",
+      "uid": "b619004a-f241-4dfc-a623-e617a2f558b9"
+    },
+    "message": "Readiness probe failed: HTTP probe failed with statuscode: 502"
+  },
+  {
+    "reason": "Unhealthy",
+    "type": "Warning",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:45:27Z",
+    "lastTimestamp": "2026-10-22T14:45:27Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{app}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-fl245",
+      "namespace": "lostlink",
+      "resourceVersion": "238880",
+      "uid": "b619004a-f241-4dfc-a623-e617a2f558b9"
+    },
+    "message": "Startup probe failed: Get \"http://10.42.0.99:8000/ready\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "reason": "Unhealthy",
+    "type": "Warning",
+    "count": 14,
+    "firstTimestamp": "2026-10-22T14:50:56Z",
+    "lastTimestamp": "2026-10-22T14:56:46Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{app}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-fl245",
+      "namespace": "lostlink",
+      "resourceVersion": "238880",
+      "uid": "b619004a-f241-4dfc-a623-e617a2f558b9"
+    },
+    "message": "Readiness probe failed: Get \"http://10.42.0.99:8000/ready\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "reason": "Unhealthy",
+    "type": "Warning",
+    "count": 2,
+    "firstTimestamp": "2026-10-22T14:52:12Z",
+    "lastTimestamp": "2026-10-22T14:55:27Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{tls}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-fl245",
+      "namespace": "lostlink",
+      "resourceVersion": "238880",
+      "uid": "b619004a-f241-4dfc-a623-e617a2f558b9"
+    },
+    "message": "Readiness probe failed: Get \"https://10.42.0.99:8443/health\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "reason": "Unhealthy",
+    "type": "Warning",
+    "count": 6,
+    "firstTimestamp": "2026-10-22T14:52:42Z",
+    "lastTimestamp": "2026-10-22T14:56:37Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{tls}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-fl245",
+      "namespace": "lostlink",
+      "resourceVersion": "238880",
+      "uid": "b619004a-f241-4dfc-a623-e617a2f558b9"
+    },
+    "message": "Readiness probe failed: Get \"https://10.42.0.99:8443/health\": net/http: request canceled (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "reason": "Unhealthy",
+    "type": "Warning",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:54:57Z",
+    "lastTimestamp": "2026-10-22T14:54:57Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{tls}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-fl245",
+      "namespace": "lostlink",
+      "resourceVersion": "238880",
+      "uid": "b619004a-f241-4dfc-a623-e617a2f558b9"
+    },
+    "message": "Readiness probe failed: Get \"https://10.42.0.99:8443/health\": net/http: request canceled while waiting for connection (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "reason": "Unhealthy",
+    "type": "Warning",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:55:21Z",
+    "lastTimestamp": "2026-10-22T14:55:21Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{app}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-fl245",
+      "namespace": "lostlink",
+      "resourceVersion": "238880",
+      "uid": "b619004a-f241-4dfc-a623-e617a2f558b9"
+    },
+    "message": "Liveness probe failed: Get \"http://10.42.0.99:8000/health\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "reason": "Unhealthy",
+    "type": "Warning",
+    "count": 3,
+    "firstTimestamp": "2026-10-22T12:35:47Z",
+    "lastTimestamp": "2026-10-22T15:00:49Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{tls}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-pvp8g",
+      "namespace": "lostlink",
+      "resourceVersion": "206608",
+      "uid": "25e8aed5-0086-41d6-9a76-37b17ebada5e"
+    },
+    "message": "Readiness probe failed: Get \"https://10.42.1.82:8443/health\": dial tcp 10.42.1.82:8443: connect: connection refused"
+  },
+  {
+    "reason": "Unhealthy",
+    "type": "Warning",
+    "count": 15,
+    "firstTimestamp": "2026-10-22T14:50:08Z",
+    "lastTimestamp": "2026-10-22T14:54:29Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{app}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-pvp8g",
+      "namespace": "lostlink",
+      "resourceVersion": "206608",
+      "uid": "25e8aed5-0086-41d6-9a76-37b17ebada5e"
+    },
+    "message": "Readiness probe failed: Get \"http://10.42.1.82:8000/ready\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "reason": "Unhealthy",
+    "type": "Warning",
+    "count": 5,
+    "firstTimestamp": "2026-10-22T14:51:39Z",
+    "lastTimestamp": "2026-10-22T14:53:24Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{tls}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-pvp8g",
+      "namespace": "lostlink",
+      "resourceVersion": "206608",
+      "uid": "25e8aed5-0086-41d6-9a76-37b17ebada5e"
+    },
+    "message": "Readiness probe failed: Get \"https://10.42.1.82:8443/health\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "reason": "Unhealthy",
+    "type": "Warning",
+    "count": 4,
+    "firstTimestamp": "2026-10-22T14:53:25Z",
+    "lastTimestamp": "2026-10-22T14:55:40Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{tls}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-pvp8g",
+      "namespace": "lostlink",
+      "resourceVersion": "206608",
+      "uid": "25e8aed5-0086-41d6-9a76-37b17ebada5e"
+    },
+    "message": "Readiness probe failed: Get \"https://10.42.1.82:8443/health\": net/http: request canceled (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "reason": "Unhealthy",
+    "type": "Warning",
+    "count": 2,
+    "firstTimestamp": "2026-10-22T14:54:23Z",
+    "lastTimestamp": "2026-10-22T14:54:43Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{app}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-pvp8g",
+      "namespace": "lostlink",
+      "resourceVersion": "206608",
+      "uid": "25e8aed5-0086-41d6-9a76-37b17ebada5e"
+    },
+    "message": "Liveness probe failed: Get \"http://10.42.1.82:8000/health\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)"
+  },
+  {
+    "reason": "Killing",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T15:00:47Z",
+    "lastTimestamp": "2026-10-22T15:00:47Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{app}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-pvp8g",
+      "namespace": "lostlink",
+      "resourceVersion": "206608",
+      "uid": "25e8aed5-0086-41d6-9a76-37b17ebada5e"
+    },
+    "message": "Stopping container app"
+  },
+  {
+    "reason": "Killing",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T15:00:47Z",
+    "lastTimestamp": "2026-10-22T15:00:47Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{tls}",
+      "kind": "Pod",
+      "name": "matching-api-7d956ddf8f-pvp8g",
+      "namespace": "lostlink",
+      "resourceVersion": "206608",
+      "uid": "25e8aed5-0086-41d6-9a76-37b17ebada5e"
+    },
+    "message": "Stopping container tls"
+  },
+  {
+    "reason": "SuccessfulCreate",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:45:16Z",
+    "lastTimestamp": "2026-10-22T14:45:16Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "ReplicaSet",
+      "name": "matching-api-7d956ddf8f",
+      "namespace": "lostlink",
+      "resourceVersion": "238873",
+      "uid": "1ccbcac2-c36d-4773-9a89-35727e5d5d9c"
+    },
+    "message": "Created pod: matching-api-7d956ddf8f-fl245"
+  },
+  {
+    "reason": "SuccessfulDelete",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T15:00:47Z",
+    "lastTimestamp": "2026-10-22T15:00:47Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "ReplicaSet",
+      "name": "matching-api-7d956ddf8f",
+      "namespace": "lostlink",
+      "resourceVersion": "242879",
+      "uid": "1ccbcac2-c36d-4773-9a89-35727e5d5d9c"
+    },
+    "message": "Deleted pod: matching-api-7d956ddf8f-pvp8g"
+  },
+  {
+    "reason": "SuccessfulRescale",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:45:16Z",
+    "lastTimestamp": "2026-10-22T14:45:16Z",
+    "involvedObject": {
+      "apiVersion": "autoscaling/v2",
+      "kind": "HorizontalPodAutoscaler",
+      "name": "matching-api",
+      "namespace": "lostlink",
+      "resourceVersion": "238811",
+      "uid": "3cbaa279-7aeb-4e31-bc0e-7418c1fc7273"
+    },
+    "message": "New size: 2; reason: cpu container resource utilization (percentage of request) above target"
+  },
+  {
+    "reason": "ScalingReplicaSet",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:45:16Z",
+    "lastTimestamp": "2026-10-22T14:45:16Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "matching-api",
+      "namespace": "lostlink",
+      "resourceVersion": "238870",
+      "uid": "179e524e-6de2-4484-a00d-d70f3708660e"
+    },
+    "message": "Scaled up replica set matching-api-7d956ddf8f from 1 to 2"
+  },
+  {
+    "reason": "SuccessfulRescale",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T15:00:47Z",
+    "lastTimestamp": "2026-10-22T15:00:47Z",
+    "involvedObject": {
+      "apiVersion": "autoscaling/v2",
+      "kind": "HorizontalPodAutoscaler",
+      "name": "matching-api",
+      "namespace": "lostlink",
+      "resourceVersion": "242694",
+      "uid": "3cbaa279-7aeb-4e31-bc0e-7418c1fc7273"
+    },
+    "message": "New size: 1; reason: All metrics below target"
+  },
+  {
+    "reason": "ScalingReplicaSet",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T15:00:47Z",
+    "lastTimestamp": "2026-10-22T15:00:47Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "matching-api",
+      "namespace": "lostlink",
+      "resourceVersion": "242876",
+      "uid": "179e524e-6de2-4484-a00d-d70f3708660e"
+    },
+    "message": "Scaled down replica set matching-api-7d956ddf8f from 2 to 1"
+  },
+  {
+    "reason": "Scheduled",
+    "type": "Normal",
+    "count": null,
+    "firstTimestamp": null,
+    "lastTimestamp": null,
+    "involvedObject": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "name": "notification-tasks-85b497b79c-s66pf",
+      "namespace": "lostlink",
+      "resourceVersion": "229593",
+      "uid": "4ae44bca-e235-463c-92c6-fd57ee07e3f2"
+    },
+    "message": "Successfully assigned lostlink/notification-tasks-85b497b79c-s66pf to ip-10-42-1-197.ap-southeast-1.compute.internal"
+  },
+  {
+    "reason": "Pulling",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:07:03Z",
+    "lastTimestamp": "2026-10-22T14:07:03Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{app}",
+      "kind": "Pod",
+      "name": "notification-tasks-85b497b79c-s66pf",
+      "namespace": "lostlink",
+      "resourceVersion": "229596",
+      "uid": "4ae44bca-e235-463c-92c6-fd57ee07e3f2"
+    },
+    "message": "Pulling image \"152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/notification-service@sha256:3ba2ef05fce5458b777581032f6a7051409b43f6c53a2e74879df46460e17ee5\""
+  },
+  {
+    "reason": "Pulled",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:07:04Z",
+    "lastTimestamp": "2026-10-22T14:07:04Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{app}",
+      "kind": "Pod",
+      "name": "notification-tasks-85b497b79c-s66pf",
+      "namespace": "lostlink",
+      "resourceVersion": "229596",
+      "uid": "4ae44bca-e235-463c-92c6-fd57ee07e3f2"
+    },
+    "message": "Successfully pulled image \"152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/notification-service@sha256:3ba2ef05fce5458b777581032f6a7051409b43f6c53a2e74879df46460e17ee5\" in 439ms (439ms including waiting). Image size: 99966488 bytes."
+  },
+  {
+    "reason": "Created",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:07:04Z",
+    "lastTimestamp": "2026-10-22T14:07:04Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{app}",
+      "kind": "Pod",
+      "name": "notification-tasks-85b497b79c-s66pf",
+      "namespace": "lostlink",
+      "resourceVersion": "229596",
+      "uid": "4ae44bca-e235-463c-92c6-fd57ee07e3f2"
+    },
+    "message": "Container created"
+  },
+  {
+    "reason": "Started",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:07:04Z",
+    "lastTimestamp": "2026-10-22T14:07:04Z",
+    "involvedObject": {
+      "apiVersion": "v1",
+      "fieldPath": "spec.containers{app}",
+      "kind": "Pod",
+      "name": "notification-tasks-85b497b79c-s66pf",
+      "namespace": "lostlink",
+      "resourceVersion": "229596",
+      "uid": "4ae44bca-e235-463c-92c6-fd57ee07e3f2"
+    },
+    "message": "Container started"
+  },
+  {
+    "reason": "SuccessfulCreate",
+    "type": "Normal",
+    "count": 1,
+    "firstTimestamp": "2026-10-22T14:07:02Z",
+    "lastTimestamp": "2026-10-22T14:07:02Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "ReplicaSet",
+      "name": "notification-tasks-85b497b79c",
+      "namespace": "lostlink",
+      "resourceVersion": "229588",
+      "uid": "f710cad2-bfa8-44ec-9a98-10854d07e724"
+    },
+    "message": "Created pod: notification-tasks-85b497b79c-s66pf"
+  },
+  {
+    "reason": "ScalingReplicaSet",
+    "type": "Normal",
+    "count": 2,
+    "firstTimestamp": "2026-10-22T12:50:03Z",
+    "lastTimestamp": "2026-10-22T14:07:02Z",
+    "involvedObject": {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "name": "notification-tasks",
+      "namespace": "lostlink",
+      "resourceVersion": "229587",
+      "uid": "26854e2a-53fa-4a64-8af0-4bb19e366006"
+    },
+    "message": "Scaled up replica set notification-tasks-85b497b79c from 0 to 1"
+  }
+]
