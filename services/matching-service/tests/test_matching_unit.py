@@ -53,7 +53,17 @@ def test_unconfigured_text_cutoff_preserves_the_existing_single_threshold():
     assert settings.automatic_match_threshold(True) == 0.42
 
 
-def test_candidate_query_scores_in_database_without_returning_dense_vectors():
+@pytest.mark.parametrize(
+    "filters",
+    [
+        {},
+        {"category": "Backpack"},
+        {"venue_id": str(uuid4())},
+        {"found_from": "2026-10-01T00:00:00Z"},
+        {"found_until": "2026-10-31T00:00:00Z"},
+    ],
+)
+def test_candidate_query_scores_in_database_without_returning_dense_vectors(filters):
     from matching_app.service import candidates
     from sqlalchemy import Select
     from sqlalchemy.dialects import postgresql
@@ -69,7 +79,7 @@ def test_candidate_query_scores_in_database_without_returning_dense_vectors():
         SimpleNamespace(execute=execute),
         [1.0] + [0.0] * 511,
         "test",
-        Search(text="backpack"),
+        Search(text="backpack", **filters),
         100,
         0.25,
     )
@@ -79,6 +89,18 @@ def test_candidate_query_scores_in_database_without_returning_dense_vectors():
     for column in ["item_version", "tenant_id", "correlation_id", "model_version"]:
         assert "matching.item_vectors." + column in projection
     assert "ORDER BY matching.item_vectors.embedding <=>" in statements[0]
+    if filters:
+        assert "JOIN (SELECT" not in statements[0]
+        assert "matching.catalog.item_id" in statements[0].split("ORDER BY", 1)[1]
+        return
+    inner = statements[0].split("JOIN (SELECT", 1)[1].split(") AS anon_1", 1)[0]
+    # Keep the single raw distance ordering eligible for pgvector's HNSW path.
+    inner_order = inner.split("ORDER BY", 1)[1].split("LIMIT", 1)[0]
+    assert "catalog.item_id" not in inner_order
+    assert "ORDER BY anon_1.candidate_distance, matching.catalog.item_id" in statements[0]
+    assert "matching.catalog.state" in inner and "matching.item_vectors.model_version" in inner
+    assert "matching.catalog.item_version = matching.item_vectors.item_version" in inner
+    assert "matching.catalog.tenant_id = matching.item_vectors.tenant_id" in inner
 
 
 @pytest.mark.parametrize("has_photo,expected", [(False, 0.63), (True, 0.78)])

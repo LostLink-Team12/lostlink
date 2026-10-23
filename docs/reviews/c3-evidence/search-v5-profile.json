@@ -1,0 +1,858 @@
+{
+  "collected_at": "2026-10-22T23:48:14.243864+00:00",
+  "model_pods": [
+    {
+      "name": "matching-api-5d9d7fb975-fpk5n",
+      "node": "ip-10-42-1-238.ap-southeast-1.compute.internal",
+      "phase": "Running"
+    },
+    {
+      "name": "matching-api-5d9d7fb975-hkc7n",
+      "node": "ip-10-42-0-69.ap-southeast-1.compute.internal",
+      "phase": "Running"
+    },
+    {
+      "name": "matching-api-5d9d7fb975-j5rp5",
+      "node": "ip-10-42-1-197.ap-southeast-1.compute.internal",
+      "phase": "Running"
+    },
+    {
+      "name": "matching-api-5d9d7fb975-jn2z5",
+      "node": "ip-10-42-0-126.ap-southeast-1.compute.internal",
+      "phase": "Running"
+    },
+    {
+      "name": "matching-api-5d9d7fb975-mddnp",
+      "node": "ip-10-42-1-59.ap-southeast-1.compute.internal",
+      "phase": "Running"
+    },
+    {
+      "name": "matching-api-5d9d7fb975-pqscs",
+      "node": "ip-10-42-1-107.ap-southeast-1.compute.internal",
+      "phase": "Running"
+    },
+    {
+      "name": "matching-api-5d9d7fb975-ps98d",
+      "node": "ip-10-42-0-121.ap-southeast-1.compute.internal",
+      "phase": "Running"
+    },
+    {
+      "name": "matching-api-5d9d7fb975-vbmpq",
+      "node": "ip-10-42-0-206.ap-southeast-1.compute.internal",
+      "phase": "Running"
+    },
+    {
+      "name": "matching-tasks-857cbc4c84-zm46k",
+      "node": "ip-10-42-0-218.ap-southeast-1.compute.internal",
+      "phase": "Running"
+    }
+  ],
+  "nodes": [
+    {
+      "name": "ip-10-42-0-121.ap-southeast-1.compute.internal",
+      "type": "t3.large",
+      "allocatable": {
+        "cpu": "1930m",
+        "ephemeral-storage": "27845546346",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "7249748Ki",
+        "pods": "35"
+      },
+      "ready": "True"
+    },
+    {
+      "name": "ip-10-42-0-126.ap-southeast-1.compute.internal",
+      "type": "t3.large",
+      "allocatable": {
+        "cpu": "1930m",
+        "ephemeral-storage": "27845546346",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "7249740Ki",
+        "pods": "35"
+      },
+      "ready": "True"
+    },
+    {
+      "name": "ip-10-42-0-206.ap-southeast-1.compute.internal",
+      "type": "t3.large",
+      "allocatable": {
+        "cpu": "1930m",
+        "ephemeral-storage": "27845546346",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "7249752Ki",
+        "pods": "35"
+      },
+      "ready": "True"
+    },
+    {
+      "name": "ip-10-42-0-218.ap-southeast-1.compute.internal",
+      "type": "t3.large",
+      "allocatable": {
+        "cpu": "1930m",
+        "ephemeral-storage": "27845546346",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "7249752Ki",
+        "pods": "35"
+      },
+      "ready": "True"
+    },
+    {
+      "name": "ip-10-42-0-69.ap-southeast-1.compute.internal",
+      "type": "t3.large",
+      "allocatable": {
+        "cpu": "1930m",
+        "ephemeral-storage": "27845546346",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "7249744Ki",
+        "pods": "35"
+      },
+      "ready": "True"
+    },
+    {
+      "name": "ip-10-42-1-107.ap-southeast-1.compute.internal",
+      "type": "t3.large",
+      "allocatable": {
+        "cpu": "1930m",
+        "ephemeral-storage": "27845546346",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "7249744Ki",
+        "pods": "35"
+      },
+      "ready": "True"
+    },
+    {
+      "name": "ip-10-42-1-197.ap-southeast-1.compute.internal",
+      "type": "t3.large",
+      "allocatable": {
+        "cpu": "1930m",
+        "ephemeral-storage": "27845546346",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "7249752Ki",
+        "pods": "35"
+      },
+      "ready": "True"
+    },
+    {
+      "name": "ip-10-42-1-238.ap-southeast-1.compute.internal",
+      "type": "t3.large",
+      "allocatable": {
+        "cpu": "1930m",
+        "ephemeral-storage": "27845546346",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "7249752Ki",
+        "pods": "35"
+      },
+      "ready": "True"
+    },
+    {
+      "name": "ip-10-42-1-59.ap-southeast-1.compute.internal",
+      "type": "t3.large",
+      "allocatable": {
+        "cpu": "1930m",
+        "ephemeral-storage": "27845546346",
+        "hugepages-1Gi": "0",
+        "hugepages-2Mi": "0",
+        "memory": "7249736Ki",
+        "pods": "35"
+      },
+      "ready": "True"
+    }
+  ],
+  "deployments": [
+    {
+      "name": "claim-api",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "app",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/claim-service@sha256:5b3d533f81dd0f7936eec88036032a434b324400d347e1cd706642bb82ac2547",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "384Mi"
+            },
+            "requests": {
+              "cpu": "25m",
+              "memory": "128Mi"
+            }
+          },
+          "matching_thresholds": {}
+        },
+        {
+          "name": "tls",
+          "image": "nginxinc/nginx-unprivileged@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03",
+          "resources": {
+            "limits": {
+              "cpu": "100m",
+              "memory": "64Mi"
+            },
+            "requests": {
+              "cpu": "10m",
+              "memory": "24Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    },
+    {
+      "name": "claim-outbox",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "app",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/claim-service@sha256:5b3d533f81dd0f7936eec88036032a434b324400d347e1cd706642bb82ac2547",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "384Mi"
+            },
+            "requests": {
+              "cpu": "25m",
+              "memory": "128Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    },
+    {
+      "name": "claim-tasks",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "app",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/claim-service@sha256:5b3d533f81dd0f7936eec88036032a434b324400d347e1cd706642bb82ac2547",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "384Mi"
+            },
+            "requests": {
+              "cpu": "25m",
+              "memory": "128Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    },
+    {
+      "name": "embedding-metrics",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "exporter",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/venue-service@sha256:ee98501593e55c963b09f4e1d45ba76a0f5bf9e8b8c550dabb0e10dae27589ce",
+          "resources": {
+            "limits": {
+              "cpu": "100m",
+              "memory": "128Mi"
+            },
+            "requests": {
+              "cpu": "10m",
+              "memory": "64Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    },
+    {
+      "name": "frontend",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "gateway",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/frontend@sha256:c298aa912f433c56a91806ae9652d39661949ef5bd7a238a9ce8ebee85dcfa36",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "128Mi"
+            },
+            "requests": {
+              "cpu": "25m",
+              "memory": "48Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    },
+    {
+      "name": "grafana",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "grafana",
+          "image": "grafana/grafana:12.2.1",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "384Mi"
+            },
+            "requests": {
+              "cpu": "50m",
+              "memory": "128Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    },
+    {
+      "name": "item-api",
+      "desired": 8,
+      "ready": 8,
+      "containers": [
+        {
+          "name": "app",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/item-service@sha256:e7d21e5e83f28724a57c5433a2966cb8c368928480dab9c055e99fac660a840c",
+          "resources": {
+            "limits": {
+              "cpu": "1",
+              "memory": "384Mi"
+            },
+            "requests": {
+              "cpu": "100m",
+              "memory": "128Mi"
+            }
+          },
+          "matching_thresholds": {}
+        },
+        {
+          "name": "tls",
+          "image": "nginxinc/nginx-unprivileged@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03",
+          "resources": {
+            "limits": {
+              "cpu": "100m",
+              "memory": "64Mi"
+            },
+            "requests": {
+              "cpu": "10m",
+              "memory": "24Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    },
+    {
+      "name": "item-cleanup",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "app",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/item-service@sha256:e7d21e5e83f28724a57c5433a2966cb8c368928480dab9c055e99fac660a840c",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "384Mi"
+            },
+            "requests": {
+              "cpu": "25m",
+              "memory": "128Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    },
+    {
+      "name": "item-consume",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "app",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/item-service@sha256:e7d21e5e83f28724a57c5433a2966cb8c368928480dab9c055e99fac660a840c",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "384Mi"
+            },
+            "requests": {
+              "cpu": "25m",
+              "memory": "128Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    },
+    {
+      "name": "item-outbox",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "app",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/item-service@sha256:e7d21e5e83f28724a57c5433a2966cb8c368928480dab9c055e99fac660a840c",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "384Mi"
+            },
+            "requests": {
+              "cpu": "25m",
+              "memory": "128Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    },
+    {
+      "name": "item-tasks",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "app",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/item-service@sha256:e7d21e5e83f28724a57c5433a2966cb8c368928480dab9c055e99fac660a840c",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "384Mi"
+            },
+            "requests": {
+              "cpu": "25m",
+              "memory": "128Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    },
+    {
+      "name": "matching-api",
+      "desired": 8,
+      "ready": 8,
+      "containers": [
+        {
+          "name": "app",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/matching-service@sha256:d36b53f2779f9eda0a4b15d4cbdb8dc30a1a9938934ed50a3da897564800aa0f",
+          "resources": {
+            "limits": {
+              "cpu": "1500m",
+              "memory": "4Gi"
+            },
+            "requests": {
+              "cpu": "500m",
+              "memory": "4Gi"
+            }
+          },
+          "matching_thresholds": {
+            "MATCH_THRESHOLD": "0.78",
+            "MATCH_THRESHOLD_TEXT": "0.63"
+          }
+        },
+        {
+          "name": "tls",
+          "image": "nginxinc/nginx-unprivileged@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03",
+          "resources": {
+            "limits": {
+              "cpu": "100m",
+              "memory": "64Mi"
+            },
+            "requests": {
+              "cpu": "10m",
+              "memory": "24Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    },
+    {
+      "name": "matching-consume",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "app",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/matching-service@sha256:d36b53f2779f9eda0a4b15d4cbdb8dc30a1a9938934ed50a3da897564800aa0f",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "384Mi"
+            },
+            "requests": {
+              "cpu": "25m",
+              "memory": "128Mi"
+            }
+          },
+          "matching_thresholds": {
+            "MATCH_THRESHOLD": "0.78",
+            "MATCH_THRESHOLD_TEXT": "0.63"
+          }
+        }
+      ]
+    },
+    {
+      "name": "matching-outbox",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "app",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/matching-service@sha256:d36b53f2779f9eda0a4b15d4cbdb8dc30a1a9938934ed50a3da897564800aa0f",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "384Mi"
+            },
+            "requests": {
+              "cpu": "25m",
+              "memory": "128Mi"
+            }
+          },
+          "matching_thresholds": {
+            "MATCH_THRESHOLD": "0.78",
+            "MATCH_THRESHOLD_TEXT": "0.63"
+          }
+        }
+      ]
+    },
+    {
+      "name": "matching-tasks",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "app",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/matching-service@sha256:d36b53f2779f9eda0a4b15d4cbdb8dc30a1a9938934ed50a3da897564800aa0f",
+          "resources": {
+            "limits": {
+              "cpu": "1500m",
+              "memory": "4Gi"
+            },
+            "requests": {
+              "cpu": "500m",
+              "memory": "4Gi"
+            }
+          },
+          "matching_thresholds": {
+            "MATCH_THRESHOLD": "0.78",
+            "MATCH_THRESHOLD_TEXT": "0.63"
+          }
+        }
+      ]
+    },
+    {
+      "name": "notification-api",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "app",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/notification-service@sha256:639d34bc75c7d79c092a309a140524331578d4714d4fa7f5a7d77d85660ebe1e",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "384Mi"
+            },
+            "requests": {
+              "cpu": "25m",
+              "memory": "128Mi"
+            }
+          },
+          "matching_thresholds": {}
+        },
+        {
+          "name": "tls",
+          "image": "nginxinc/nginx-unprivileged@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03",
+          "resources": {
+            "limits": {
+              "cpu": "100m",
+              "memory": "64Mi"
+            },
+            "requests": {
+              "cpu": "10m",
+              "memory": "24Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    },
+    {
+      "name": "notification-consume",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "app",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/notification-service@sha256:639d34bc75c7d79c092a309a140524331578d4714d4fa7f5a7d77d85660ebe1e",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "384Mi"
+            },
+            "requests": {
+              "cpu": "25m",
+              "memory": "128Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    },
+    {
+      "name": "notification-tasks",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "app",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/notification-service@sha256:639d34bc75c7d79c092a309a140524331578d4714d4fa7f5a7d77d85660ebe1e",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "384Mi"
+            },
+            "requests": {
+              "cpu": "25m",
+              "memory": "128Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    },
+    {
+      "name": "prometheus",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "prometheus",
+          "image": "prom/prometheus:v3.7.3",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "768Mi"
+            },
+            "requests": {
+              "cpu": "100m",
+              "memory": "256Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    },
+    {
+      "name": "venue-api",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "app",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/venue-service@sha256:ee98501593e55c963b09f4e1d45ba76a0f5bf9e8b8c550dabb0e10dae27589ce",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "384Mi"
+            },
+            "requests": {
+              "cpu": "25m",
+              "memory": "128Mi"
+            }
+          },
+          "matching_thresholds": {}
+        },
+        {
+          "name": "tls",
+          "image": "nginxinc/nginx-unprivileged@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03",
+          "resources": {
+            "limits": {
+              "cpu": "100m",
+              "memory": "64Mi"
+            },
+            "requests": {
+              "cpu": "10m",
+              "memory": "24Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    },
+    {
+      "name": "venue-identity",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "app",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/venue-service@sha256:ee98501593e55c963b09f4e1d45ba76a0f5bf9e8b8c550dabb0e10dae27589ce",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "384Mi"
+            },
+            "requests": {
+              "cpu": "25m",
+              "memory": "128Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    },
+    {
+      "name": "venue-outbox",
+      "desired": 1,
+      "ready": 1,
+      "containers": [
+        {
+          "name": "app",
+          "image": "152174417545.dkr.ecr.ap-southeast-1.amazonaws.com/lostlink/venue-service@sha256:ee98501593e55c963b09f4e1d45ba76a0f5bf9e8b8c550dabb0e10dae27589ce",
+          "resources": {
+            "limits": {
+              "cpu": "500m",
+              "memory": "384Mi"
+            },
+            "requests": {
+              "cpu": "25m",
+              "memory": "128Mi"
+            }
+          },
+          "matching_thresholds": {}
+        }
+      ]
+    }
+  ],
+  "hpas": [
+    {
+      "name": "claim-api",
+      "min": 1,
+      "max": 2,
+      "metrics": [
+        {
+          "containerResource": {
+            "container": "app",
+            "name": "cpu",
+            "target": {
+              "averageUtilization": 60,
+              "type": "Utilization"
+            }
+          },
+          "type": "ContainerResource"
+        }
+      ]
+    },
+    {
+      "name": "item-api",
+      "min": 1,
+      "max": 8,
+      "metrics": [
+        {
+          "containerResource": {
+            "container": "app",
+            "name": "cpu",
+            "target": {
+              "averageUtilization": 60,
+              "type": "Utilization"
+            }
+          },
+          "type": "ContainerResource"
+        }
+      ]
+    },
+    {
+      "name": "keda-hpa-matching-tasks",
+      "min": 1,
+      "max": 2,
+      "metrics": [
+        {
+          "external": {
+            "metric": {
+              "name": "s0-postgresql",
+              "selector": {
+                "matchLabels": {
+                  "scaledobject.keda.sh/name": "matching-tasks"
+                }
+              }
+            },
+            "target": {
+              "averageValue": "10",
+              "type": "AverageValue"
+            }
+          },
+          "type": "External"
+        }
+      ]
+    },
+    {
+      "name": "matching-api",
+      "min": 1,
+      "max": 8,
+      "metrics": [
+        {
+          "containerResource": {
+            "container": "app",
+            "name": "cpu",
+            "target": {
+              "averageUtilization": 60,
+              "type": "Utilization"
+            }
+          },
+          "type": "ContainerResource"
+        }
+      ]
+    },
+    {
+      "name": "notification-api",
+      "min": 1,
+      "max": 2,
+      "metrics": [
+        {
+          "containerResource": {
+            "container": "app",
+            "name": "cpu",
+            "target": {
+              "averageUtilization": 60,
+              "type": "Utilization"
+            }
+          },
+          "type": "ContainerResource"
+        }
+      ]
+    },
+    {
+      "name": "venue-api",
+      "min": 1,
+      "max": 2,
+      "metrics": [
+        {
+          "containerResource": {
+            "container": "app",
+            "name": "cpu",
+            "target": {
+              "averageUtilization": 60,
+              "type": "Utilization"
+            }
+          },
+          "type": "ContainerResource"
+        }
+      ]
+    }
+  ]
+}

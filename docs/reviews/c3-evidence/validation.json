@@ -1,0 +1,39 @@
+{
+  "source_commit": "fed9245325d2bfcd05e5e4da131f30c5c8ac90f1",
+  "local": {
+    "backend_unit": {
+      "passed": 232,
+      "deselected": 83,
+      "excluded_markers": [
+        "integration",
+        "model",
+        "scale"
+      ]
+    },
+    "deployment_contracts": {
+      "passed": 4
+    },
+    "terraform_mock": {
+      "passed": 16
+    },
+    "load_tool_contracts": {
+      "passed": 11
+    },
+    "frontend": {
+      "passed": 28
+    }
+  },
+  "remote_ci": {
+    "passed_checks": 25,
+    "skipped_checks": 1,
+    "skipped_job": "publish-image (PR policy)",
+    "runs": [
+      39872963278,
+      39872963279,
+      39872963293,
+      39872963361
+    ],
+    "includes_real_container_integration": true
+  },
+  "local_full_container_integration_rerun": false
+}

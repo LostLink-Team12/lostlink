@@ -106,6 +106,12 @@ performs a new HTTPS exchange with current authorization and Item state;
 responses are not cached. Restart Matching API/tasks after changing the CA
 trust bundle. Candidate scoring/sorting remains in PostgreSQL; complete dense
 vectors are no longer transferred for results that only need version metadata.
+Unfiltered retrieval uses a distance-only bounded inner query so PostgreSQL can
+use HNSW, then orders that candidate set by distance and item ID. Eligibility and
+RLS checks remain inside the bound. Selective category/venue/date queries retain
+exact retrieval because pgvector 0.7 cannot iteratively recover filtered hits.
+Equal-score membership at the candidate cutoff can differ under approximate
+retrieval; the existing truncation indicator remains in the response.
 
 Use public clients with real Cognito code/PKCE login. Real user login, camera
 permissions and UC1–UC5 must be checked against the deployed environment; a
@@ -178,7 +184,7 @@ default HPA cap and return `node_desired_size` to 2 through a reviewed Terraform
 plan. This is deliberate operator capacity management; no node autoscaler is installed.
 
 `preserve-monitoring.py protect` temporarily protects the two original baseline
-instances before removing the three demo nodes, so their private monitoring
+instances before removing the temporary demo nodes, so their private monitoring
 emptyDir histories survive that scale-in. Run `preserve-monitoring.py restore`
 afterwards to restore their previous protection flags. This is not durable
 storage or protection against node failure; keep exported report artifacts.

@@ -1,0 +1,14 @@
+{
+  "started_at": "2026-10-22T16:47:12.186960+00:00",
+  "finished_at": "2026-10-22T17:10:43.270260+00:00",
+  "run_id": "c3-search-20261022-v2",
+  "mode": "search",
+  "origin": "https://d37mn7oo1kv0ok.cloudfront.net",
+  "k6_exit_code": 99,
+  "collector_exit_code": 0,
+  "cooldown_and_drain_observed": true,
+  "historical_failed_jobs_before": 7.0,
+  "failed_jobs_after": 7.0,
+  "prometheus_p95_window": "15m",
+  "search_latency_source": "search k6 summary"
+}
