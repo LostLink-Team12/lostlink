@@ -199,6 +199,20 @@ def search(body: schemas.Search, request: Request, principal: Actor):
 
 
 @router.get(
+    "/v1/items/{item_id}/photo",
+    response_model=schemas.ItemPhoto,
+    responses=error_responses(404),
+)
+def item_photo(item_id: UUID, request: Request, response: Response, principal: Actor):
+    owner(request, principal)
+    current = item_context(request, item_id)
+    if current is None or current.state != "available" or not current.photo_url:
+        fail(404, "photo_unavailable", "This item's photo is no longer available")
+    response.headers["Cache-Control"] = "no-store"
+    return {"item_id": item_id, "photo_url": current.photo_url}
+
+
+@router.get(
     "/v1/lost-reports/{report_id}/matches",
     response_model=schemas.MatchesPage,
     responses=error_responses(404),

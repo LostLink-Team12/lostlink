@@ -23,6 +23,7 @@ from venue_app.schemas import (
     NewVenue,
     OnboardingView,
     OperationView,
+    PortalAccess,
     VenueChange,
     VenuesPage,
     VenueView,
@@ -136,6 +137,45 @@ def admin_venue(tenant_id: UUID, request: Request, response: Response, principal
         venue = service(session, principal, request).venue(tenant_id)
         response.headers["ETag"] = f'"{venue.version}"'
         return venue_view(venue)
+
+
+@router.get("/v1/session", response_model=PortalAccess, tags=["Venue"])
+def portal_access(request: Request, response: Response, principal: Actor):
+    settings = request.app.state.settings
+    if principal.client_id not in {*settings.user_client_ids, *settings.platform_client_ids}:
+        raise VenueError(403, "forbidden", "A permitted human application is required")
+    value = {
+        "venue": None,
+        "can_manage_venue": False,
+        "can_manage_members": False,
+        "can_onboard_venues": principal.client_id in settings.platform_client_ids
+        and "platform_admin" in principal.roles,
+    }
+    if (
+        principal.client_id in settings.user_client_ids
+        and principal.tenant_id is not None
+        and principal.roles & {"venue_staff", "venue_admin"}
+    ):
+        try:
+            with database(request).context(
+                subject=principal.subject, tenant_id=principal.tenant_id
+            ) as session:
+                domain = service(session, principal, request)
+                venue = domain.employee(principal.tenant_id, principal.roles, write=True)
+                value["venue"] = venue_view(venue)
+                value["can_manage_venue"] = True
+                if "venue_admin" in principal.roles:
+                    try:
+                        domain.employee(principal.tenant_id, principal.roles, admin=True)
+                        value["can_manage_members"] = True
+                    except VenueError as exc:
+                        if exc.status not in {403, 404}:
+                            raise
+        except VenueError as exc:
+            if exc.status not in {403, 404}:
+                raise
+    response.headers["Cache-Control"] = "no-store"
+    return value
 
 
 @router.get(

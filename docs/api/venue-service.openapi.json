@@ -749,6 +749,128 @@
         }
       }
     },
+    "/v1/session": {
+      "get": {
+        "tags": [
+          "Venue"
+        ],
+        "summary": "Portal Access",
+        "operationId": "portal_access_v1_session_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalAccess"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid Cognito access token is required.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string",
+                  "example": "Bearer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The client, role, scope or current membership does not permit this operation.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request validation failed or application input is invalid.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected internal error occurred; details are not disclosed.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required configuration, database access or an upstream dependency is unavailable.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/v1/venues/current": {
       "get": {
         "tags": [
@@ -2456,6 +2578,40 @@
           "last_error_code"
         ],
         "title": "OperationView"
+      },
+      "PortalAccess": {
+        "properties": {
+          "venue": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VenueView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "can_manage_venue": {
+            "type": "boolean",
+            "title": "Can Manage Venue"
+          },
+          "can_manage_members": {
+            "type": "boolean",
+            "title": "Can Manage Members"
+          },
+          "can_onboard_venues": {
+            "type": "boolean",
+            "title": "Can Onboard Venues"
+          }
+        },
+        "type": "object",
+        "required": [
+          "venue",
+          "can_manage_venue",
+          "can_manage_members",
+          "can_onboard_venues"
+        ],
+        "title": "PortalAccess"
       },
       "ValidationIssue": {
         "properties": {

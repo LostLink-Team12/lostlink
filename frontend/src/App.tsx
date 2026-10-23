@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ItemPhoto } from './ItemPhoto';
+import { FoundDateFilters, foundDateError, foundDateRange } from './SearchDates';
 import { HandoverCode, MatchLink, Members, ScanToken } from './MissingFlows';
 import { photoBase64, registerItem, validatePhoto, waitOperation } from './api.js';
 
@@ -39,30 +41,43 @@ export function PageList({ api, service, path, revision = 0, children }: { api: 
   return <>{loading ? <p role="status">Loading…</p> : error ? <p role="alert">{error}</p> : <>{page.items.length ? children(page.items) : <p>No records yet.</p>}<div className="pagination"><button disabled={!offset} onClick={() => setOffset(x => x - 20)}>Previous</button><span>Page {offset / 20 + 1}</span><button disabled={!page.has_more} onClick={() => setOffset(x => x + 20)}>Next</button></div></>}</>;
 }
 
-export function ItemCards({ items, choose }: { items: Item[]; choose?: (item: Item) => void }) {
+export function ItemCards({ items, choose, busy = false, api }: { items: Item[]; choose?: (item: Item) => void; busy?: boolean; api?: Api }) {
   return <div className="cards">{items.map(item => <article key={item.item_id || item.id}>
-    {item.photo_url && <img src={item.photo_url} alt={item.title} loading="lazy" />}
+    {item.photo_url && <ItemPhoto key={item.photo_url} itemId={(item.item_id || item.id)!} title={item.title} url={item.photo_url} api={api} />}
     <span className="tag">{item.category}</span><h3>{item.title}</h3><p>{item.description}</p>
     {item.public_location_hint && <p>{item.public_location_hint}</p>}
     {item.score !== undefined && <p>Similarity {item.score.toFixed(3)}</p>}
     {item.state && <p>Status: {item.state}</p>}
-    {choose && <button onClick={() => choose(item)} aria-label={`Claim ${item.title}`}>This could be mine</button>}
+    {choose && <button disabled={busy} onClick={() => choose(item)} aria-label={`Claim ${item.title}`}>This could be mine</button>}
   </article>)}</div>;
 }
 
 export function OwnerApp({ api }: { api: Api }) {
-  const action = useAction();
+  const action = useAction(), claimAction = useAction();
+  const claimHeading = useRef<HTMLHeadingElement>(null);
+  const [claimItem, setClaimItem] = useState<Item | null>(null), [claimSubmitted, setClaimSubmitted] = useState(false);
+  useEffect(() => {
+    if (claimItem) {
+      claimHeading.current?.focus({ preventScroll: true });
+      claimHeading.current?.scrollIntoView?.({ block: 'start' });
+    }
+  }, [claimItem]);
   const [results, setResults] = useState<Item[] | null>(null), [truncated, setTruncated] = useState(false), [revision, setRevision] = useState(0);
   const [claim, setClaim] = useState<{ item_id: string; title: string; questions: Question[] } | null>(null);
   const [matches, setMatches] = useState<string | null>(null);
   const query = async (data: FormData) => {
-    const photo = file(data);
-    return { ...(text(data, 'description') ? { text: text(data, 'description') } : {}), ...(photo ? { photo_base64: await photoBase64(photo) } : {}), ...(text(data, 'category') ? { category: text(data, 'category') } : {}), ...(text(data, 'venue') ? { venue_id: text(data, 'venue') } : {}), ...(text(data, 'from') ? { found_from: new Date(text(data, 'from')).toISOString() } : {}), ...(text(data, 'until') ? { found_until: new Date(text(data, 'until')).toISOString() } : {}) };
+    const photo = file(data), dates = foundDateRange(text(data, 'from'), text(data, 'until'));
+    return { ...(text(data, 'description') ? { text: text(data, 'description') } : {}), ...(photo ? { photo_base64: await photoBase64(photo) } : {}), ...(text(data, 'category') ? { category: text(data, 'category') } : {}), ...(text(data, 'venue') ? { venue_id: text(data, 'venue') } : {}), ...dates };
   };
-  const choose = (item: Item) => action.run(async () => { setClaim(await api('claim', `/v1/claim-questions?item_id=${id(item.item_id!)}`)); });
+  const choose = (item: Item) => claimAction.run(async () => {
+    setClaimItem(item); setClaim(null); setClaimSubmitted(false);
+    const itemId = item.item_id || item.id;
+    if (!itemId) throw Error('This item is missing its identifier. Search again.');
+    setClaim(await api('claim', `/v1/claim-questions?item_id=${id(itemId)}`));
+  });
   return <>
     <section><p className="eyebrow">OWNER APP</p><h1>Find what matters.</h1><p>Search found items across venues, or save a lost report for future matches.</p>
-      <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); const mode = (e.nativeEvent as SubmitEvent).submitter?.getAttribute('value'); void action.run(async () => {
+      <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); const mode = (e.nativeEvent as SubmitEvent).submitter?.getAttribute('value'); if (foundDateError(text(data, 'from'), text(data, 'until'))) { const input = e.currentTarget.elements.namedItem('from') as HTMLInputElement; const filters = input.closest('details'); if (filters) filters.open = true; input.focus(); return; } void action.run(async () => {
         const body = await query(data);
         if (mode === 'report') {
           if (!body.text) throw Error('Describe your lost item before saving a report.');
@@ -75,22 +90,28 @@ export function OwnerApp({ api }: { api: Api }) {
         }
       }); }}>
         <Field label="Describe your lost item" name="description" required={false} /><Photo />
-        <details><summary>Filter results</summary><div className="grid"><Field label="Category" name="category" maxLength={100} required={false} /><Field label="Venue ID" name="venue" required={false} /><Field label="Found from" name="from" type="datetime-local" required={false} /><Field label="Found until" name="until" type="datetime-local" required={false} /></div></details>
+        <details><summary>Filter results</summary><div className="grid"><Field label="Category" name="category" maxLength={100} required={false} /><Field label="Venue ID" name="venue" required={false} /><FoundDateFilters /></div></details>
         <div className="actions"><button disabled={action.busy} value="search">Search items</button><button disabled={action.busy} value="report" className="secondary">Save lost report</button></div>
       </form>{action.status}
     </section>
-    <MatchLink api={api} choose={choose} revision={revision} />
-    {results && <section><h2>Search results</h2>{!results.length && <p>No matches. Try another description or save a lost report.</p>}{truncated && <p>Results may be incomplete. Narrow your filters.</p>}<ItemCards items={results} choose={choose} /></section>}
-    {claim && <section><h2>Claim {claim.title}</h2><p>Tell the venue details only the owner would know.</p><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
-      const contact = { ...(text(data, 'name') ? { name: text(data, 'name') } : {}), ...(text(data, 'phone') ? { phone: text(data, 'phone') } : {}) };
-      await api('claim', '/v1/claims', { body: { item_id: claim.item_id, answers: claim.questions.map(q => ({ question_id: q.id, version: q.version, answer: text(data, q.id) })), ...(Object.keys(contact).length ? { contact } : {}) } });
-      setClaim(null); setRevision(x => x + 1); action.setMessage('Claim submitted. The venue will review your answers.');
-    }); }}>{claim.questions.map(q => <Field key={q.id} label={q.prompt} name={q.id} maxLength={1000} />)}<Field label="Contact name" name="name" required={false} maxLength={120} /><Field label="Phone" name="phone" type="tel" required={false} maxLength={32} /><button disabled={action.busy}>Submit claim</button><button type="button" className="secondary" onClick={() => setClaim(null)}>Cancel</button></form></section>}
+    {claimItem && <section aria-labelledby="claim-heading">
+      <h2 id="claim-heading" ref={claimHeading} tabIndex={-1}>Claim {claimItem.title}</h2>
+      {claimAction.status}
+      {claim && <><p>Tell the venue details only the owner would know.</p><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void claimAction.run(async () => {
+        const contact = { ...(text(data, 'name') ? { name: text(data, 'name') } : {}), ...(text(data, 'phone') ? { phone: text(data, 'phone') } : {}) };
+        await api('claim', '/v1/claims', { body: { item_id: claim.item_id, answers: claim.questions.map(q => ({ question_id: q.id, version: q.version, answer: text(data, q.id) })), ...(Object.keys(contact).length ? { contact } : {}) } });
+        setClaim(null); setClaimSubmitted(true); setRevision(x => x + 1); claimAction.setMessage('Claim submitted. The venue will review your answers.');
+      }); }}>{claim.questions.map(q => <Field key={q.id} label={q.prompt} name={q.id} maxLength={1000} />)}<Field label="Contact name" name="name" required={false} maxLength={120} /><Field label="Phone" name="phone" type="tel" required={false} maxLength={32} /><button disabled={claimAction.busy}>Submit claim</button></form></>}
+      {!claim && !claimSubmitted && !claimAction.busy && <button onClick={() => void choose(claimItem)}>Retry loading questions</button>}
+      <button type="button" disabled={claimAction.busy} className="secondary" onClick={() => { setClaimItem(null); setClaim(null); }}>{claimSubmitted ? 'Close' : 'Cancel'}</button>
+    </section>}
+    <MatchLink api={api} choose={choose} revision={revision} busy={claimAction.busy || action.busy} />
+    {results && <section><h2>Search results</h2>{!results.length && <p>No matches. Try another description or save a lost report.</p>}{truncated && <p>Results may be incomplete. Narrow your filters.</p>}<ItemCards api={api} items={results} choose={choose} busy={claimAction.busy || action.busy} /></section>}
     <section><h2>My lost reports</h2><button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh records</button><PageList api={api} service="matching" path="/v1/lost-reports" revision={revision}>{rows => rows.map(report => <article key={report.id}><h3>{report.description}</h3><p>{report.state}</p><button onClick={() => setMatches(report.id)}>View matches</button>{report.state === 'open' && <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
       await api('matching', '/v1/lost-reports/' + id(report.id) + '/close', { body: { reason: text(data, 'reason') }, version: report.version });
       setRevision(x => x + 1); action.setMessage('Lost report closed.');
     }); }}><label>Closure reason<select name="reason"><option value="found">Found my item</option><option value="no_longer_needed">No longer needed</option></select></label><button disabled={action.busy}>Close lost report</button></form>}</article>)}</PageList></section>
-    {matches && <section><h2>Report matches</h2><PageList api={api} service="matching" path={`/v1/lost-reports/${id(matches)}/matches`} revision={revision}>{rows => <ItemCards items={rows.map(row => row.item)} choose={choose} />}</PageList></section>}
+    {matches && <section><h2>Report matches</h2><PageList api={api} service="matching" path={`/v1/lost-reports/${id(matches)}/matches`} revision={revision}>{rows => <ItemCards api={api} items={rows.map(row => row.item)} choose={choose} busy={claimAction.busy || action.busy} />}</PageList></section>}
     <section><h2>My claims</h2><PageList api={api} service="claim" path="/v1/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue={false} refresh={() => setRevision(x => x + 1)} />}</PageList></section>
   </>;
 }
@@ -126,15 +147,28 @@ function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; ven
     </article>}{action.status}</>;
 }
 
+type PortalAccess = { venue: { name: string } | null; can_manage_venue: boolean; can_manage_members: boolean; can_onboard_venues: boolean };
+
 export function VenueApp({ api }: { api: Api }) {
-  const action = useAction(), [revision, setRevision] = useState(0), [venue, setVenue] = useState('Venue Portal');
+  const action = useAction(), onboardingAction = useAction(), [revision, setRevision] = useState(0);
+  const [access, setAccess] = useState<PortalAccess | null>(null), [accessError, setAccessError] = useState(''), [accessAttempt, setAccessAttempt] = useState(0);
   const progress = useRef<Record<string, any>>({}), [lockedForm, setLockedForm] = useState(false);
   const draft = useRef<{ item: object; photo: File } | null>(null);
   const refresh = useCallback(() => setRevision(x => x + 1), []);
-  useEffect(() => { let current = true; api('venue', '/v1/venues/current').then(v => { if (current) setVenue(v.name); }).catch(() => {}); return () => { current = false; }; }, [api]);
+  useEffect(() => {
+    let current = true; setAccess(null); setAccessError('');
+    api('venue', '/v1/session').then(value => { if (current) setAccess(value); }).catch(e => { if (current) setAccessError(e instanceof Error ? e.message : 'Could not verify venue access.'); });
+    return () => { current = false; };
+  }, [api, accessAttempt]);
+  if (accessError) return <section><h1>Venue access unavailable</h1><p role="alert">Could not verify your venue access. {accessError}</p><button onClick={() => setAccessAttempt(x => x + 1)}>Retry access check</button><a href="/owner-app/">Go to Owner App</a></section>;
+  if (!access) return <section><h1>Venue Portal</h1><p role="status">Checking venue access…</p></section>;
+  const staff = access.can_manage_venue === true;
+  const administrator = staff && access.can_manage_members === true;
+  const platform = access.can_onboard_venues === true;
+  if (!staff && !platform) return <section><h1>Venue access required</h1><p>Your account does not have active venue access. Ask a venue administrator to add you, then sign in again after membership sync completes.</p><a href="/owner-app/">Go to Owner App</a><button onClick={() => setAccessAttempt(x => x + 1)}>Check access again</button></section>;
   return <>
-    <section><p className="eyebrow">VENUE PORTAL</p><h1>{venue}</h1><p>Register found items and help them get home.</p><button className="secondary" onClick={refresh}>Refresh records</button></section>
-    <section><h2>Register a found item</h2><form onSubmit={e => { e.preventDefault(); const form = e.currentTarget, data = new FormData(form); void action.run(async () => {
+    <section><p className="eyebrow">VENUE PORTAL</p><h1>{access.venue?.name || 'Venue Portal'}</h1><p>Register found items and help them get home.</p><button className="secondary" onClick={() => { refresh(); setAccessAttempt(x => x + 1); }}>Refresh records</button></section>
+    {staff && <><section><h2>Register a found item</h2><form onSubmit={e => { e.preventDefault(); const form = e.currentTarget, data = new FormData(form); void action.run(async () => {
       if (!draft.current) {
         validatePhoto(file(data), 10);
         draft.current = { photo: file(data)!, item: { title: text(data, 'title'), description: text(data, 'description'), category: text(data, 'category'), found_at: new Date(text(data, 'found_at')).toISOString(), public_location_hint: text(data, 'location') || null, verification_questions: [{ prompt: text(data, 'question'), reference_answer: text(data, 'answer') }] } };
@@ -147,10 +181,10 @@ export function VenueApp({ api }: { api: Api }) {
       <button disabled={action.busy}>{lockedForm ? 'Retry registration' : 'Register item'}</button>
     </form>{lockedForm && <p>Registration started. Keep this page open and retry with the same photo if the connection fails.</p>}{action.status}</section>
     <section><h2>Found items</h2><PageList api={api} service="item" path="/v1/items" revision={revision}>{rows => <ItemCards items={rows} />}</PageList></section>
-    <section><h2>Claims to review</h2><PageList api={api} service="claim" path="/v1/venue/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue refresh={refresh} />}</PageList></section>
-    <Members api={api} />
-    <section><details><summary>Venue onboarding (platform administrators)</summary><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
-      await api('venue', '/v1/admin/venues', { body: { name: text(data, 'name'), slug: text(data, 'slug'), initial_admin_sub: text(data, 'admin') } }); action.setMessage('Venue created. The initial administrator must sign in again after identity sync.');
-    }); }}><Field label="Venue name" name="name" maxLength={120} /><Field label="Venue slug" name="slug" maxLength={80} /><Field label="Initial administrator Cognito subject" name="admin" maxLength={128} /><button disabled={action.busy}>Create venue</button></form></details></section>
+    <section><h2>Claims to review</h2><PageList api={api} service="claim" path="/v1/venue/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue refresh={refresh} />}</PageList></section></>}
+    {administrator && <Members api={api} />}
+    {platform && <section><details><summary>Venue onboarding (platform administrators)</summary><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void onboardingAction.run(async () => {
+      await api('venue', '/v1/admin/venues', { body: { name: text(data, 'name'), slug: text(data, 'slug'), initial_admin_sub: text(data, 'admin') } }); onboardingAction.setMessage('Venue created. The initial administrator must sign in again after identity sync.');
+    }); }}><Field label="Venue name" name="name" maxLength={120} /><Field label="Venue slug" name="slug" maxLength={80} /><Field label="Initial administrator Cognito subject" name="admin" maxLength={128} /><button disabled={onboardingAction.busy}>Create venue</button></form>{onboardingAction.status}</details></section>}
   </>;
 }

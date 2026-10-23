@@ -8,7 +8,7 @@ afterEach(() => history.replaceState({}, '', '/'));
 
 function venueApi(state = 'submitted') {
   return vi.fn(async (_service: string, path: string, options?: any): Promise<any> => {
-    if (path === '/v1/venues/current') return { name: 'Campus' };
+    if (path === '/v1/session') return { venue: { name: 'Campus' }, can_manage_venue: true, can_manage_members: true, can_onboard_venues: false };
     if (path.startsWith('/v1/venue/claims?')) return { items: [{ id: 'c1', item_title: 'Bag', state }] };
     if (path === '/v1/venue/claims/c1') return { id: 'c1', item_title: 'Bag', state, version: 7 };
     if (path.endsWith('/reject')) return { id: 'c1', item_title: 'Bag', state: 'rejected', version: 8 };

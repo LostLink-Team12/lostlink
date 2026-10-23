@@ -55,7 +55,7 @@ export function Members({ api }: { api: Api }) {
     {action.status}</details></section>;
 }
 
-export function MatchLink({ api, choose, revision }: { api: Api; choose: React.ComponentProps<typeof ItemCards>['choose']; revision: number }) {
+export function MatchLink({ api, choose, revision, busy = false }: { api: Api; choose: React.ComponentProps<typeof ItemCards>['choose']; revision: number; busy?: boolean }) {
   const matchId = location.pathname.match(/^\/matches\/([^/]+)\/?$/)?.[1];
   const [item, setItem] = useState<any>(null), [error, setError] = useState(''), [loading, setLoading] = useState(true), [retry, setRetry] = useState(0);
   useEffect(() => {
@@ -80,7 +80,7 @@ export function MatchLink({ api, choose, revision }: { api: Api; choose: React.C
     return () => { active = false; };
   }, [api, matchId, revision, retry]);
   if (!matchId) return null;
-  return <section><h2>Your notified match</h2>{loading ? <p role="status">Loading match...</p> : error ? <><p role="alert">{error}</p><button onClick={() => setRetry(r => r + 1)}>Retry match</button></> : <ItemCards items={[item]} choose={choose} />}</section>;
+  return <section><h2>Your notified match</h2>{loading ? <p role="status">Loading match...</p> : error ? <><p role="alert">{error}</p><button onClick={() => setRetry(r => r + 1)}>Retry match</button></> : <ItemCards api={api} items={[item]} choose={choose} busy={busy} />}</section>;
 }
 
 export function HandoverCode({ payload }: { payload: string }) {
