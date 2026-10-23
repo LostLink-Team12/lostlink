@@ -20,11 +20,11 @@ from matching_app.calibration import (  # noqa: E402
     MODALITIES,
     by_modality,
     evaluate,
-    recommend,
     threshold_grid,
 )
+from matching_app.calibration import report as calibration_report  # noqa: E402
 
-CURRENT_THRESHOLD = 0.25
+BASELINE_THRESHOLD = 0.25
 
 
 def spread(values):
@@ -37,12 +37,16 @@ def fmt(metrics):
     if metrics is None:
         return "none reaches target"
     return (
-        f"**{metrics.threshold:.2f}** (P {metrics.precision:.2f}, R {metrics.recall:.2f}, "
-        f"TP {metrics.true_positives}, FP {metrics.false_positives})"
+        f"**{metrics['threshold']:.2f}** (P {metrics['precision']:.2f}, R {metrics['recall']:.2f}, "
+        f"TP {metrics['true_positives']}, FP {metrics['false_positives']})"
     )
 
 
 def summarise(scores, min_precision, report=None):
+    result = (
+        report if report is not None else calibration_report(scores, min_precision=min_precision)
+    )
+    min_precision = result["min_precision"]
     groups = by_modality(scores)
     lines = [
         "## Match threshold calibration",
@@ -51,27 +55,24 @@ def summarise(scores, min_precision, report=None):
         "cosine similarities (pinned ViT-B/32); a pair matches when score >= threshold.",
         "",
         "| Query | Pairs | Positives min/median/max | Negatives min/median/max | "
-        f"At current {CURRENT_THRESHOLD} | Recommended |",
+        f"At historical baseline {BASELINE_THRESHOLD} | Recommended |",
         "| --- | --- | --- | --- | --- | --- |",
     ]
-    grid = threshold_grid(-0.2, 1.0, 0.01)
+    grid = result.get("thresholds", threshold_grid())
     rows = [(m, groups[m]) for m in MODALITIES if m in groups] + [("overall", scores)]
     for name, rows_ in rows:
-        current = evaluate(rows_, CURRENT_THRESHOLD)
+        current = evaluate(rows_, BASELINE_THRESHOLD)
+        best = result["overall"] if name == "overall" else result["modalities"][name]["recommended"]
         lines.append(
             f"| {name} | {len(rows_)} | {spread([r.score for r in rows_ if r.is_match])} | "
             f"{spread([r.score for r in rows_ if not r.is_match])} | "
             f"P {current.precision:.2f} / R {current.recall:.2f} | "
-            f"{fmt(recommend(rows_, grid, min_precision))} |"
+            f"{fmt(best)} |"
         )
     lines += ["", "### Precision / recall by threshold", ""]
     header = "| Threshold | " + " | ".join(name for name, _ in rows) + " |"
     lines += [header, "|" + " --- |" * (len(rows) + 1)]
-    low = min(r.score for r in scores)
-    high = max(r.score for r in scores)
-    start = max(-0.2, round(low - 0.02, 2))
-    stop = min(1.0, round(high + 0.02, 2))
-    for threshold in threshold_grid(start, stop, 0.02):
+    for threshold in grid:
         cells = []
         for _, rows_ in rows:
             m = evaluate(rows_, threshold)

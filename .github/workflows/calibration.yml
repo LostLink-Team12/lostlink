@@ -13,6 +13,8 @@ on:
       - tests/data/match_pairs.csv
       - tests/data/match_photos/**
       - scripts/calibrate_match_threshold.py
+      - scripts/calibration_summary.py
+      - services/matching-service/tests/test_calibration_unit.py
       - services/matching-service/matching_app/calibration.py
       - services/matching-service/matching_app/embedding.py
       - .github/workflows/calibration.yml
