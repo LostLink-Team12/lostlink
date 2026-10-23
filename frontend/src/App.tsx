@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ItemPhoto } from './ItemPhoto';
 import { HandoverCode, MatchLink, Members, ScanToken } from './MissingFlows';
 import { photoBase64, registerItem, validatePhoto, waitOperation } from './api.js';
 
@@ -39,9 +40,9 @@ export function PageList({ api, service, path, revision = 0, children }: { api: 
   return <>{loading ? <p role="status">Loading…</p> : error ? <p role="alert">{error}</p> : <>{page.items.length ? children(page.items) : <p>No records yet.</p>}<div className="pagination"><button disabled={!offset} onClick={() => setOffset(x => x - 20)}>Previous</button><span>Page {offset / 20 + 1}</span><button disabled={!page.has_more} onClick={() => setOffset(x => x + 20)}>Next</button></div></>}</>;
 }
 
-export function ItemCards({ items, choose, busy = false }: { items: Item[]; choose?: (item: Item) => void; busy?: boolean }) {
+export function ItemCards({ items, choose, busy = false, api }: { items: Item[]; choose?: (item: Item) => void; busy?: boolean; api?: Api }) {
   return <div className="cards">{items.map(item => <article key={item.item_id || item.id}>
-    {item.photo_url && <img src={item.photo_url} alt={item.title} loading="lazy" />}
+    {item.photo_url && <ItemPhoto key={item.photo_url} itemId={(item.item_id || item.id)!} title={item.title} url={item.photo_url} api={api} />}
     <span className="tag">{item.category}</span><h3>{item.title}</h3><p>{item.description}</p>
     {item.public_location_hint && <p>{item.public_location_hint}</p>}
     {item.score !== undefined && <p>Similarity {item.score.toFixed(3)}</p>}
@@ -104,12 +105,12 @@ export function OwnerApp({ api }: { api: Api }) {
       <button type="button" disabled={claimAction.busy} className="secondary" onClick={() => { setClaimItem(null); setClaim(null); }}>{claimSubmitted ? 'Close' : 'Cancel'}</button>
     </section>}
     <MatchLink api={api} choose={choose} revision={revision} busy={claimAction.busy || action.busy} />
-    {results && <section><h2>Search results</h2>{!results.length && <p>No matches. Try another description or save a lost report.</p>}{truncated && <p>Results may be incomplete. Narrow your filters.</p>}<ItemCards items={results} choose={choose} busy={claimAction.busy || action.busy} /></section>}
+    {results && <section><h2>Search results</h2>{!results.length && <p>No matches. Try another description or save a lost report.</p>}{truncated && <p>Results may be incomplete. Narrow your filters.</p>}<ItemCards api={api} items={results} choose={choose} busy={claimAction.busy || action.busy} /></section>}
     <section><h2>My lost reports</h2><button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh records</button><PageList api={api} service="matching" path="/v1/lost-reports" revision={revision}>{rows => rows.map(report => <article key={report.id}><h3>{report.description}</h3><p>{report.state}</p><button onClick={() => setMatches(report.id)}>View matches</button>{report.state === 'open' && <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
       await api('matching', '/v1/lost-reports/' + id(report.id) + '/close', { body: { reason: text(data, 'reason') }, version: report.version });
       setRevision(x => x + 1); action.setMessage('Lost report closed.');
     }); }}><label>Closure reason<select name="reason"><option value="found">Found my item</option><option value="no_longer_needed">No longer needed</option></select></label><button disabled={action.busy}>Close lost report</button></form>}</article>)}</PageList></section>
-    {matches && <section><h2>Report matches</h2><PageList api={api} service="matching" path={`/v1/lost-reports/${id(matches)}/matches`} revision={revision}>{rows => <ItemCards items={rows.map(row => row.item)} choose={choose} busy={claimAction.busy || action.busy} />}</PageList></section>}
+    {matches && <section><h2>Report matches</h2><PageList api={api} service="matching" path={`/v1/lost-reports/${id(matches)}/matches`} revision={revision}>{rows => <ItemCards api={api} items={rows.map(row => row.item)} choose={choose} busy={claimAction.busy || action.busy} />}</PageList></section>}
     <section><h2>My claims</h2><PageList api={api} service="claim" path="/v1/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue={false} refresh={() => setRevision(x => x + 1)} />}</PageList></section>
   </>;
 }

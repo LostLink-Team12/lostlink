@@ -108,3 +108,8 @@ class NotificationContext(BaseModel):
     active: bool
     item_title: str | None
     venue_name: str | None
+
+
+class ItemPhoto(BaseModel):
+    item_id: UUID
+    photo_url: str
