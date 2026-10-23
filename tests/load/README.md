@@ -1,4 +1,17 @@
-# Load and scaling tests (owner: ZHANG JI)
+# Search validation and scaling tests
+
+## Issue #7 backend investigation
+
+`search_review.js` is the dedicated read-only 500 ms p95 investigation for Issue #7.
+It has separate warmup/measurement, required sample counts, text/photo/fused cases,
+known-result and stale-result assertions, and aggregate JSON evidence.
+See [the reproducible runbook](../../docs/search-review-performance.md) for local
+real-CLIP/pgvector/HTTP fixtures, AWS dev runs and the batch/cache decision criteria.
+`node --test tests/load/search_review.test.mjs` checks its contract without dependencies.
+CI also exercises the real pinned k6 runner against controlled HTTP failure cases;
+this checks the tooling, not application performance.
+
+## Issue #10 scaling demo (owner: ZHANG JI)
 
 k6 scripts used in the demo:
 
@@ -19,6 +32,8 @@ No token, response body, claim or hidden verification answer is logged. A missin
 configuration, HTTP failure, invalid response or failed threshold exits nonzero.
 Default p95 < 5s is a smoke threshold, not a production performance target.
 The scaling demo scripts and evidence workflow are documented below under issue #10.
+Their demo thresholds do not replace the separate Issue #7 search investigation
+and its 500 ms per-case criterion documented above.
 
 Search phase instrumentation and the 500 ms investigation criterion are documented
 in [the backend readiness checklist](../../docs/backend-readiness.md#搜索性能诊断准备).

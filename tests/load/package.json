@@ -1,0 +1,6 @@
+{
+  "name": "lostlink-search-review-validation",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test search_review.test.mjs" }
+}

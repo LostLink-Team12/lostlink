@@ -1,9 +1,16 @@
 """Real PostgreSQL, independent login roles and disposable test-owned resources."""
 
+import hashlib
+import json
 import os
+import subprocess
+import time
+import urllib.error
+import urllib.request
+import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
 from uuid import UUID, uuid4
 
@@ -20,6 +27,7 @@ from psycopg import sql
 from sqlalchemy import create_engine, func, select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import DBAPIError
+from venue_app import token_trigger
 from venue_app import workers as venue_workers
 from venue_app.config import VenueSettings
 from venue_app.database import VenueDatabase
@@ -155,6 +163,240 @@ def add_member(env, subject="staff-a", role="venue_staff", actor="admin-a"):
         subject=subject, client_id="web", roles={role}, tenant_id=env.identities[actor].tenant_id
     )
     return response.json()
+
+
+def token_event(subject, *, client="web", pool="pool", version="2"):
+    return {
+        "version": version,
+        "userPoolId": pool,
+        "triggerSource": "TokenGeneration_Authentication",
+        "callerContext": {"clientId": client},
+        "request": {
+            "userAttributes": {"sub": subject, "custom:tenant_id": str(uuid4())},
+            "groupConfiguration": {"groupsToOverride": ["venue_admin", "unrelated"]},
+        },
+        "response": {},
+    }
+
+
+@pytest.fixture(params=["python", "lambda_zip"])
+def invoke_token_trigger(request, env, monkeypatch, tmp_path):
+    config = {
+        "ENVIRONMENT": "dev",
+        "IDENTITY_DATABASE_URL": env.db["identity"].engine.url.render_as_string(
+            hide_password=False
+        ),
+        "COGNITO_USER_POOL_ID": "pool",
+        "USER_CLIENT_IDS": '["web"]',
+        "PLATFORM_CLIENT_IDS": '["ops"]',
+        "DB_POOL_SIZE": "1",
+        "DB_MAX_OVERFLOW": "0",
+        "DB_STATEMENT_TIMEOUT_MS": "500",
+    }
+    if request.param == "python":
+        for field in VenueSettings.model_fields:
+            monkeypatch.delenv(field.upper(), raising=False)
+        for key, value in config.items():
+            monkeypatch.setenv(key, value)
+        token_trigger.dependencies.cache_clear()
+        try:
+            yield lambda event: token_trigger.handler(event, None)
+        finally:
+            if token_trigger.dependencies.cache_info().currsize:
+                token_trigger.dependencies()[1].close()
+            token_trigger.dependencies.cache_clear()
+        return
+
+    artifact = os.getenv("LOSTLINK_TEST_TRIGGER_ARTIFACT")
+    if not artifact:
+        pytest.skip("Build the Lambda ZIP and set LOSTLINK_TEST_TRIGGER_ARTIFACT")
+    archive_path = Path(artifact).resolve()
+    manifest = json.loads(archive_path.with_suffix(".manifest.json").read_text(encoding="utf-8"))
+    with archive_path.open("rb") as content:
+        assert hashlib.file_digest(content, "sha256").hexdigest() == manifest["zip_sha256"]
+    assert manifest["handler"] == "venue_app.token_trigger.handler"
+    assert (manifest["runtime"], manifest["architecture"]) == ("python3.12", "x86_64")
+    with zipfile.ZipFile(archive_path) as archive:
+        assert "venue_app/token_trigger.py" in archive.namelist()
+        installed = archive.read("requirements.txt").decode()
+        assert "psycopg-binary==" in installed and "pydantic-core==" in installed
+        assert (
+            hashlib.sha256(archive.read("rds-global-bundle.pem")).hexdigest()
+            == manifest["rds_ca_sha256"]
+        )
+        assert sum(entry.file_size for entry in archive.infolist()) <= 250 * 1024 * 1024
+        for entry in archive.infolist():
+            path = PurePosixPath(entry.filename)
+            assert not path.is_absolute() and ".." not in path.parts
+            assert path.suffix not in {".pyc", ".pyd"} and path.name != ".env"
+    # Only the generated ZIP is copied, without the checkout or host Python packages.
+    url = make_url(config["IDENTITY_DATABASE_URL"])
+    config["IDENTITY_DATABASE_URL"] = url.set(host="host.docker.internal").render_as_string(
+        hide_password=False
+    )
+    env_file = tmp_path / "trigger.env"
+    env_file.write_text(
+        "".join(f"{key}={value}\n" for key, value in config.items()), encoding="utf-8"
+    )
+    env_file.chmod(0o600)
+    name = f"lostlink-trigger-test-{uuid4().hex}"
+    subprocess.run(
+        [
+            "docker",
+            "create",
+            "--rm",
+            "--name",
+            name,
+            "--platform",
+            "linux/amd64",
+            "--publish",
+            "127.0.0.1::8080",
+            "--add-host",
+            "host.docker.internal:host-gateway",
+            "--env-file",
+            str(env_file),
+            "--entrypoint",
+            "/bin/sh",
+            "public.ecr.aws/lambda/python:3.12",
+            "-c",
+            "python -m zipfile -e /tmp/function.zip /var/task "
+            "&& exec /lambda-entrypoint.sh venue_app.token_trigger.handler",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    try:
+        subprocess.run(
+            ["docker", "cp", str(archive_path), f"{name}:/tmp/function.zip"],
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(["docker", "start", name], check=True, capture_output=True)
+        port = subprocess.check_output(["docker", "port", name, "8080/tcp"], text=True).strip()
+        endpoint = (
+            f"http://127.0.0.1:{port.rsplit(':', 1)[1]}/2015-03-31/functions/function/invocations"
+        )
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+        def invoke(event):
+            deadline = time.monotonic() + 30
+            while True:
+                try:
+                    with opener.open(
+                        urllib.request.Request(
+                            endpoint,
+                            data=json.dumps(event).encode(),
+                            headers={"Content-Type": "application/json"},
+                            method="POST",
+                        ),
+                        timeout=10,
+                    ) as response:
+                        result = json.load(response)
+                    break
+                except (urllib.error.URLError, ConnectionError):
+                    if time.monotonic() >= deadline:
+                        raise
+                    time.sleep(0.1)
+            if "errorType" in result:
+                raise RuntimeError(result["errorMessage"])
+            return result
+
+        yield invoke
+    finally:
+        subprocess.run(["docker", "rm", "--force", name], check=True, capture_output=True)
+
+
+def token_identity(result):
+    override = result["response"]["claimsAndScopeOverrideDetails"]
+    access = override["accessTokenGeneration"]
+    return (
+        set(override["groupOverrideDetails"]["groupsToOverride"]),
+        access["claimsToAddOrOverride"],
+        access["claimsToSuppress"],
+    )
+
+
+def test_token_trigger_entry_reads_current_membership_and_isolates_warm_invocations(
+    env, invoke_token_trigger
+):
+    a, b = onboard(env, "a"), onboard(env, "b")
+    member = add_member(env)
+    for subject, role, tenant in [
+        ("staff-a", "venue_staff", a["venue"]["id"]),
+        ("owner", None, None),
+        ("admin-b", "venue_admin", b["venue"]["id"]),
+        ("staff-a", "venue_staff", a["venue"]["id"]),
+    ]:
+        groups, additions, suppressed = token_identity(invoke_token_trigger(token_event(subject)))
+        assert groups == {"owner", "unrelated"} | ({role} if role else set())
+        assert additions == ({"custom:tenant_id": tenant} if tenant else {})
+        assert suppressed == ([] if tenant else ["custom:tenant_id"])
+    promoted = env.client.patch(
+        f"/v1/venues/current/members/{member['id']}",
+        headers=headers("admin-a", version=1),
+        json={"role": "venue_admin"},
+    )
+    assert promoted.status_code == 200
+    assert "venue_admin" in token_identity(invoke_token_trigger(token_event("staff-a")))[0]
+    suspended = env.client.patch(
+        f"/v1/venues/current/members/{member['id']}",
+        headers=headers("admin-a", version=2),
+        json={"status": "suspended"},
+    )
+    assert suspended.status_code == 200
+    assert token_identity(invoke_token_trigger(token_event("staff-a"))) == (
+        {"owner", "unrelated"},
+        {},
+        ["custom:tenant_id"],
+    )
+    response = env.client.patch(
+        f"/v1/admin/venues/{b['venue']['id']}",
+        headers=headers(version=1),
+        json={"status": "suspended"},
+    )
+    assert response.status_code == 200
+    assert token_identity(invoke_token_trigger(token_event("admin-b")))[1] == {}
+    assert (
+        "platform_admin"
+        not in token_identity(invoke_token_trigger(token_event("owner", client="ops")))[0]
+    )
+
+
+@pytest.mark.parametrize("change", [{"client": "unknown"}, {"pool": "other"}, {"version": "1"}])
+def test_token_trigger_entry_rejects_invalid_invocations(env, invoke_token_trigger, change):
+    onboard(env)
+    with pytest.raises(RuntimeError, match="^Token customization unavailable$"):
+        invoke_token_trigger(token_event("admin-a", **change))
+
+
+def test_token_trigger_entry_database_failure_cannot_reuse_previous_claims(
+    env, invoke_token_trigger
+):
+    onboard(env)
+    assert token_identity(invoke_token_trigger(token_event("admin-a")))[1]
+    engine = create_engine(env.migration_url)
+    try:
+        with engine.begin() as connection:
+            connection.execute(text("LOCK TABLE venue.memberships IN ACCESS EXCLUSIVE MODE"))
+            machine = {"version": "3", "triggerSource": "TokenGeneration_ClientCredentials"}
+            assert invoke_token_trigger(machine) == machine
+            with pytest.raises(RuntimeError, match="^Token customization unavailable$"):
+                invoke_token_trigger(token_event("admin-a"))
+        # The failed transaction must roll back; the warm process must recover.
+        assert token_identity(invoke_token_trigger(token_event("admin-a")))[1]
+        role = env.roles["identity"]  # Test-owned, randomly generated SQL identifier.
+        with engine.begin() as connection:
+            connection.execute(text(f'REVOKE SELECT ON venue.memberships FROM "{role}"'))
+        try:
+            with pytest.raises(RuntimeError, match="^Token customization unavailable$"):
+                invoke_token_trigger(token_event("admin-a"))
+        finally:
+            with engine.begin() as connection:
+                connection.execute(text(f'GRANT SELECT ON venue.memberships TO "{role}"'))
+        assert token_identity(invoke_token_trigger(token_event("admin-a")))[1]
+    finally:
+        engine.dispose()
 
 
 def test_onboarding_idempotency_atomicity_and_private_operational_tables(env):
