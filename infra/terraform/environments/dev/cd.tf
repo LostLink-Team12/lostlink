@@ -1,5 +1,6 @@
 # Separate from C2 image publishing. Main-only identity, named cluster only;
 # Kubernetes mutations are restricted by infra/deploy/cd-rbac.yaml.
+# This repository uses immutable GitHub owner/repository IDs in its OIDC subject.
 resource "aws_iam_role" "github_deploy" {
   count                = var.c3_enabled ? 1 : 0
   name                 = "${local.name}-github-deploy"
@@ -15,7 +16,7 @@ resource "aws_iam_role" "github_deploy" {
       Condition = {
         StringEquals = {
           "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
-          "token.actions.githubusercontent.com:sub" = "repo:LostLink-Team12/lostlink:ref:refs/heads/main"
+          "token.actions.githubusercontent.com:sub" = "repo:LostLink-Team12@343981760/lostlink@1423380955:ref:refs/heads/main"
         }
       }
     }]

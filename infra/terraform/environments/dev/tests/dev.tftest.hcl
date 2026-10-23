@@ -380,3 +380,28 @@ run "c3_private_gateway_and_controller_identity" {
     error_message = "C3 requires an isolated controller identity, immutable frontend images and a scoped private gateway boundary."
   }
 }
+
+
+run "cd_trust_accepts_only_immutable_main_subject" {
+  command = plan
+  variables {
+    c3_enabled = true
+  }
+  assert {
+    condition = (
+      length(jsondecode(aws_iam_role.github_deploy[0].assume_role_policy).Statement) == 1 &&
+      jsondecode(aws_iam_role.github_deploy[0].assume_role_policy).Statement[0].Effect == "Allow" &&
+      jsondecode(aws_iam_role.github_deploy[0].assume_role_policy).Statement[0].Action == "sts:AssumeRoleWithWebIdentity" &&
+      jsondecode(aws_iam_role.github_deploy[0].assume_role_policy).Statement[0].Principal == {
+        Federated = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
+      } &&
+      jsondecode(aws_iam_role.github_deploy[0].assume_role_policy).Statement[0].Condition == {
+        StringEquals = {
+          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+          "token.actions.githubusercontent.com:sub" = "repo:LostLink-Team12@343981760/lostlink@1423380955:ref:refs/heads/main"
+        }
+      }
+    )
+    error_message = "CD must trust only this repository's immutable main subject and STS audience, without wildcard or PR access."
+  }
+}
