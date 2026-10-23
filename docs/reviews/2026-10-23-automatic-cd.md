@@ -40,3 +40,9 @@ GitHub runner 临时添加自己的 `/32`，结束时以 `always()` 清理，保
 
 首次 GitHub OIDC → EKS 的完整自动发布需此变更合并 main 后执行；PR 中不会为了测试而
 绕过 main-only 信任条件或部署共享 dev。此前真实邮箱、实体相机及性能验收结论保持不变。
+
+## 审阅后修复：干净 runner 的冒烟证据目录
+
+HTTPS 冒烟在写入证据前显式创建本地输出目录及父目录，避免 Git 忽略的 `.local` 在新 runner 上不存在，导致健康发布因写文件失败而回滚。新增离线回归用例：模拟全部 HTTP 边界检查通过，保持输出目录不存在，并验证最终证据文件确实生成；测试还确认 `--origin` 路径不会读取 Terraform state。
+
+该测试在修复前复现 FileNotFoundError，修复后通过。PR 的 publish-image 与 Deploy dev EKS 仍按原有 main-only 条件跳过；没有为测试放宽云端发布或部署条件。

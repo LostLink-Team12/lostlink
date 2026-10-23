@@ -191,3 +191,41 @@ def test_image_resolution_requires_same_commit_for_every_image():
     assert set(images) == {*cd.SERVICES, "frontend"}
     assert all(c["imageIds"] == [{"imageTag": "b" * 40}] for c in calls)
     assert all("@sha256:" in image for image in images.values())
+
+
+def test_smoke_creates_evidence_directory_on_a_clean_runner(monkeypatch, tmp_path):
+    import sys
+    from urllib.parse import urlsplit
+
+    import configure
+    import smoke
+
+    origin = "https://offline.invalid"
+    output = tmp_path / "clean-checkout" / ".local"
+    assert not output.exists()
+    monkeypatch.setattr(configure, "LOCAL", output)
+    monkeypatch.setattr(sys, "argv", ["smoke.py", "--origin", origin])
+    monkeypatch.setattr(smoke, "outputs", lambda: pytest.fail("Unexpected Terraform access"))
+    public_routes = {
+        "/api/venue/v1/venues/current",
+        "/api/item/v1/items",
+        "/api/claim/v1/claims",
+        "/api/notification/v1/notifications",
+        "/api/matching/v1/lost-reports",
+    }
+
+    def healthy_response(url):
+        path = urlsplit(url).path
+        if path in {"/owner-app/", "/venue-portal/", "/matches/c3-route-test"}:
+            return 200, "text/html", b'<script src="/assets/app.js"></script>'
+        if path == "/config.json":
+            return 200, "application/json", b'{"api": {"item": "/api/item"}}'
+        if path in public_routes:
+            return 401, "application/json", b'{"error": {"code": "unauthorized"}}'
+        return 404, "text/plain", b"not found"
+
+    monkeypatch.setattr(smoke, "status", healthy_response)
+    smoke.main()
+    evidence = json.loads((output / "public-smoke.json").read_text(encoding="utf-8"))
+    assert evidence["origin"] == origin
+    assert len(evidence["checks"]) == 15

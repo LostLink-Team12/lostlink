@@ -62,6 +62,7 @@ def main():
         evidence.append({"path": path, "status": code})
     from configure import LOCAL
 
+    LOCAL.mkdir(parents=True, exist_ok=True)
     (LOCAL / "public-smoke.json").write_text(
         json.dumps({"origin": origin, "checks": evidence}, indent=2), encoding="utf-8"
     )
