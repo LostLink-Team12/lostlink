@@ -19,6 +19,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       services: ${{ steps.list.outputs.services }}
+      publish_services: ${{ steps.list.outputs.publish_services }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -42,6 +43,7 @@ jobs:
                       raise SystemExit(f"Missing {required} for {service}")
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               output.write(f"services={json.dumps(services)}\n")
+              output.write(f"publish_services={json.dumps([*services, 'frontend'])}\n")
           PY
 
   test:
@@ -262,12 +264,68 @@ jobs:
           if-no-files-found: error
           overwrite: true
 
+  build-frontend:
+    needs: [security-scan]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci && npm test && npm run build
+        working-directory: frontend
+      - name: Build frontend gateway
+        run: docker build --pull -f infra/deploy/frontend.Dockerfile -t "lostlink/frontend:${GITHUB_SHA}" .
+      - name: Verify non-root read-only frontend runtime
+        run: |
+          name="lostlink-frontend-ci-${GITHUB_RUN_ID}"
+          trap 'docker rm -f "$name" >/dev/null 2>&1 || true' EXIT
+          docker run -d --name "$name" --user 1000:1000 --read-only \
+            --tmpfs /tmp:rw,nosuid,nodev,size=64m \
+            --add-host kube-dns.kube-system.svc.cluster.local:127.0.0.1 \
+            -v /etc/ssl/certs/ca-certificates.crt:/trust/combined.pem:ro \
+            -p 127.0.0.1:18080:8080 "lostlink/frontend:${GITHUB_SHA}"
+          if ! curl --fail --retry 6 --retry-all-errors --retry-delay 2 http://127.0.0.1:18080/health; then
+            docker logs "$name"
+            exit 1
+          fi
+          for path in owner-app/ venue-portal/ matches/test; do
+            curl --fail "http://127.0.0.1:18080/$path" | grep -q '/assets/'
+          done
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          version: v0.76.0
+          scan-type: image
+          image-ref: lostlink/frontend:${{ github.sha }}
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: true
+      - name: Save scanned frontend image
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: docker save "lostlink/frontend:${GITHUB_SHA}" | gzip -1 > "${RUNNER_TEMP}/image.tar.gz"
+      - uses: actions/upload-artifact@v7
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        with:
+          name: image-frontend
+          path: ${{ runner.temp }}/image.tar.gz
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+          overwrite: true
+
   publish-image:
     # Runs once the AWS account is configured (docs/ci.md); until then main stays green.
     if: >-
       github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
       && vars.AWS_ROLE_ARN != ''
-    needs: [discover, build-image]
+    needs: [discover, build-image, build-frontend]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -276,7 +334,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: ${{ fromJson(needs.discover.outputs.services) }}
+        service: ${{ fromJson(needs.discover.outputs.publish_services) }}
     env:
       AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
       AWS_REGION: ${{ vars.AWS_REGION }}
@@ -332,3 +390,91 @@ jobs:
           docker push "${image}"
           # shellcheck disable=SC2016 # Markdown backticks in the format string are literal.
           printf '### Published %s\n\n`%s`\n' "${SERVICE_NAME}" "${image}" >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-dev:
+    name: Deploy dev EKS
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: [publish-image, helm-chart]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    concurrency:
+      group: lostlink-dev-deployment
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Skip a superseded main build
+        id: current
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const {data} = await github.rest.repos.getCommit({...context.repo, ref: 'main'});
+            const current = data.sha === context.sha;
+            core.setOutput('deploy', String(current));
+            if (!current) core.notice('A newer main commit exists; its successful CI will deploy instead.');
+      - name: Set deployment paths
+        if: steps.current.outputs.deploy == 'true'
+        run: |
+          echo "KUBECONFIG=$RUNNER_TEMP/lostlink-kubeconfig" >> "$GITHUB_ENV"
+          echo "ACCESS_LEASE=$RUNNER_TEMP/lostlink-access.json" >> "$GITHUB_ENV"
+      - uses: actions/setup-python@v6
+        if: steps.current.outputs.deploy == 'true'
+        with:
+          python-version: '3.12'
+      - name: Install deployment dependencies and verified tools
+        if: steps.current.outputs.deploy == 'true'
+        run: |
+          python -m pip install -r requirements-dev.lock ./libs PyYAML==6.0.3
+          mkdir -p "$RUNNER_TEMP/cd-tools"
+          cd "$RUNNER_TEMP/cd-tools"
+          curl --fail --location --retry 3 -o helm.tar.gz https://get.helm.sh/helm-v4.3.1-linux-amd64.tar.gz
+          curl --fail --location --retry 3 -o helm.sha256 https://get.helm.sh/helm-v4.3.1-linux-amd64.tar.gz.sha256sum
+          expected="$(cut -d ' ' -f 1 helm.sha256)"
+          echo "$expected  helm.tar.gz" | sha256sum --check
+          tar -xzf helm.tar.gz
+          curl --fail --location --retry 3 -o kubectl https://dl.k8s.io/release/v1.36.5/bin/linux/amd64/kubectl
+          curl --fail --location --retry 3 -o kubectl.sha256 https://dl.k8s.io/release/v1.36.5/bin/linux/amd64/kubectl.sha256
+          echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
+          chmod +x kubectl
+          echo "$RUNNER_TEMP/cd-tools" >> "$GITHUB_PATH"
+          echo "$RUNNER_TEMP/cd-tools/linux-amd64" >> "$GITHUB_PATH"
+      - name: Validate deployment configuration
+        if: steps.current.outputs.deploy == 'true'
+        env:
+          DEPLOY_ROLE: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+        run: |
+          test -n "$AWS_ACCOUNT_ID" && test -n "$AWS_REGION"
+          [[ "$DEPLOY_ROLE" == "arn:aws:iam::${AWS_ACCOUNT_ID}:role/lostlink-dev-github-deploy" ]]
+          HELM_BIN=helm python -m pytest -q infra/deploy
+      - name: Assume dev deployment identity
+        if: steps.current.outputs.deploy == 'true'
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          allowed-account-ids: ${{ env.AWS_ACCOUNT_ID }}
+          role-session-name: lostlink-deploy-${{ github.run_id }}
+          role-duration-seconds: 7200
+      - name: Lease runner endpoint access
+        if: steps.current.outputs.deploy == 'true'
+        run: python infra/deploy/cd_access.py open --lease "$ACCESS_LEASE" --region "$AWS_REGION"
+      - name: Configure dev kubeconfig
+        if: steps.current.outputs.deploy == 'true'
+        run: aws eks update-kubeconfig --name lostlink-dev --alias lostlink-dev --region "$AWS_REGION" --kubeconfig "$KUBECONFIG"
+      - name: Release the images published by this CI run
+        if: steps.current.outputs.deploy == 'true'
+        run: python infra/deploy/cd_deploy.py --sha "$GITHUB_SHA" --account "$AWS_ACCOUNT_ID" --region "$AWS_REGION" --kubeconfig "$KUBECONFIG"
+      - name: Remove runner endpoint access
+        if: always() && steps.current.outputs.deploy == 'true'
+        run: python infra/deploy/cd_access.py close --lease "$ACCESS_LEASE" --region "$AWS_REGION"
+      - name: Remove local deployment files
+        if: always()
+        run: rm -f "$KUBECONFIG"

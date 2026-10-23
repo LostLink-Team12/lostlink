@@ -1,5 +1,6 @@
 """Check the real HTTPS frontend and public/private route boundary, without tokens."""
 
+import argparse
 import json
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -16,8 +17,12 @@ def status(url):
 
 
 def main():
-    data = outputs()
-    origin = data["c3"]["value"]["frontend_origin"]
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--origin", help="Existing HTTPS origin; avoids Terraform state access in CD"
+    )
+    args = parser.parse_args()
+    origin = args.origin or outputs()["c3"]["value"]["frontend_origin"]
     if not origin:
         raise RuntimeError("HTTPS edge is not deployed")
     evidence = []
@@ -57,6 +62,7 @@ def main():
         evidence.append({"path": path, "status": code})
     from configure import LOCAL
 
+    LOCAL.mkdir(parents=True, exist_ok=True)
     (LOCAL / "public-smoke.json").write_text(
         json.dumps({"origin": origin, "checks": evidence}, indent=2), encoding="utf-8"
     )

@@ -92,6 +92,8 @@ integration requirements for each team member are in the
 The C3 environment serves [Owner App](https://d37mn7oo1kv0ok.cloudfront.net/owner-app/)
 and [Venue Portal](https://d37mn7oo1kv0ok.cloudfront.net/venue-portal/) through
 CloudFront and a private ALB. Internal APIs and monitoring stay private.
+After CI publishes a successful `main` build, automatic CD updates the existing
+dev application Deployments and checks rollout/HTTPS. PR builds never deploy.
 Use the [deployment runbook](infra/deploy/README.md) and the
 [actual acceptance record](docs/reviews/2026-10-23-c3-deployment.md) for process
 charts, capacity profiles, test results and remaining device/mailbox checks.
