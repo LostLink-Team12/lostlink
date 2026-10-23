@@ -4,6 +4,16 @@ resource "aws_cognito_user_pool" "this" {
   auto_verified_attributes = ["email"]
   deletion_protection      = "ACTIVE"
   mfa_configuration        = "OPTIONAL"
+  user_pool_tier           = "ESSENTIALS"
+  dynamic "lambda_config" {
+    for_each = var.attach_token_trigger ? [1] : []
+    content {
+      pre_token_generation_config {
+        lambda_arn     = aws_lambda_function.token_trigger[0].arn
+        lambda_version = "V2_0"
+      }
+    }
+  }
   software_token_mfa_configuration {
     enabled = true
   }
@@ -31,8 +41,8 @@ resource "aws_cognito_user_pool_client" "frontend" {
   allowed_oauth_scopes                 = ["openid", "email", "profile"]
   allowed_oauth_flows_user_pool_client = true
   supported_identity_providers         = ["COGNITO"]
-  callback_urls                        = var.cognito_callback_urls
-  logout_urls                          = var.cognito_logout_urls
+  callback_urls                        = local.callback_urls
+  logout_urls                          = local.logout_urls
   explicit_auth_flows                  = ["ALLOW_USER_SRP_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"]
   prevent_user_existence_errors        = "ENABLED"
   enable_token_revocation              = true

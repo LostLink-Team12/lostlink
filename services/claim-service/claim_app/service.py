@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 
 from lostlink_common.crypto import DecryptionFailed, EncryptedValue, EncryptionContext
 from lostlink_common.events import DomainEvent
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 
 from claim_app.errors import fail
@@ -312,7 +312,11 @@ class ClaimService:
         if operation is None:
             operation = self.operation(claim, "cancel")
         else:
-            operation.kind, operation.available_at = "cancel", self.now()
+            # Match the worker's database clock even when API hosts have clock skew.
+            operation.kind, operation.available_at = (
+                "cancel",
+                self.session.scalar(select(func.now())),
+            )
         self.audit(claim, "claim.cancellation_started")
         self.session.flush()
         return self.accepted(claim, operation)

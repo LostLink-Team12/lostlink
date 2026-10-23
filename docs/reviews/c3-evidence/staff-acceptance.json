@@ -1,0 +1,56 @@
+{
+  "completed_at": "2026-10-22T14:51:08.567533+00:00",
+  "origin": "https://d37mn7oo1kv0ok.cloudfront.net",
+  "checks": [
+    {
+      "service": "venue",
+      "method": "GET",
+      "path": "/v1/venues/current/members",
+      "status": 200
+    },
+    {
+      "service": "venue",
+      "method": "POST",
+      "path": "/v1/venues/current/members",
+      "status": 201
+    },
+    {
+      "service": "venue",
+      "method": "PATCH",
+      "path": "/v1/venues/current/members/e4ab6b49-2439-4055-ad59-a8193b63b157",
+      "status": 200
+    },
+    {
+      "service": "venue",
+      "method": "GET",
+      "path": "/v1/venues/current/members",
+      "status": 200
+    },
+    {
+      "service": "venue",
+      "method": "PATCH",
+      "path": "/v1/venues/current/members/e4ab6b49-2439-4055-ad59-a8193b63b157",
+      "status": 200
+    },
+    {
+      "service": "venue",
+      "method": "GET",
+      "path": "/v1/venues/current",
+      "status": 403
+    },
+    {
+      "service": "venue",
+      "method": "PATCH",
+      "path": "/v1/venues/current/members/e4ab6b49-2439-4055-ad59-a8193b63b157",
+      "status": 200
+    },
+    {
+      "service": "venue",
+      "method": "GET",
+      "path": "/v1/venues/current",
+      "status": 200
+    }
+  ],
+  "final_role": "venue_staff",
+  "final_status": "active"
+}

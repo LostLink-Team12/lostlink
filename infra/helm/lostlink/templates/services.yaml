@@ -1,0 +1,28 @@
+{{- $root := . }}
+{{- range $name := keys .Values.services | sortAlpha }}
+{{- $svc := get $root.Values.services $name }}
+{{- if and $svc.enabled $svc.api }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ printf "%s-service" $name }}
+  labels:
+    {{- include "lostlink.labels" (dict "root" $root "service" $name "process" (printf "%s-api" $name)) | nindent 4 }}
+  annotations:
+    # Used only when the ALB Ingress is enabled; the backends serve the internal certificate.
+    alb.ingress.kubernetes.io/backend-protocol: HTTPS
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTPS
+    alb.ingress.kubernetes.io/healthcheck-path: /ready
+    alb.ingress.kubernetes.io/success-codes: "200"
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "lostlink.selector" (dict "service" $name "process" (printf "%s-api" $name)) | nindent 4 }}
+  ports:
+    - name: https
+      port: 443
+      targetPort: https
+      protocol: TCP
+{{- end }}
+{{- end }}

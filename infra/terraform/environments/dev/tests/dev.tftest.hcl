@@ -7,6 +7,24 @@ override_resource {
   values          = { id = "lostlink/service-template" }
 }
 
+override_resource {
+  target          = aws_s3_bucket.media
+  override_during = plan
+  values          = { arn = "arn:aws:s3:::test-media" }
+}
+
+override_resource {
+  target          = aws_cognito_user_pool.this
+  override_during = plan
+  values          = { id = "ap-southeast-1_test", arn = "arn:aws:cognito-idp:ap-southeast-1:123456789012:userpool/ap-southeast-1_test" }
+}
+
+override_resource {
+  target          = aws_cognito_user_pool_client.frontend
+  override_during = plan
+  values          = { id = "testwebclient" }
+}
+
 # Distinct IDs at plan time let assertions verify public/private node routing.
 override_resource {
   target          = aws_subnet.public[0]
@@ -50,16 +68,31 @@ override_resource {
   values          = { id = "rtb-00000000000000003" }
 }
 
+override_resource {
+  target          = aws_cognito_user_pool_client.operator[0]
+  override_during = plan
+  values          = { id = "testoperatorclient" }
+}
+
 variables {
-  aws_account_id             = "123456789012"
-  eks_public_access_cidrs    = ["203.0.113.10/32"]
-  eks_admin_principal_arns   = ["arn:aws:iam::123456789012:role/test-deployer"]
-  frontend_origins           = ["http://localhost:5173"]
-  cognito_callback_urls      = ["http://localhost:5173/callback"]
-  cognito_logout_urls        = ["http://localhost:5173/"]
-  monthly_budget_usd         = 100
-  budget_notification_emails = ["team@example.com"]
-  node_network_mode          = "private"
+  application_runtime_enabled       = false
+  notification_test_recipient_email = null
+  notification_sender_email         = null
+  token_trigger_package             = null
+  token_trigger_sha256              = null
+  token_trigger_pool_id             = null
+  token_trigger_web_client_id       = null
+  token_trigger_operator_client_id  = null
+  attach_token_trigger              = false
+  aws_account_id                    = "123456789012"
+  eks_public_access_cidrs           = ["203.0.113.10/32"]
+  eks_admin_principal_arns          = ["arn:aws:iam::123456789012:role/test-deployer"]
+  frontend_origins                  = ["http://localhost:5173"]
+  cognito_callback_urls             = ["http://localhost:5173/callback"]
+  cognito_logout_urls               = ["http://localhost:5173/"]
+  monthly_budget_usd                = 100
+  budget_notification_emails        = ["team@example.com"]
+  node_network_mode                 = "private"
 }
 
 run "private_compute_database_and_media" {
@@ -123,6 +156,72 @@ run "private_compute_database_and_media" {
       length(aws_ses_email_identity.notifications) == 0
     )
     error_message = "Browser login needs a public code-flow client; cost alerts are mandatory, and SES must be explicitly configured."
+  }
+}
+
+run "application_process_isolation_and_routing" {
+  command = plan
+  variables {
+    application_runtime_enabled = true
+  }
+  assert {
+    condition = (
+      length(aws_cognito_user_pool_client.machine) == 4 &&
+      alltrue([for client in aws_cognito_user_pool_client.machine : client.generate_secret && client.allowed_oauth_flows == toset(["client_credentials"])]) &&
+      aws_cognito_user_pool_client.machine["item"].allowed_oauth_scopes == toset(["lostlink/members.check"]) &&
+      aws_cognito_user_pool_client.machine["matching"].allowed_oauth_scopes == toset(["lostlink/items.index"]) &&
+      aws_cognito_user_pool_client.frontend.id != aws_cognito_user_pool_client.operator[0].id
+    )
+    error_message = "Each machine must use a separate secret-bearing client with only its receiver's scopes."
+  }
+  assert {
+    condition = (
+      length(aws_sqs_queue.application) == 3 && length(aws_sqs_queue.application_dlq) == 3 &&
+      jsondecode(aws_sns_topic_subscription.application["matching"].filter_policy).event_type == ["item.registered", "item.catalog_changed"] &&
+      jsondecode(aws_sns_topic_subscription.application["item"].filter_policy).event_type == ["item.embedded", "item.embedding_failed"] &&
+      alltrue([for sub in aws_sns_topic_subscription.application : sub.raw_message_delivery])
+    )
+    error_message = "Route current Phase 1 events to the correct consumers, including embedding results back to Item."
+  }
+  assert {
+    condition = (
+      local.storage_statements.upload[0].Resource == "${aws_s3_bucket.media.arn}/staging/*" &&
+      local.storage_statements.seal[1].Resource == "${aws_s3_bucket.media.arn}/sealed/*" &&
+      local.storage_statements.embed[0].Action == ["s3:GetObject"] &&
+      alltrue([for process in local.process_contracts : !contains(process.db, "venue/migration") && !contains(process.db, "item/migration")]) &&
+      length(local.process_contracts) == 18 &&
+      one(aws_s3_bucket_cors_configuration.media.cors_rule).allowed_methods == toset(["POST"])
+    )
+    error_message = "Runtime identities cannot receive migration credentials; only the Item sealer writes sealed photos, and CORS permits POST uploads."
+  }
+}
+
+run "private_trigger_access_token_configuration" {
+  command = plan
+  variables {
+    application_runtime_enabled      = true
+    node_network_mode                = "public"
+    token_trigger_package            = "build/mock-only.zip"
+    token_trigger_sha256             = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    token_trigger_pool_id            = "ap-southeast-1_test"
+    token_trigger_web_client_id      = "testwebclient"
+    token_trigger_operator_client_id = "testoperatorclient"
+    attach_token_trigger             = true
+  }
+  assert {
+    condition = (
+      one(one(aws_cognito_user_pool.this.lambda_config).pre_token_generation_config).lambda_version == "V2_0" &&
+      aws_cognito_user_pool.this.user_pool_tier == "ESSENTIALS" &&
+      length(aws_nat_gateway.this) == 0 &&
+      length(aws_vpc_endpoint.secrets[0].subnet_ids) == 1 &&
+      aws_vpc_endpoint.secrets[0].private_dns_enabled &&
+      toset(one(aws_lambda_function.token_trigger[0].vpc_config).subnet_ids) == toset(aws_subnet.private[*].id) &&
+      aws_vpc_security_group_ingress_rule.database_trigger[0].from_port == 5432 &&
+      aws_vpc_security_group_egress_rule.trigger_secrets[0].to_port == 443 &&
+      !contains(keys(one(aws_lambda_function.token_trigger[0].environment).variables), "IDENTITY_DATABASE_URL") &&
+      aws_lambda_permission.cognito[0].source_account == var.aws_account_id
+    )
+    error_message = "Access-token customization must use V2, private database/secret access without NAT, no credential in the Lambda environment, and a pool-scoped invocation permission."
   }
 }
 
@@ -244,4 +343,40 @@ run "reject_mismatched_postgres_family" {
     postgres_engine_version = "17"
   }
   expect_failures = [var.postgres_engine_version]
+}
+
+run "c3_private_gateway_and_controller_identity" {
+  command = plan
+  override_resource {
+    target          = aws_eks_cluster.this
+    override_during = plan
+    values = {
+      identity = [{ oidc = [{ issuer = "https://oidc.eks.ap-southeast-1.amazonaws.com/id/test" }] }]
+    }
+  }
+  override_resource {
+    target          = aws_iam_openid_connect_provider.eks
+    override_during = plan
+    values = {
+      arn = "arn:aws:iam::123456789012:oidc-provider/oidc.eks.ap-southeast-1.amazonaws.com/id/test"
+    }
+  }
+  variables {
+    c3_enabled        = true
+    node_desired_size = 2
+    node_max_size     = 5
+  }
+  assert {
+    condition = (
+      length(aws_iam_role.alb_controller) == 1 &&
+      length(aws_cloudfront_distribution.dev) == 0 &&
+      aws_ecr_repository.frontend[0].image_tag_mutability == "IMMUTABLE" &&
+      aws_vpc_security_group_ingress_rule.c3_cloudfront[0].cidr_ipv4 == null &&
+      aws_vpc_security_group_ingress_rule.c3_cloudfront[0].from_port == 80 &&
+      aws_vpc_security_group_ingress_rule.c3_gateway[0].from_port == 8080 &&
+      aws_vpc_security_group_ingress_rule.c3_gateway[0].to_port == 8080 &&
+      jsondecode(aws_iam_role.alb_controller[0].assume_role_policy).Statement[0].Condition.StringEquals["${local.oidc_host}:sub"] == "system:serviceaccount:kube-system:aws-load-balancer-controller"
+    )
+    error_message = "C3 requires an isolated controller identity, immutable frontend images and a scoped private gateway boundary."
+  }
 }

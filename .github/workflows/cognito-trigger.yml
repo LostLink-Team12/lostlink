@@ -1,0 +1,66 @@
+name: Cognito trigger package
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-and-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: lostlink
+          POSTGRES_PASSWORD: lostlink
+          POSTGRES_DB: lostlink
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lostlink -d lostlink"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      LOSTLINK_TEST_ADMIN_URL: postgresql+psycopg://lostlink:lostlink@localhost:5432/lostlink
+      LOSTLINK_TEST_TRIGGER_ARTIFACT: ${{ github.workspace }}/build/cognito-token-trigger.zip
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.lock
+      - run: python -m pip install -r requirements-dev.lock ./libs
+      - run: python scripts/build_cognito_trigger.py
+      - name: Invoke the handler and final ZIP against PostgreSQL
+        run: python -m pytest -q services/venue-service/tests/test_venue_integration.py -k token_trigger
+      - name: Extract the final ZIP for dependency scanning
+        run: python -m zipfile -e build/cognito-token-trigger.zip build/cognito-scan
+      - name: Scan the extracted function dependencies
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          version: v0.76.0
+          scan-type: fs
+          scan-ref: build/cognito-scan
+          scanners: vuln,secret
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true
+      - name: Upload verified deployment ZIP and checksums
+        uses: actions/upload-artifact@v7
+        with:
+          name: cognito-token-trigger-${{ github.sha }}
+          path: |
+            build/cognito-token-trigger.zip
+            build/cognito-token-trigger.zip.sha256
+            build/cognito-token-trigger.manifest.json
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error

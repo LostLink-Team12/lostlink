@@ -1,8 +1,13 @@
 # 后端接入指南
 
-更新时间：2026-10-21。维护人：JIANG YIBAI。
+更新时间：2026-10-22。维护人：JIANG YIBAI。
 
 本文汇总 Phase 1 后端已实现的服务、对外契约，以及各成员需要完成的接入工作。这里记录的是后端采用的约定和接入要求，并不表示队友已经确认，也不表示真实云端联调已经完成。接口细节以 [API 契约](api/README.md)和各服务 README 为准。
+
+2026-10-23 C3 补充：dev 入口、真实 Cognito/S3/事件/CLIP/认领联调及扩容结果见
+[云端验收记录](reviews/2026-10-23-c3-deployment.md)和[部署 runbook](../infra/deploy/README.md)。
+下表保留原本地基线，云端状态以该记录为准；实体摄像头及真实邮箱收件仍需单独核对。
+当前 dev 承接 #17 的阈值配置：纯文字 0.63、带照片 0.78，不能视为生产匹配质量验收。
 
 ## 1. 服务现状
 
@@ -16,6 +21,8 @@
 | Partner API / Webhooks | Seed 2 合作方接口 | Phase 2，未实现 | 见第 5 节 |
 
 本地验证使用 Docker PostgreSQL/pgvector 与 LocalStack（S3/SNS/SQS）。真实 Cognito、SES、AWS IAM、EKS 部署与 5,000 张照片云端吞吐尚未验收。
+
+云端配置交接、逐项验收和搜索分段测量见[后端联调准备清单](backend-readiness.md)。该清单是联调材料，不代表 AWS 验收已通过。
 
 ## 2. 通用接口约定（前端与其他服务）
 
@@ -83,7 +90,8 @@
 
 ## 5. Yang Dongwei：匹配、契约与 Seed 2
 
-- Matching 和 Embedding 已在 `matching-service` 中实现（独立进程，共享 `matching` schema）：真实 OpenCLIP ViT-B/32、512 维向量、权重 SHA256 固定。API 和 tasks 必须使用同一份权重。自动匹配阈值 0.25 只是初值，需要用演示数据重新标定。
+- Matching 和 Embedding 已在 `matching-service` 中实现（独立进程，共享 `matching` schema）：真实 OpenCLIP ViT-B/32、512 维向量、权重 SHA256 固定。API 和 tasks 必须使用同一份权重。自动匹配阈值已用 102 对标注数据标定（#9）：带照片的报告 `MATCH_THRESHOLD=0.78`，纯文字报告 `MATCH_THRESHOLD_TEXT=0.63`，均按精确率 ≥0.8 选取；模型或标注数据变化后重新运行 Match threshold calibration 工作流。
+- 阈值配置对齐（#22 与 #24）：统一使用 `MatchingSettings.automatic_match_threshold`，新报告匹配与物品更新后的重新匹配都按报告是否含照片选择阈值。代码默认值与部署值一致（照片 0.78、纯文字 0.63）；需要沿用单一阈值时，通过配置对象显式传入 `match_threshold_text=None`，纯文字报告回退到 `MATCH_THRESHOLD`。
 - Embedding 的成功/失败结果必须原样带回登记事件的 `correlation_id` 和 `item_version`。Matching 只展示 `available` 状态的物品，其他状态保留版本墓碑。
 - 通知上下文接口 `GET /internal/v1/matches/{id}/notification-context` 由 Notification 在每次发送前调用复核。`venue_name` 目前为 null，等 Venue 提供公开目录后再填充。
 - A1 契约：[docs/api](api/README.md) 由 `scripts/export_contracts.py` 从代码生成。请作为架构负责人审阅，后续修改以代码为准，生成后再提交。

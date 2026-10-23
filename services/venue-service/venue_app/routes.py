@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from fastapi.responses import JSONResponse
 from lostlink_common.auth import Principal, get_principal
+from lostlink_common.errors import error_responses
 from sqlalchemy import select
 
 from venue_app.errors import VenueError
@@ -28,7 +29,7 @@ from venue_app.schemas import (
 )
 from venue_app.service import VenueService, idempotent, member_view, resolve_identity, venue_view
 
-router = APIRouter()
+router = APIRouter(responses=error_responses(401, 403, 422, 500, 503))
 Actor = Annotated[Principal, Depends(get_principal)]
 Key = Annotated[str | None, Header(alias="Idempotency-Key")]
 Version = Annotated[str | None, Header(alias="If-Match")]
@@ -80,7 +81,11 @@ def result(value):
 
 
 @router.post(
-    "/v1/admin/venues", status_code=201, response_model=OnboardingView, tags=["Onboarding"]
+    "/v1/admin/venues",
+    status_code=201,
+    response_model=OnboardingView,
+    tags=["Onboarding"],
+    responses=error_responses(409, 428),
 )
 def create_venue(body: NewVenue, request: Request, principal: Actor, key: Key = None):
     authorize(request, principal, "platform")
@@ -119,7 +124,12 @@ def list_venues(
         }
 
 
-@router.get("/v1/admin/venues/{tenant_id}", response_model=VenueView, tags=["Onboarding"])
+@router.get(
+    "/v1/admin/venues/{tenant_id}",
+    response_model=VenueView,
+    tags=["Onboarding"],
+    responses=error_responses(404),
+)
 def admin_venue(tenant_id: UUID, request: Request, response: Response, principal: Actor):
     authorize(request, principal, "platform")
     with database(request, "platform").context(subject=principal.subject) as session:
@@ -128,7 +138,9 @@ def admin_venue(tenant_id: UUID, request: Request, response: Response, principal
         return venue_view(venue)
 
 
-@router.get("/v1/venues/current", response_model=VenueView, tags=["Venue"])
+@router.get(
+    "/v1/venues/current", response_model=VenueView, tags=["Venue"], responses=error_responses(404)
+)
 def current(request: Request, response: Response, principal: Actor):
     authorize(request, principal, "employee")
     with database(request).context(
@@ -144,6 +156,7 @@ def current(request: Request, response: Response, principal: Actor):
     response_model=MembersPage,
     response_model_exclude_none=True,
     tags=["Members"],
+    responses=error_responses(404),
 )
 def members(
     request: Request,
@@ -175,7 +188,11 @@ def members(
 
 
 @router.post(
-    "/v1/venues/current/members", status_code=201, response_model=MemberView, tags=["Members"]
+    "/v1/venues/current/members",
+    status_code=201,
+    response_model=MemberView,
+    tags=["Members"],
+    responses=error_responses(404, 409, 428),
 )
 def add_member(body: NewMember, request: Request, principal: Actor, key: Key = None):
     authorize(request, principal, "employee")
@@ -196,7 +213,12 @@ def add_member(body: NewMember, request: Request, principal: Actor, key: Key = N
     return result(value)
 
 
-@router.patch("/v1/venues/current/members/{member_id}", response_model=MemberView, tags=["Members"])
+@router.patch(
+    "/v1/venues/current/members/{member_id}",
+    response_model=MemberView,
+    tags=["Members"],
+    responses=error_responses(404, 409, 412, 428),
+)
 def change_member(
     member_id: UUID,
     body: MemberChange,
@@ -225,7 +247,12 @@ def change_member(
     return result(value)
 
 
-@router.patch("/v1/admin/venues/{tenant_id}", response_model=VenueView, tags=["Onboarding"])
+@router.patch(
+    "/v1/admin/venues/{tenant_id}",
+    response_model=VenueView,
+    tags=["Onboarding"],
+    responses=error_responses(404, 409, 412, 428),
+)
 def change_venue(
     tenant_id: UUID,
     body: VenueChange,
@@ -249,7 +276,10 @@ def change_venue(
 
 
 @router.get(
-    "/v1/admin/identity-sync/{operation_id}", response_model=OperationView, tags=["Identity"]
+    "/v1/admin/identity-sync/{operation_id}",
+    response_model=OperationView,
+    tags=["Identity"],
+    responses=error_responses(404),
 )
 def identity_sync(operation_id: UUID, request: Request, principal: Actor):
     mode = (

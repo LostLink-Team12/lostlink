@@ -10,6 +10,20 @@ from lostlink_common.events import DomainEvent, SnsPublisher, SqsPublisher, deco
 from pydantic import ValidationError
 
 
+def test_sqs_socket_timeout_allows_a_full_long_poll():
+    from lostlink_common.config import Settings
+    from lostlink_common.events import aws_client
+
+    settings = Settings(_env_file=None, aws_endpoint_url="http://localhost:4566")
+    sqs, sns = aws_client("sqs", settings), aws_client("sns", settings)
+    try:
+        assert sqs.meta.config.read_timeout > 20
+        assert sns.meta.config.read_timeout == 3
+    finally:
+        sqs.close()
+        sns.close()
+
+
 @pytest.fixture
 def event():
     return DomainEvent(

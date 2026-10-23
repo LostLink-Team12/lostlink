@@ -6,14 +6,15 @@ import random
 import signal
 import threading
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from uuid import UUID, uuid4
 
 import boto3
 from botocore.config import Config
 from lostlink_common.events import DomainEvent, SnsPublisher, aws_client
 from lostlink_common.observability import configure_logging
-from sqlalchemy import and_, or_, select
+from lostlink_common.worker_health import heartbeat
+from sqlalchemy import and_, func, or_, select
 
 from venue_app.config import VenueSettings
 from venue_app.database import VenueDatabase
@@ -77,8 +78,8 @@ class JobRunner:
         self.database, self.publisher, self.revoker = database, publisher, revoker
 
     def claim(self, model):
-        now = datetime.now(UTC)
         with self.database.context() as session:
+            now = session.scalar(select(func.now()))
             row = session.scalar(
                 select(model)
                 .where(
@@ -118,7 +119,7 @@ class JobRunner:
                 return
             row.state = "failed" if error and row.attempts >= 10 else state
             row.last_error_code = error
-            row.available_at = datetime.now(UTC) + timedelta(
+            row.available_at = session.scalar(select(func.now())) + timedelta(
                 seconds=random.uniform(1, min(300, 2**row.attempts))
             )
             row.lease_token, row.lease_until = None, None
@@ -166,7 +167,7 @@ class JobRunner:
             if row is None or row.state != "failed":
                 raise ValueError("Only a failed job can be replayed")
             row.state, row.attempts = "pending", 0
-            row.available_at = datetime.now(UTC)
+            row.available_at = session.scalar(select(func.now()))
             row.last_error_code, row.lease_token, row.lease_until = None, None, None
             session.add(
                 AuditEntry(
@@ -222,6 +223,7 @@ def main():
             )
         while not stopped.is_set():
             worked = runner.once(args.mode)
+            heartbeat()
             if args.once:
                 break
             if not worked:

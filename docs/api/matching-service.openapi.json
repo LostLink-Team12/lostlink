@@ -53,12 +53,159 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "401": {
+            "description": "A valid Cognito access token is required.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string",
+                  "example": "Bearer"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The client, role, scope or current membership does not permit this operation.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body exceeds the service size limit.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request validation failed or application input is invalid.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected internal error occurred; details are not disclosed.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required configuration, database access or an upstream dependency is unavailable.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The operation conflicts with resource state, an in-progress operation or idempotency.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for operation_in_progress; retry delay in seconds.",
+                "schema": {
+                  "type": "string",
+                  "example": "1"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A required Idempotency-Key or If-Match header is missing.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -110,12 +257,116 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "401": {
+            "description": "A valid Cognito access token is required.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string",
+                  "example": "Bearer"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The client, role, scope or current membership does not permit this operation.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body exceeds the service size limit.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request validation failed or application input is invalid.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected internal error occurred; details are not disclosed.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required configuration, database access or an upstream dependency is unavailable.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -155,12 +406,134 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "401": {
+            "description": "A valid Cognito access token is required.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string",
+                  "example": "Bearer"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The client, role, scope or current membership does not permit this operation.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body exceeds the service size limit.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request validation failed or application input is invalid.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected internal error occurred; details are not disclosed.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required configuration, database access or an upstream dependency is unavailable.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist or is not visible to the caller.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -242,12 +615,195 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "401": {
+            "description": "A valid Cognito access token is required.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string",
+                  "example": "Bearer"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The client, role, scope or current membership does not permit this operation.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body exceeds the service size limit.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request validation failed or application input is invalid.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected internal error occurred; details are not disclosed.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required configuration, database access or an upstream dependency is unavailable.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist or is not visible to the caller.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The operation conflicts with resource state, an in-progress operation or idempotency.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Present for operation_in_progress; retry delay in seconds.",
+                "schema": {
+                  "type": "string",
+                  "example": "1"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "If-Match does not match the current resource version; reload before retrying.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "A required Idempotency-Key or If-Match header is missing.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -280,12 +836,116 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "401": {
+            "description": "A valid Cognito access token is required.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string",
+                  "example": "Bearer"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The client, role, scope or current membership does not permit this operation.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body exceeds the service size limit.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request validation failed or application input is invalid.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected internal error occurred; details are not disclosed.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required configuration, database access or an upstream dependency is unavailable.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -354,12 +1014,134 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "401": {
+            "description": "A valid Cognito access token is required.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string",
+                  "example": "Bearer"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The client, role, scope or current membership does not permit this operation.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body exceeds the service size limit.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request validation failed or application input is invalid.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected internal error occurred; details are not disclosed.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required configuration, database access or an upstream dependency is unavailable.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist or is not visible to the caller.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -399,12 +1181,134 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
+          "401": {
+            "description": "A valid Cognito access token is required.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string",
+                  "example": "Bearer"
+                }
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The client, role, scope or current membership does not permit this operation.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body exceeds the service size limit.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request validation failed or application input is invalid.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected internal error occurred; details are not disclosed.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required configuration, database access or an upstream dependency is unavailable.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist or is not visible to the caller.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -466,18 +1370,68 @@
         "type": "object",
         "title": "CloseReport"
       },
-      "HTTPValidationError": {
+      "ErrorDetail": {
         "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "type": "array",
-            "title": "Detail"
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Stable application error code used by clients."
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "Human-readable error message without sensitive values."
+          },
+          "details": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ValidationIssue"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details",
+            "description": "Included for request validation errors; omitted for other errors."
           }
         },
+        "additionalProperties": false,
         "type": "object",
-        "title": "HTTPValidationError"
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorDetail"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorDetail"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id",
+            "description": "Request correlation ID, also sent as X-Request-ID."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "title": "ErrorResponse",
+        "description": "The existing error_response wire format, shared by service OpenAPI contracts."
       },
       "MatchView": {
         "properties": {
@@ -1013,9 +1967,9 @@
         ],
         "title": "SearchResults"
       },
-      "ValidationError": {
+      "ValidationIssue": {
         "properties": {
-          "loc": {
+          "location": {
             "items": {
               "anyOf": [
                 {
@@ -1029,29 +1983,19 @@
             "type": "array",
             "title": "Location"
           },
-          "msg": {
-            "type": "string",
-            "title": "Message"
-          },
           "type": {
             "type": "string",
-            "title": "Error Type"
-          },
-          "input": {
-            "title": "Input"
-          },
-          "ctx": {
-            "type": "object",
-            "title": "Context"
+            "title": "Type"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
-          "loc",
-          "msg",
+          "location",
           "type"
         ],
-        "title": "ValidationError"
+        "title": "ValidationIssue",
+        "description": "Sanitized request validation detail; input values are never returned."
       }
     },
     "securitySchemes": {

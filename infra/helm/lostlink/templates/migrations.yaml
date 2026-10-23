@@ -1,0 +1,93 @@
+{{- if .Values.migrations.enabled }}
+{{- $root := . }}
+---
+# Hooks run before regular resources exist, so the migration Jobs get their own CA copy.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lostlink-migration-rds-ca
+  labels:
+    app.kubernetes.io/part-of: lostlink
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation
+data:
+  global-bundle.pem: |
+    {{- .Values.database.caBundle | nindent 4 }}
+{{- range $name := keys .Values.services | sortAlpha }}
+{{- $svc := get $root.Values.services $name }}
+{{- if and $svc.enabled $svc.migrations }}
+{{- $process := printf "%s-migration" $name }}
+{{- $labels := dict "root" $root "service" $name "process" $process }}
+---
+# Runs before API/worker rollout. The migration credential exists only in this Job's memory;
+# API and worker pods never receive it (team-alignment section 4).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $process }}
+  labels:
+    {{- include "lostlink.labels" $labels | nindent 4 }}
+  annotations:
+    eks.amazonaws.com/role-arn: {{ default (printf "%s%s" $root.Values.aws.roleArnPrefix $process) (get $root.Values.migrations.roleArns $name) | quote }}
+    eks.amazonaws.com/sts-regional-endpoints: "true"
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation
+automountServiceAccountToken: false
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $process }}
+  labels:
+    {{- include "lostlink.labels" $labels | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        {{- include "lostlink.labels" $labels | nindent 8 }}
+    spec:
+      serviceAccountName: {{ $process }}
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: {{ $root.Values.podSecurity.runAsUser }}
+        runAsGroup: {{ $root.Values.podSecurity.runAsGroup }}
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: alembic
+          image: {{ include "lostlink.image" (list $root $svc) }}
+          command: [python, -m, lostlink_common.secret_env, --, alembic, upgrade, head]
+          env:
+            - {name: ENVIRONMENT, value: {{ $root.Values.environment | quote }}}
+            - {name: AWS_REGION, value: {{ $root.Values.aws.region | quote }}}
+            - {name: AWS_STS_REGIONAL_ENDPOINTS, value: regional}
+            - {name: DATABASE_SSLROOTCERT, value: /etc/lostlink/rds/global-bundle.pem}
+            - name: LOSTLINK_SECRET_ENV
+              value: {{ dict "MIGRATION_DATABASE_URL" (dict "secret" (printf "%s/database/%s/migration" $root.Values.aws.secretPrefix $name) "format" "database") | toJson | quote }}
+          securityContext:
+            {{- include "lostlink.containerSecurity" . | nindent 12 }}
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {memory: 256Mi}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+            - {name: rds-ca, mountPath: /etc/lostlink/rds, readOnly: true}
+      volumes:
+        - name: tmp
+          emptyDir: {sizeLimit: 64Mi}
+        - name: rds-ca
+          configMap: {name: lostlink-migration-rds-ca}
+{{- end }}
+{{- end }}
+{{- end }}

@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, Query, Request
 from fastapi.responses import JSONResponse
 from lostlink_common.auth import Principal, get_principal
+from lostlink_common.errors import error_responses
 from lostlink_common.identity import (
     EmailNotVerified,
     IdentityDirectoryUnavailable,
@@ -20,7 +21,7 @@ from claim_app.models import Claim, ClaimOperation
 from claim_app.service import ClaimService, claim_view
 from claim_app.transactions import idempotent, identity, stored
 
-router = APIRouter()
+router = APIRouter(responses=error_responses(401, 403, 422, 500, 503))
 Actor = Annotated[Principal, Depends(get_principal)]
 Key = Annotated[str | None, Header(alias="Idempotency-Key")]
 Version = Annotated[str | None, Header(alias="If-Match")]
@@ -121,7 +122,12 @@ def item_context(request, item_id):
         fail(503, "item_unavailable", "Item could not be checked")
 
 
-@router.get("/v1/claim-questions", response_model=schemas.ClaimQuestions, tags=["Claims"])
+@router.get(
+    "/v1/claim-questions",
+    response_model=schemas.ClaimQuestions,
+    tags=["Claims"],
+    responses=error_responses(404, 409),
+)
 def questions(item_id: UUID, request: Request, principal: Owner):
     context = item_context(request, item_id)
     if context.state != "available":
@@ -135,7 +141,13 @@ def questions(item_id: UUID, request: Request, principal: Owner):
     }
 
 
-@router.post("/v1/claims", status_code=201, response_model=schemas.ClaimDetail, tags=["Claims"])
+@router.post(
+    "/v1/claims",
+    status_code=201,
+    response_model=schemas.ClaimDetail,
+    tags=["Claims"],
+    responses=error_responses(404, 409, 428),
+)
 def create(body: schemas.NewClaim, request: Request, principal: Owner, key: Key = None):
     operation, payload = "POST /v1/claims", body.model_dump(mode="json")
     scope, request_hash = identity(principal, operation, key, payload, None)
@@ -181,7 +193,12 @@ def list_claims(request: Request, principal: Owner, limit: Limit = 20, offset: O
     return {"items": items, "limit": limit, "offset": offset, "has_more": len(rows) > limit}
 
 
-@router.get("/v1/claims/{claim_id}", response_model=schemas.ClaimDetail, tags=["Claims"])
+@router.get(
+    "/v1/claims/{claim_id}",
+    response_model=schemas.ClaimDetail,
+    tags=["Claims"],
+    responses=error_responses(404),
+)
 def owner_detail(claim_id: UUID, request: Request, principal: Owner):
     with owner_session(request, principal) as session:
         svc = service(session, principal, request)
@@ -189,7 +206,12 @@ def owner_detail(claim_id: UUID, request: Request, principal: Owner):
         return JSONResponse(svc.detail(claim), headers={"ETag": f'"{claim.version}"'})
 
 
-@router.get("/v1/claims/{claim_id}/contact", response_model=schemas.ContactView, tags=["Claims"])
+@router.get(
+    "/v1/claims/{claim_id}/contact",
+    response_model=schemas.ContactView,
+    tags=["Claims"],
+    responses=error_responses(404),
+)
 def owner_contact(claim_id: UUID, request: Request, principal: Owner):
     dependency(request, "cipher", "encryption_unavailable")
     with owner_session(request, principal) as session:
@@ -200,7 +222,7 @@ def owner_contact(claim_id: UUID, request: Request, principal: Owner):
 @router.post(
     "/v1/claims/{claim_id}/cancel",
     response_model=schemas.ClaimDetail,
-    responses={202: {"model": schemas.AcceptedOperation}},
+    responses={**error_responses(404, 409, 412, 428), 202: {"model": schemas.AcceptedOperation}},
     tags=["Claims"],
 )
 def cancel(
@@ -228,6 +250,7 @@ def cancel(
     status_code=201,
     response_model=schemas.HandoverTokenView,
     tags=["Handover"],
+    responses=error_responses(404, 409, 428),
 )
 def handover_token(claim_id: UUID, request: Request, principal: Owner, key: Key = None):
     dependency(request, "cipher", "encryption_unavailable")
@@ -268,7 +291,12 @@ def venue_claims(
     return {"items": items, "limit": limit, "offset": offset, "has_more": len(rows) > limit}
 
 
-@router.get("/v1/venue/claims/{claim_id}", response_model=schemas.VenueClaimDetail, tags=["Venue"])
+@router.get(
+    "/v1/venue/claims/{claim_id}",
+    response_model=schemas.VenueClaimDetail,
+    tags=["Venue"],
+    responses=error_responses(404),
+)
 def venue_detail(claim_id: UUID, request: Request, principal: Staff):
     with staff_session(request, principal) as session:
         svc = service(session, principal, request)
@@ -281,6 +309,7 @@ def venue_detail(claim_id: UUID, request: Request, principal: Staff):
     status_code=202,
     response_model=schemas.AcceptedOperation,
     tags=["Venue"],
+    responses=error_responses(404, 409, 412, 428),
 )
 def approve(
     claim_id: UUID, request: Request, principal: Staff, key: Key = None, version: Version = None
@@ -298,7 +327,10 @@ def approve(
 
 
 @router.post(
-    "/v1/venue/claims/{claim_id}/reject", response_model=schemas.VenueClaimDetail, tags=["Venue"]
+    "/v1/venue/claims/{claim_id}/reject",
+    response_model=schemas.VenueClaimDetail,
+    tags=["Venue"],
+    responses=error_responses(404, 409, 412, 428),
 )
 def reject(
     claim_id: UUID,
@@ -325,6 +357,7 @@ def reject(
     status_code=202,
     response_model=schemas.AcceptedOperation,
     tags=["Handover"],
+    responses=error_responses(404, 409, 412, 428),
 )
 def handover(
     claim_id: UUID,
@@ -348,7 +381,10 @@ def handover(
 
 
 @router.get(
-    "/v1/venue/claims/{claim_id}/contact", response_model=schemas.ContactView, tags=["Venue"]
+    "/v1/venue/claims/{claim_id}/contact",
+    response_model=schemas.ContactView,
+    tags=["Venue"],
+    responses=error_responses(404),
 )
 def venue_contact(claim_id: UUID, request: Request, principal: Staff):
     dependency(request, "cipher", "encryption_unavailable")
@@ -384,7 +420,10 @@ def find_operation(request, principal, opener, operation_id, condition):
 
 
 @router.get(
-    "/v1/claim-operations/{operation_id}", response_model=schemas.OperationView, tags=["Claims"]
+    "/v1/claim-operations/{operation_id}",
+    response_model=schemas.OperationView,
+    tags=["Claims"],
+    responses=error_responses(404),
 )
 def operation_status(operation_id: UUID, request: Request, principal: Actor):
     user_client(request, principal)

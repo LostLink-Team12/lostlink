@@ -36,7 +36,7 @@ docker-compose.yml  local dependencies (Postgres+pgvector, Redis, LocalStack)
 - AI matching: open-source CLIP (ViT-B/32) embeddings, PostgreSQL `pgvector`
 - AWS: EKS, RDS PostgreSQL, S3, SQS, SNS, ElastiCache Redis, Cognito, SES, API Gateway, WAF
 - Delivery: GitHub Actions, Trivy, Docker, Amazon ECR, Helm, Terraform
-- Scaling: HPA for APIs, KEDA on SQS queue depth for embedding workers
+- Scaling: CPU HPA for APIs, PostgreSQL runnable-job KEDA scaler for Matching tasks
 - Frontend: React + Vite + TypeScript
 - Tests: pytest, k6
 
@@ -86,6 +86,15 @@ Run `psql` with [scripts/init-local.sql](scripts/init-local.sql) once to create 
 local service role. API contracts generated from the code are in [docs/api](docs/api/README.md);
 integration requirements for each team member are in the
 [backend integration guide](docs/team-alignment.md).
+
+## Dev deployment
+
+The C3 environment serves [Owner App](https://d37mn7oo1kv0ok.cloudfront.net/owner-app/)
+and [Venue Portal](https://d37mn7oo1kv0ok.cloudfront.net/venue-portal/) through
+CloudFront and a private ALB. Internal APIs and monitoring stay private.
+Use the [deployment runbook](infra/deploy/README.md) and the
+[actual acceptance record](docs/reviews/2026-10-23-c3-deployment.md) for process
+charts, capacity profiles, test results and remaining device/mailbox checks.
 
 ## How we work
 

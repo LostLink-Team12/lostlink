@@ -11,10 +11,11 @@ const base=apiBase(__ENV.ITEM_API_URL), runId=validRun(__ENV.RUN_ID);
 const rows=new SharedArray('import-manifest',()=>JSON.parse(open(__ENV.LOAD_MANIFEST || './generated/manifest.json')));
 const photos=await fsOpen(__ENV.LOAD_PHOTOS || './generated/photos.bin');
 const count=integer(__ENV.IMPORT_COUNT,5000,1,5000),batchSize=integer(__ENV.BATCH_SIZE,50,1,100);
+const iterations=Math.ceil(count/batchSize),vus=Math.min(iterations,integer(__ENV.IMPORT_VUS,10,1,50));
 if (rows.length<count) throw Error('Prepared manifest has fewer rows than IMPORT_COUNT');
 const confirmed=new Counter('photos_confirmed'),reused=new Counter('photos_reused'),batches=new Rate('batches_succeeded');
 export const options={
-  scenarios:{bulk:{executor:'shared-iterations',vus:integer(__ENV.IMPORT_VUS,10,1,50),iterations:Math.ceil(count/batchSize),maxDuration:__ENV.IMPORT_DURATION || '45m',gracefulStop:'1m'}},
+  scenarios:{bulk:{executor:'shared-iterations',vus,iterations,maxDuration:__ENV.IMPORT_DURATION || '45m',gracefulStop:'1m'}},
   thresholds:{photos_confirmed:[`count==${count}`],batches_succeeded:['rate==1'],http_req_failed:['rate<0.01']},
   systemTags:['status','method','name','scenario','expected_response'],summaryTrendStats:['avg','min','med','max','p(95)','p(99)'],
 };
@@ -43,8 +44,12 @@ async function api(path, {body,key,version}={}) {
 async function upload(target,photo) {
   apiBase(target.url.split('?')[0]);
   const form=multipartPhoto(target.fields,photo,'lostlink-'+sha256(`${Date.now()}:${__VU}:${__ITER}:${Math.random()}`,'hex').slice(0,40));
-  const res=http.post(target.url,form.body,{headers:{'Content-Type':form.contentType},tags:{name:'s3-upload'},timeout:'60s',redirects:0});
-  if (![200,201,204].includes(res.status)) throw Error('S3 upload failed (HTTP '+res.status+')');
+  for(let attempt=0;attempt<3;attempt++) {
+    const res=http.post(target.url,form.body,{headers:{'Content-Type':form.contentType},tags:{name:'s3-upload'},timeout:'60s',redirects:0});
+    if ([200,201,204].includes(res.status)) return;
+    if (!(res.status===0 || res.status===429 || res.status>=500) || attempt===2) throw Error('S3 upload failed (HTTP '+res.status+')');
+    sleep(attempt+1);
+  }
 }
 export async function setup() {
   if (!__ENV.LOSTLINK_ACCESS_TOKEN) throw Error('Set LOSTLINK_ACCESS_TOKEN to a fresh venue staff token');

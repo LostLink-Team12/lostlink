@@ -1,0 +1,8 @@
+{
+  "run_id": "c3-bulk-20261022",
+  "mode": "bulk",
+  "k6_exit_code": 99,
+  "collector_exit_code": 0,
+  "cooldown_and_drain_observed": false,
+  "failure": "One S3 EOF interrupted a batch; six invalid_image jobs remain. Strict acceptance rejected."
+}

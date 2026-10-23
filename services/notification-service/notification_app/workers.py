@@ -11,7 +11,7 @@ from datetime import timedelta
 from uuid import UUID, uuid4
 
 from lostlink_common.db import Database
-from lostlink_common.events import aws_client, decode_message
+from lostlink_common.events import acknowledge_message, aws_client, decode_message, receive_messages
 from lostlink_common.identity import (
     CognitoIdentityDirectory,
     EmailNotVerified,
@@ -19,6 +19,7 @@ from lostlink_common.identity import (
     IdentityNotFound,
 )
 from lostlink_common.observability import configure_logging
+from lostlink_common.worker_health import heartbeat
 from sqlalchemy import and_, func, or_, select, text
 from sqlalchemy.dialects.postgresql import insert
 
@@ -133,12 +134,7 @@ class NotificationWorker:
             return code
 
     def poll(self, client, queue_url, *, wait_seconds=10):
-        messages = client.receive_message(
-            QueueUrl=queue_url,
-            WaitTimeSeconds=wait_seconds,
-            VisibilityTimeout=60,
-            MaxNumberOfMessages=1,
-        ).get("Messages", [])
+        messages = receive_messages(client, queue_url, wait_seconds=wait_seconds)
         for message in messages:
             try:
                 self.consume(decode_message(message["Body"]))
@@ -148,7 +144,7 @@ class NotificationWorker:
                     "notification_message_rejected", extra={"error_type": type(exc).__name__}
                 )
                 continue
-            client.delete_message(QueueUrl=queue_url, ReceiptHandle=message["ReceiptHandle"])
+            acknowledge_message(client, queue_url, message["ReceiptHandle"])
         return bool(messages)
 
     def claim(self):
@@ -370,7 +366,7 @@ def main():
     parser.add_argument("mode", choices=["consume", "tasks"])
     parser.add_argument("--once", action="store_true")
     args = parser.parse_args()
-    settings = NotificationSettings(process_mode="worker")
+    settings = NotificationSettings(process_mode="worker", worker_mode=args.mode)
     configure_logging(settings.service_name, settings.log_level)
     if not settings.worker_database_url:
         parser.error("WORKER_DATABASE_URL is required")
@@ -402,6 +398,7 @@ def main():
                 clients.append(worker.sender.client)
         while not stopped.is_set():
             worked = worker.poll(queue, settings.event_queue_url) if queue else worker.once()
+            heartbeat()
             if args.once:
                 break
             if not worked:

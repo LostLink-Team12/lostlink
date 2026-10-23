@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, Query, Request
 from fastapi.responses import JSONResponse
 from lostlink_common.auth import Principal, get_principal
+from lostlink_common.errors import error_responses
 from sqlalchemy import func, select
 
 from notification_app import schemas
@@ -18,7 +19,7 @@ from notification_app.models import (
 )
 from notification_app.transactions import idempotent
 
-router = APIRouter()
+router = APIRouter(responses=error_responses(401, 403, 422, 500, 503))
 Actor = Annotated[Principal, Depends(get_principal)]
 Key = Annotated[str | None, Header(alias="Idempotency-Key")]
 Limit = Annotated[int, Query(ge=1, le=100)]
@@ -107,6 +108,7 @@ def list_notifications(request: Request, principal: Owner, limit: Limit = 20, of
     "/v1/notifications/{notification_id}",
     response_model=schemas.NotificationView,
     tags=["Notifications"],
+    responses=error_responses(404),
 )
 def notification_detail(notification_id: UUID, request: Request, principal: Owner):
     with database(request, "database").actor_session(principal, venue_scope=False) as session:
@@ -176,6 +178,7 @@ def notification_stats(request: Request, principal: Operator):
     "/v1/admin/notifications/{notification_id}/retry",
     response_model=schemas.AdminNotificationView,
     tags=["Operations"],
+    responses=error_responses(404, 409, 428),
 )
 def retry_notification(
     notification_id: UUID,

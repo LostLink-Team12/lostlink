@@ -17,7 +17,7 @@ function run(script,env) {
   });
 }
 test('real k6 executes search ramps, multipart uploads, poll, resume and failure thresholds against a local contract double', {skip:!k6,timeout:120000},async()=> {
-  let imports=0,uploads=0,confirmed=0,rejectSearch=false,rejectUploads=false,uploadLeak=false,uploadHeaders=[],versionHeaders=[],keys=[],pendingReads=0;
+  let imports=0,uploads=0,confirmed=0,rejectSearch=false,rejectUploads=false,uploadLeak=false,uploadHeaders=[],versionHeaders=[],keys=[],pendingReads=0,transientUploads=0;
   const jobs=new Map(),items=new Map(),serverErrors=[];
   const server=createServer(async(req,res)=> {
     try {
@@ -53,6 +53,7 @@ test('real k6 executes search ramps, multipart uploads, poll, resume and failure
       const header=Buffer.from('--'+boundary+'\r\nContent-Disposition: form-data; name="file"; filename="photo.jpg"\r\nContent-Type: image/jpeg\r\n\r\n');
       const start=raw.indexOf(header);assert(start>=0);
       assert.deepEqual(raw.subarray(start+header.length),Buffer.concat([bytes,Buffer.from('\r\n--'+boundary+'--\r\n')]));
+      if(transientUploads>0) {transientUploads--;return send(503,{});}
       uploadHeaders.push(req.headers['content-type']);uploads++;res.writeHead(204);return res.end();
     }
     if(req.url.startsWith('/v1/item-operations/')) {pendingReads++;if(pendingReads===1)return send(200,{state:'pending'});confirmed++;return send(200,{state:'completed'});}
@@ -70,11 +71,19 @@ test('real k6 executes search ramps, multipart uploads, poll, resume and failure
     let result=await run('tests/load/search_load.js',{...common,MATCHING_API_URL:base,MAX_VUS:'2',RAMP_DURATION:'1s',HOLD_DURATION:'1s',THINK_SECONDS:'0',SUMMARY_PATH:join(root,'search.json')});
     assert.equal(result.code,0,result.output);
     const search=JSON.parse(await readFile(join(root,'search.json'),'utf8'));assert(search.metrics.http_reqs.values.count>0);assert(search.metrics.http_req_duration.values['p(95)']>=0);
-    const bulk={...common,ITEM_API_URL:base,IMPORT_COUNT:'4',BATCH_SIZE:'2',IMPORT_VUS:'2',IMPORT_DURATION:'30s',LOAD_MANIFEST:join(root,'packed/manifest.json'),LOAD_PHOTOS:join(root,'packed/photos.bin'),SUMMARY_PATH:join(root,'bulk.json')};
+    // Default 10 VUs must clamp to the two batches, or k6 rejects configuration.
+    const bulk={...common,ITEM_API_URL:base,IMPORT_COUNT:'4',BATCH_SIZE:'2',IMPORT_DURATION:'30s',LOAD_MANIFEST:join(root,'packed/manifest.json'),LOAD_PHOTOS:join(root,'packed/photos.bin'),SUMMARY_PATH:join(root,'bulk.json')};
     result=await run('tests/load/bulk_import.js',bulk);assert.equal(result.code,0,result.output);assert.equal(uploads,4);assert.equal(confirmed,4);assert.equal(uploadLeak,false);assert(versionHeaders.every(x=>x==='"4"'));assert(uploadHeaders.every(x=>x.startsWith('multipart/form-data; boundary=')));
     const initialKeys=[...keys].sort();const metrics=JSON.parse(await readFile(join(root,'bulk.json'),'utf8')).metrics;assert.equal(metrics.photos_confirmed.values.count,4);
     result=await run('tests/load/bulk_import.js',bulk);assert.equal(result.code,0,result.output);assert.equal(uploads,4);assert.deepEqual(keys.slice(2).sort(),initialKeys);
     assert.equal(JSON.parse(await readFile(join(root,'bulk.json'),'utf8')).metrics.photos_reused.values.count,4);
+    transientUploads=1;
+    result=await run('tests/load/bulk_import.js',{...bulk,RUN_ID:'transient-retry'});
+    // A single failure exceeds 1% in this tiny contract fixture; it must remain
+    // visible even though upload retry completes every photo successfully.
+    assert.equal(result.code,99,result.output);
+    const retried=JSON.parse(await readFile(join(root,'bulk.json'),'utf8')).metrics;
+    assert.equal(retried.photos_confirmed.values.count,4);assert.equal(retried.batches_succeeded.values.rate,1);
     rejectSearch=true;result=await run('tests/load/search_load.js',{...common,MATCHING_API_URL:base,MAX_VUS:'1',RAMP_DURATION:'1s',HOLD_DURATION:'1s',SUMMARY_PATH:join(root,'failed.json')});assert.notEqual(result.code,0);
     assert(!result.output.includes(common.LOSTLINK_ACCESS_TOKEN));
     assert.deepEqual(serverErrors,[]);

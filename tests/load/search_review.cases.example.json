@@ -1,0 +1,10 @@
+{
+  "cases": [
+    {
+      "name": "text-limit-one",
+      "payload": {"text": "red backpack", "limit": 1, "category": "Bags"},
+      "min_results": 1,
+      "expected_item_ids": ["00000000-0000-0000-0000-000000000001"]
+    }
+  ]
+}

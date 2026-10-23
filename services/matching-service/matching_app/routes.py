@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from fastapi.responses import JSONResponse
 from lostlink_common.auth import Principal, get_principal
+from lostlink_common.errors import error_responses
 from lostlink_common.membership import MembershipUnavailable
 from sqlalchemy import select
 
@@ -24,7 +25,7 @@ from matching_app.service import (
 )
 from matching_app.transactions import idempotent, replay
 
-router = APIRouter()
+router = APIRouter(responses=error_responses(401, 403, 413, 422, 500, 503))
 Actor = Annotated[Principal, Depends(get_principal)]
 Key = Annotated[str | None, Header(alias="Idempotency-Key")]
 Version = Annotated[str | None, Header(alias="If-Match")]
@@ -67,7 +68,12 @@ def result(value):
     return JSONResponse(body, status_code=status, headers={"ETag": etag} if etag else {})
 
 
-@router.post("/v1/lost-reports", status_code=201, response_model=schemas.ReportView)
+@router.post(
+    "/v1/lost-reports",
+    status_code=201,
+    response_model=schemas.ReportView,
+    responses=error_responses(409, 428),
+)
 def new_report(body: schemas.NewReport, request: Request, principal: Actor, key: Key = None):
     owner(request, principal)
     db = database(request)
@@ -119,7 +125,11 @@ def list_reports(
         }
 
 
-@router.get("/v1/lost-reports/{report_id}", response_model=schemas.ReportView)
+@router.get(
+    "/v1/lost-reports/{report_id}",
+    response_model=schemas.ReportView,
+    responses=error_responses(404),
+)
 def get_report(report_id: UUID, request: Request, response: Response, principal: Actor):
     owner(request, principal)
     with database(request).context(subject=principal.subject) as session:
@@ -128,7 +138,11 @@ def get_report(report_id: UUID, request: Request, response: Response, principal:
         return report_view(row)
 
 
-@router.post("/v1/lost-reports/{report_id}/close", response_model=schemas.ReportView)
+@router.post(
+    "/v1/lost-reports/{report_id}/close",
+    response_model=schemas.ReportView,
+    responses=error_responses(404, 409, 412, 428),
+)
 def close(
     report_id: UUID,
     body: schemas.CloseReport,
@@ -156,18 +170,25 @@ def close(
 @router.post("/v1/search", response_model=schemas.SearchResults)
 def search(body: schemas.Search, request: Request, principal: Actor):
     owner(request, principal)
-    vector = encode(request, body.text, body.photo_base64)
+    metrics = request.app.state.search_metrics
+    with metrics.phase_seconds.labels("encode").time():
+        vector = encode(request, body.text, body.photo_base64)
     model_version = request.app.state.encoder.model_version
     bound = request.app.state.settings.candidate_limit
-    with database(request).context(subject=principal.subject) as session:
-        rows = candidates(session, vector, model_version, body, bound, body.min_score)
+    with metrics.phase_seconds.labels("candidates").time():
+        with database(request).context(subject=principal.subject) as session:
+            rows = candidates(session, vector, model_version, body, bound, body.min_score)
+    metrics.candidates.observe(len(rows))
     values = []
-    for item, embedding, score in rows:
-        context = item_context(request, item.item_id)
-        if is_current(context, item, embedding, body):
-            values.append(hit(context, score))
-        if len(values) == body.limit:
-            break
+    with metrics.phase_seconds.labels("item_context").time():
+        for item, embedding, score in rows:
+            metrics.item_context_calls.inc()
+            context = item_context(request, item.item_id)
+            if is_current(context, item, embedding, body):
+                values.append(hit(context, score))
+            if len(values) == body.limit:
+                break
+    metrics.results.observe(len(values))
     return {
         "items": values,
         "limit": body.limit,
@@ -177,7 +198,11 @@ def search(body: schemas.Search, request: Request, principal: Actor):
     }
 
 
-@router.get("/v1/lost-reports/{report_id}/matches", response_model=schemas.MatchesPage)
+@router.get(
+    "/v1/lost-reports/{report_id}/matches",
+    response_model=schemas.MatchesPage,
+    responses=error_responses(404),
+)
 def list_matches(
     report_id: UUID,
     request: Request,
@@ -232,6 +257,7 @@ def is_filter_current(context, row):
 @router.get(
     "/internal/v1/matches/{match_id}/notification-context",
     response_model=schemas.NotificationContext,
+    responses=error_responses(404),
 )
 def notification_context(match_id: UUID, request: Request, principal: Actor):
     settings = request.app.state.settings
