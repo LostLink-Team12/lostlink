@@ -26,5 +26,5 @@ jobs:
           echo "$expected  $RUNNER_TEMP/helm.tar.gz" | sha256sum --check
           tar -xzf "$RUNNER_TEMP/helm.tar.gz" -C "$RUNNER_TEMP"
           echo "HELM_BIN=$RUNNER_TEMP/linux-amd64/helm" >> "$GITHUB_ENV"
-      - name: Validate process settings and all rendered application charts
-        run: python -m pytest -q infra/deploy/test_deployment.py
+      - name: Validate process settings, charts and acceptance safety
+        run: python -m pytest -q infra/deploy

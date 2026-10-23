@@ -32,11 +32,18 @@
 | UC3 报告/搜索 | 带照片报告、真实向量检索、匹配记录和真实库存搜索通过 |
 | UC4 通知 | Notification inbox 观察到真实匹配；发送器暂停时测试，关闭 synthetic 报告后恢复 |
 | UC5 认领/交接 | 未验证失主 409、过期版本 412、审批异步完成、原始 QR payload 交接，Claim/Item 均 handed_over |
-| 浏览器 | Owner App 与 Venue Portal 均通过真实 Cognito 登录；场馆页面显示真实库存与 handed_over 记录 |
+| 浏览器 | 员工角色修改往返、物品照片登记、照片/文字搜索、保存报告、通知深链接 Cognito 回跳、回答问题、审批、二维码生成与原码交接通过；Claim/Item 均 handed_over |
 | 公网边界 | 15 项 HTTPS、路由与私有接口拒绝检查通过 |
 
-没有向其他人发送消息或邮件。真实邮箱收件、完整浏览器逐步操作及实体摄像头扫码仍需人工验收；
-本次交接验证使用原始 QR payload，并不声称实体摄像头已通过。
+两节点恢复后重新执行 API 业务流与纯文字匹配流，通过后均关闭报告。浏览器另创建
+`C3 browser suitcase`：真实登记、S3 上传确认并变为 available；搜索找到该物品；报告匹配
+分数 0.9068，Notification inbox 可见；`/matches/:id` 登录后保持原路径并展示对应物品。
+随后通过页面提交答案、关闭报告、场馆审批、失主生成 QR、场馆输入同一原始 payload 交接。
+Claim 与 Item 均为 handed_over，截图 `browser-handover.png` 不含交接码。码值只在进程内存中
+传递，没有导出。四条 fixture owner 报告全部关闭后，notification-tasks 已恢复 1/1 Ready。
+
+没有向其他人发送消息或邮件。真实邮箱收件、浏览器场馆入驻表单及实体摄像头扫码仍需人工验收；
+场馆入驻已通过 API 验证，本次交接使用原始 QR payload，不声称实体摄像头已通过。
 
 ## 批量导入和恢复
 
@@ -57,6 +64,13 @@ runnable/leased/delayed 均排空，五个 API 和 Matching tasks 回到各 1 �
 
 因此最终 5,000 件可搜索已验证；续跑不是第二次全新 5,000 张扩容演示。最初 bulk 同时运行
 每 30 秒一次真实 owner 搜索 canary，其延迟不能冒充 200 VU 压测结果。
+
+当前 4 GiB 预留配置另实跑 256 张新导入（`c3-current-worker-20261023-v2`），
+全部确认、HTTP 无失败，k6/collector 均退出 0。29 次采集无错误，runnable 峰值 13，
+Matching tasks desired/Ready 实际从 1 到 2 再回 1；Item API 从 1 到 5 再回 1。
+历史 failed 仍为 7，积压排空且冷却稳定。该轮库存为 5,256 available、1 handed_over，
+是当前配置的补充扩缩容证据，不是另一次 5,000 张导入。此前同 RUN_ID 的首次尝试因
+6 iterations 小于默认 10 VU 被 k6 拒绝，未导入数据；保留失败记录，并修复小批次 VU 上限。
 
 ## 搜索与扩容
 
@@ -107,7 +121,8 @@ v6 的搜索中位数降至 974 ms，但 Item 连接池排队仍使尾延迟和�
 简单把全局池调大。新增独立 `INTERNAL_DB_POOL_SIZE`，仅将 Item 内部池从 1 调到 2；
 用户 API 与其他进程维持 1，overflow 均为 0。按八 Matching API 的压测上限加上其他
 HPA/KEDA 上限，应用池合计 64，另留监控 2、实测后台 8、操作员 2 和保留连接 3。
-部署契约检查该预算；不要与迁移并行运行该压测配置。下一轮将验证此配置。
+部署契约检查该预算；不要与迁移并行运行该压测配置。v7 已验证此配置，尾延迟未明显改善，
+因此不能将单连接池视为唯一性能瓶颈。
 
 v7 的 HTTP 失败率已低于 1%，但 p95 和 100% 有效搜索仍未达标（146 个失败请求）。
 API 扩容与自动回落已实际发生，不能将它表述为 200 VU 性能验收通过。5 秒尾延迟及严格契约
@@ -116,12 +131,18 @@ API 扩容与自动回落已实际发生，不能将它表述为 200 VU 性能�
 KEDA/HPA 不提供节点容量；本次节点容量由操作员通过 Terraform 调整，没有安装节点自动伸缩器。
 压测是一个 owner token 的并发 VU，并非 200 个独立用户。
 
+取证后已应用 Terraform 基线恢复计划（0 新增、1 更新、0 删除），节点 desired 9 → 2、
+max 9 → 5。最终 EKS ACTIVE、两节点 Ready、22 个 Deployment 全部就绪，原实例均 InService，
+临时 scale-in protection 已恢复为原 false。Matching API HPA 上限恢复 2；没有遗留九节点压测容量。
+两节点能容纳最低两个 4 GiB 模型进程，无法同时承载四个模型副本；扩容前仍需操作员增加节点。
+
 ## 回归检查与实际限制
 
 - 后端单元：238 passed，83 deselected（integration/model/scale）；本地未重跑全套容器集成。
-- 部署真实 Settings + 五 charts 渲染及峰值连接预算：5 passed。
-- Matching 的真实隔离 pgvector 集成：12 passed、1 skipped（本地未启用 LocalStack 事件端点）；
-  覆盖跨场馆、过滤、版本墓碑、持久化匹配与通知复核。临时测试容器已删除。
+- 部署真实 Settings + 五 charts 渲染及峰值连接预算：5 passed；发送器暂停安全检查另 5 passed。
+  验收工具同时要求 Deployment 为零且没有运行中或终止中的 sender Pod，避免仅改副本数就开始报告测试。
+- Matching 与 Item 的真实隔离 pgvector 集成：23 passed、6 skipped（本地未启用 LocalStack 事件/媒体端点）；
+  覆盖跨场馆、过滤、版本墓碑、持久化匹配、通知复核及 Item 内部池 2。临时测试容器已删除。
 - Terraform mock：16 passed，0 failed；没有使用真实 backend state。
 - 与当前主线合并后，压测工具 + 实际 k6 localhost 契约：11 passed。
 - 前端此前 28 tests 和生产构建通过；两端真实 Cognito 浏览器登录通过。
@@ -137,4 +158,4 @@ KEDA/HPA 不提供节点容量；本次节点容量由操作员通过 Terraform 
   照片/融合推理：API 峰值 RSS 2741.34 MiB，tasks 2732.86 MiB，均无 OOM。
   cgroup 峰值读取不可用，记录为 null，未将 RSS 当作容器总内存；证据固定引用当时镜像 manifest。
 
-Issue #6 暂不自动关闭：实体相机、邮箱收件及完整浏览器 UC1–UC5 仍有人工核对项。
+Issue #6 暂不自动关闭：实体相机、邮箱收件和浏览器场馆入驻表单仍需人工核对。

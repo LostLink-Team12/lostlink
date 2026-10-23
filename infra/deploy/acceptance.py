@@ -24,7 +24,30 @@ from uuid import uuid4
 
 import boto3
 from botocore.config import Config
-from configure import LOCAL, Cluster, outputs
+from configure import LOCAL, Cluster, outputs, run
+
+
+def require_paused_sender(cluster):
+    sender = cluster.get("deployment", "notification-tasks")
+    if not sender or sender["spec"].get("replicas", 1) != 0:
+        raise RuntimeError("Pause notification-tasks before testing synthetic recipients")
+    pods = json.loads(
+        run(
+            [
+                *cluster.command,
+                "-n",
+                "lostlink",
+                "get",
+                "pods",
+                "-l",
+                "app.kubernetes.io/name=notification-tasks",
+                "-o",
+                "json",
+            ]
+        )
+    )["items"]
+    if any(pod.get("status", {}).get("phase") not in {"Succeeded", "Failed"} for pod in pods):
+        raise RuntimeError("Wait until notification-tasks pods have fully exited")
 
 
 class Form(HTMLParser):
@@ -254,9 +277,7 @@ def run_flow(cluster, data, client, users):
         app["web_client_id"],
     )
     api = API(origin)
-    sender = cluster.get("deployment", "notification-tasks")
-    if sender and sender["spec"].get("replicas", 1) != 0:
-        raise RuntimeError("Pause notification-tasks before testing synthetic recipients")
+    require_paused_sender(cluster)
 
     def auth(name, venue=False):
         return login(users[name], operator if venue else owner_client, domain, origin, venue)
@@ -499,9 +520,7 @@ def run_flow(cluster, data, client, users):
 
 def text_match_flow(cluster, data, users):
     """Verify the calibrated text-only path without sending fixture emails."""
-    sender = cluster.get("deployment", "notification-tasks")
-    if not sender or sender["spec"].get("replicas", 1) != 0:
-        raise RuntimeError("Pause notification-tasks before testing synthetic recipients")
+    require_paused_sender(cluster)
     origin = data["c3"]["value"]["frontend_origin"]
     owner = login(
         users["owner"],

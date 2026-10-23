@@ -1,5 +1,4 @@
 {
-  "source_commit": "62c0f4d93466d31763a4d1493a8dcfa324ba3daf",
   "local": {
     "backend_unit": {
       "passed": 238,
@@ -28,6 +27,9 @@
       "skipped": 6,
       "skip_reason": "LocalStack event/media endpoint not configured",
       "internal_pool_size": 2
+    },
+    "acceptance_sender_safety": {
+      "passed": 5
     }
   },
   "remote_ci": {
@@ -35,13 +37,14 @@
     "skipped_checks": 1,
     "skipped_job": "publish-image (PR policy)",
     "runs": [
-      39877542275,
-      39877542293,
-      39877542324,
-      39877542360
+      39881122889,
+      39881122830,
+      39881122838,
+      39881122844
     ],
     "includes_real_container_integration": true,
-    "source_commit": "62c0f4d93466d31763a4d1493a8dcfa324ba3daf"
+    "source_commit": "c4fe5b91e0216b1061c181119083fe9fccd213f8"
   },
-  "local_full_container_integration_rerun": false
+  "local_full_container_integration_rerun": false,
+  "deployed_backend_source_commit": "62c0f4d93466d31763a4d1493a8dcfa324ba3daf"
 }

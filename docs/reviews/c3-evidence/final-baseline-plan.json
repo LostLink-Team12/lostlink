@@ -20,5 +20,13 @@
   "add": 0,
   "change": 1,
   "destroy": 0,
-  "applied": false
+  "applied": true,
+  "scale_in_protection_restored": {
+    "group": "eks-general-86d0afbb-b6ce-7241-20aa-d64091c68f21",
+    "previous": {
+      "i-022ef01ee1e15a3dd": false,
+      "i-09d0107ca101e9911": false
+    },
+    "restored": true
+  }
 }

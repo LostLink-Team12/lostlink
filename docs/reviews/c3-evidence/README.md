@@ -28,6 +28,13 @@ Asia/Shanghai dates. These are observations from dev, not production guarantees.
   unsupported D1 originals. Seven failed historical jobs remain as audit records.
 - `grafana-*.png`: genuine dashboard screenshots, separate from generated load
   HTML plots. Monitoring is private and uses temporary emptyDir storage.
+- `c3-current-worker-20261023-v2-*` and `current-worker-profile.json`: 256 new
+  imports under the current 4 GiB model reservation, worker 1 → 2 → 1, with raw
+  drain/cooldown evidence. This supplements the historical 5,000-photo run.
+- `final-baseline*.json`: applied node-group capacity restoration and observed
+  final workloads; temporary instance scale-in protection was restored.
+- `text-match-acceptance.json`: real text-only score between the 0.63 text and
+  0.78 photo cutoffs, persisted match/inbox observation and closed test report.
 
 Secret-bearing Helm values, Terraform state/plans, credentials, access tokens,
 presigned fields and the original photo archive are intentionally excluded.

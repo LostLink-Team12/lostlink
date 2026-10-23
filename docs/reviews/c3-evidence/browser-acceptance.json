@@ -9,8 +9,38 @@
       "server_refreshed_intermediate_role": "venue_admin / active",
       "server_refreshed_final_role": "venue_staff / active",
       "screenshot": "browser-staff.png"
+    },
+    {
+      "use_case": "UC2",
+      "method": "real browser UI",
+      "action": "Register C3 browser suitcase with real presigned photo upload and confirmation",
+      "item_id": "cc03454f-19c1-41b5-8063-642f752edad3"
+    },
+    {
+      "use_case": "UC3/UC4",
+      "method": "real browser UI plus read-only API observation",
+      "action": "Photo/text search, save report, match inbox, Cognito login from /matches/:id preserves original URL",
+      "report_id": "fdea34c2-96d0-4a8c-8f32-d7fabb9ec38c",
+      "match_id": "7452c57e-2c2a-4b46-8f23-3550bb7d979c",
+      "match_score": 0.906834613462143,
+      "notification_inbox_observed": true,
+      "report_state": "closed"
+    },
+    {
+      "use_case": "UC5",
+      "method": "real browser UI",
+      "action": "Submit verification answer, venue approves, owner QR rendered, exact original payload entered into venue form, handover completes",
+      "claim_id": "330c076d-8e73-4f86-bab7-e211e9cc5f94",
+      "claim_state": "handed_over",
+      "item_state": "handed_over",
+      "qr_image_rendered": true,
+      "exact_payload_transferred": true,
+      "payload_exported": false,
+      "screenshot": "browser-handover.png"
     }
   ],
   "physical_camera_tested": false,
-  "mailbox_delivery_tested": false
+  "mailbox_delivery_tested": false,
+  "completed_at": "2026-10-23T04:29:00.326226+00:00",
+  "venue_onboarding_browser_tested": false
 }

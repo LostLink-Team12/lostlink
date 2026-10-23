@@ -128,7 +128,10 @@ successful unauthenticated route smoke does not establish these flows.
 invitations. Their random passwords remain in `lostlink-acceptance`, never local
 files or output. Trusted fixture email flags do not demonstrate mailbox ownership
 verification. For `acceptance.py flow`, pause `notification-tasks` first; the
-script refuses a running sender. It tests real code/PKCE, two-venue onboarding,
+script refuses a running sender, including a terminating Pod after its replica
+target reaches zero. Wait for Pod deletion before running fixtures:
+`kubectl --context lostlink-dev -n lostlink wait --for=delete pod -l app.kubernetes.io/name=notification-tasks --timeout=180s`.
+It tests real code/PKCE, two-venue onboarding,
 S3 upload/sealing, CLIP embedding/search, report matching and the notification
 inbox, unverified-owner rejection, version conflicts, approval and QR payload
 handover. Close all synthetic fixture reports before restoring the sender. A
@@ -224,7 +227,7 @@ this change are operator-driven; `c3.yml` validates charts, not cloud CD.
 
 ```powershell
 $env:HELM_BIN = (Resolve-Path infra/terraform/.terraform/tools/helm/windows-amd64/helm.exe).Path
-python -m pytest -q infra/deploy/test_deployment.py
+python -m pytest -q infra/deploy
 python -m pytest -q -m 'not integration and not model and not scale'
 ```
 
