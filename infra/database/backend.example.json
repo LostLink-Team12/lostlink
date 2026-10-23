@@ -1,0 +1,46 @@
+{
+  "database": "lostlink",
+  "bootstrap_url_env": "BOOTSTRAP_DATABASE_URL",
+  "services": {
+    "venue": {
+      "migration_url_env": "VENUE_MIGRATION_DATABASE_URL",
+      "roles": {
+        "api": {"name": "lostlink_venue_api", "password_env": "VENUE_API_DB_PASSWORD"},
+        "platform": {"name": "lostlink_venue_platform", "password_env": "VENUE_PLATFORM_DB_PASSWORD"},
+        "worker": {"name": "lostlink_venue_worker", "password_env": "VENUE_WORKER_DB_PASSWORD"},
+        "identity": {"name": "lostlink_venue_identity", "password_env": "VENUE_IDENTITY_DB_PASSWORD"}
+      }
+    },
+    "item": {
+      "migration_url_env": "ITEM_MIGRATION_DATABASE_URL",
+      "roles": {
+        "api": {"name": "lostlink_item_api", "password_env": "ITEM_API_DB_PASSWORD"},
+        "internal": {"name": "lostlink_item_internal", "password_env": "ITEM_INTERNAL_DB_PASSWORD"},
+        "worker": {"name": "lostlink_item_worker", "password_env": "ITEM_WORKER_DB_PASSWORD"}
+      }
+    },
+    "matching": {
+      "migration_url_env": "MATCHING_MIGRATION_DATABASE_URL",
+      "roles": {
+        "api": {"name": "lostlink_matching_api", "password_env": "MATCHING_API_DB_PASSWORD"},
+        "internal": {"name": "lostlink_matching_internal", "password_env": "MATCHING_INTERNAL_DB_PASSWORD"},
+        "worker": {"name": "lostlink_matching_worker", "password_env": "MATCHING_WORKER_DB_PASSWORD"}
+      }
+    },
+    "claim": {
+      "migration_url_env": "CLAIM_MIGRATION_DATABASE_URL",
+      "roles": {
+        "api": {"name": "lostlink_claim_api", "password_env": "CLAIM_API_DB_PASSWORD"},
+        "worker": {"name": "lostlink_claim_worker", "password_env": "CLAIM_WORKER_DB_PASSWORD"}
+      }
+    },
+    "notification": {
+      "migration_url_env": "NOTIFICATION_MIGRATION_DATABASE_URL",
+      "roles": {
+        "api": {"name": "lostlink_notification_api", "password_env": "NOTIFICATION_API_DB_PASSWORD"},
+        "admin": {"name": "lostlink_notification_admin", "password_env": "NOTIFICATION_ADMIN_DB_PASSWORD"},
+        "worker": {"name": "lostlink_notification_worker", "password_env": "NOTIFICATION_WORKER_DB_PASSWORD"}
+      }
+    }
+  }
+}

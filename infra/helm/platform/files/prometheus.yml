@@ -1,0 +1,25 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+scrape_configs:
+  - job_name: lostlink-api
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces: {names: [lostlink]}
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        regex: "true"
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_container_port_number]
+        regex: "8000"
+        action: keep
+      - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+        target_label: workload
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+  - job_name: embedding-backlog
+    static_configs: [{targets: ["embedding-metrics:9108"]}]
+  - job_name: kube-state-metrics
+    static_configs: [{targets: ["kube-state-metrics.kube-system.svc.cluster.local:8080"]}]

@@ -1,5 +1,8 @@
 .git
 **/.venv
+**/.venv-c3
+**/.terraform
+**/.local
 .models
 **/__pycache__
 **/.pytest_cache

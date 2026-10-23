@@ -2,6 +2,8 @@
 
 import http.client
 import json
+import ssl
+from functools import partial
 from urllib.parse import urlsplit
 from uuid import UUID
 
@@ -23,9 +25,11 @@ def validate_url(url):
     return parsed
 
 
-def get_json(url, headers):
+def get_json(url, headers, *, tls_context=None):
     parsed = validate_url(url)
-    connection = http.client.HTTPSConnection(parsed.hostname, parsed.port or 443, timeout=2)
+    connection = http.client.HTTPSConnection(
+        parsed.hostname, parsed.port or 443, timeout=2, context=tls_context
+    )
     try:
         connection.connect()
         connection.sock.settimeout(5)
@@ -65,13 +69,20 @@ class ItemContext(BaseModel):
 
 
 class ItemClient:
-    def __init__(self, base_url, token_provider, *, transport=get_json):
+    def __init__(self, base_url, token_provider, *, transport=None):
         validate_url(base_url)
-        self.base_url, self.token_provider, self.transport = (
+        self.base_url, self.token_provider = (
             base_url.rstrip("/"),
             token_provider,
-            transport,
         )
+        if transport is None:
+            # Reuse verified trust material, not Item responses or authorization.
+            # Like other long-lived clients, reload this client after CA rotation.
+            context = ssl.create_default_context()
+            context.set_alpn_protocols(["http/1.1"])
+            context.post_handshake_auth = True
+            transport = partial(get_json, tls_context=context)
+        self.transport = transport
 
     def context(self, item_id):
         try:

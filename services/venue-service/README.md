@@ -90,8 +90,14 @@ requires that the caller still has current access.
 
 ## Cognito integration
 
-Package `venue_app`, `lostlink_common` and their locked runtime dependencies for
-Lambda. Use pre-token generation `V2_0` and handler
+Build the Linux Python 3.12/x86_64 ZIP from the repository root with
+`python scripts/build_cognito_trigger.py`. Outputs, final-ZIP integration tests,
+RDS certificates, environment configuration and cloud acceptance steps are in the
+[Cognito trigger deployment guide](../../docs/cognito-trigger-deployment.md).
+The separate `Cognito trigger package` workflow verifies and scans this artifact
+before uploading it; it does not deploy it or change a user pool.
+
+Use pre-token generation `V2_0` and handler
 `venue_app.token_trigger.handler`. Supply only the identity database URL,
 `COGNITO_USER_POOL_ID`, allowed human client IDs and `ENVIRONMENT`; the trigger
 does not require API/platform database credentials or a machine token.

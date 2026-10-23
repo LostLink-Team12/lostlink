@@ -53,6 +53,10 @@ class ClipEncoder:
         self.model_version = f"clip-vit-b32-{sha256[:16]}" if sha256 else "unconfigured"
 
     def ready(self):
+        # The model is assigned only after initialization completes. Once loaded,
+        # readiness must not wait behind the inference lock under search pressure.
+        if self.model is not None:
+            return
         with self.lock:
             self._load()
 

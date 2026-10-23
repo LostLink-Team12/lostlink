@@ -1,0 +1,216 @@
+{
+  "origin": "https://d37mn7oo1kv0ok.cloudfront.net",
+  "completed_at": "2026-10-23T01:27:02.171555+00:00",
+  "venues": [
+    "631e0553-3d10-4098-ad88-8da3bc91ee74",
+    "1a401e5b-947a-44b4-98e6-e9454ac291b8"
+  ],
+  "item_id": "19867f90-2aaf-4e9c-b414-0ea54e2d5649",
+  "claim_id": "b7b0171b-7afa-4804-96a4-1152020e145a",
+  "final_item_state": "handed_over",
+  "report_id": "b8242fc6-cf05-4454-b356-92a158776bfb",
+  "match_id": "c7a42158-2e22-4d70-a85e-dd3b1a7aa317",
+  "notification_inbox_observed": true,
+  "checks": [
+    {
+      "service": "venue",
+      "method": "GET",
+      "path": "/v1/venues/current",
+      "status": 200
+    },
+    {
+      "service": "venue",
+      "method": "GET",
+      "path": "/v1/venues/current",
+      "status": 200
+    },
+    {
+      "service": "venue",
+      "method": "GET",
+      "path": "/v1/venues/current",
+      "status": 200
+    },
+    {
+      "service": "venue",
+      "method": "GET",
+      "path": "/v1/venues/current",
+      "status": 200
+    },
+    {
+      "service": "venue",
+      "method": "GET",
+      "path": "/v1/venues/current/members",
+      "status": 200
+    },
+    {
+      "service": "item",
+      "method": "POST",
+      "path": "/v1/items",
+      "status": 201
+    },
+    {
+      "service": "item",
+      "method": "GET",
+      "path": "/v1/items/19867f90-2aaf-4e9c-b414-0ea54e2d5649",
+      "status": 404
+    },
+    {
+      "service": "item",
+      "method": "POST",
+      "path": "/v1/items/19867f90-2aaf-4e9c-b414-0ea54e2d5649/uploads",
+      "status": 201
+    },
+    {
+      "service": "item",
+      "method": "GET",
+      "path": "/v1/items/19867f90-2aaf-4e9c-b414-0ea54e2d5649",
+      "status": 200
+    },
+    {
+      "service": "item",
+      "method": "POST",
+      "path": "/v1/items/19867f90-2aaf-4e9c-b414-0ea54e2d5649/uploads/0b62f09d-08a5-4daf-a2be-2cedff74e524/confirm",
+      "status": 202
+    },
+    {
+      "service": "item",
+      "method": "GET",
+      "path": "/v1/item-operations/afad7383-899a-413d-9d35-d28bca0bcfc2",
+      "status": 200
+    },
+    {
+      "service": "item",
+      "method": "GET",
+      "path": "/v1/items/19867f90-2aaf-4e9c-b414-0ea54e2d5649",
+      "status": 200
+    },
+    {
+      "service": "item",
+      "method": "GET",
+      "path": "/v1/items/19867f90-2aaf-4e9c-b414-0ea54e2d5649",
+      "status": 200
+    },
+    {
+      "service": "matching",
+      "method": "POST",
+      "path": "/v1/search",
+      "status": 200
+    },
+    {
+      "service": "matching",
+      "method": "POST",
+      "path": "/v1/lost-reports",
+      "status": 201
+    },
+    {
+      "service": "matching",
+      "method": "GET",
+      "path": "/v1/lost-reports/b8242fc6-cf05-4454-b356-92a158776bfb/matches",
+      "status": 200
+    },
+    {
+      "service": "matching",
+      "method": "GET",
+      "path": "/v1/lost-reports/b8242fc6-cf05-4454-b356-92a158776bfb/matches",
+      "status": 200
+    },
+    {
+      "service": "notification",
+      "method": "GET",
+      "path": "/v1/notifications",
+      "status": 200
+    },
+    {
+      "service": "matching",
+      "method": "GET",
+      "path": "/v1/lost-reports/b8242fc6-cf05-4454-b356-92a158776bfb",
+      "status": 200
+    },
+    {
+      "service": "matching",
+      "method": "POST",
+      "path": "/v1/lost-reports/b8242fc6-cf05-4454-b356-92a158776bfb/close",
+      "status": 200
+    },
+    {
+      "service": "claim",
+      "method": "GET",
+      "path": "/v1/claim-questions",
+      "status": 200
+    },
+    {
+      "service": "claim",
+      "method": "POST",
+      "path": "/v1/claims",
+      "status": 201
+    },
+    {
+      "service": "claim",
+      "method": "POST",
+      "path": "/v1/claims",
+      "status": 409
+    },
+    {
+      "service": "claim",
+      "method": "GET",
+      "path": "/v1/venue/claims/b7b0171b-7afa-4804-96a4-1152020e145a",
+      "status": 200
+    },
+    {
+      "service": "claim",
+      "method": "POST",
+      "path": "/v1/venue/claims/b7b0171b-7afa-4804-96a4-1152020e145a/approve",
+      "status": 412
+    },
+    {
+      "service": "claim",
+      "method": "POST",
+      "path": "/v1/venue/claims/b7b0171b-7afa-4804-96a4-1152020e145a/approve",
+      "status": 202
+    },
+    {
+      "service": "claim",
+      "method": "GET",
+      "path": "/v1/claim-operations/e3995825-7588-4d75-b206-925e1bcdf78f",
+      "status": 200
+    },
+    {
+      "service": "claim",
+      "method": "POST",
+      "path": "/v1/claims/b7b0171b-7afa-4804-96a4-1152020e145a/handover-token",
+      "status": 201
+    },
+    {
+      "service": "claim",
+      "method": "GET",
+      "path": "/v1/venue/claims/b7b0171b-7afa-4804-96a4-1152020e145a",
+      "status": 200
+    },
+    {
+      "service": "claim",
+      "method": "POST",
+      "path": "/v1/venue/claims/b7b0171b-7afa-4804-96a4-1152020e145a/handover",
+      "status": 202
+    },
+    {
+      "service": "claim",
+      "method": "GET",
+      "path": "/v1/claim-operations/dab21bd7-594f-4fab-8723-743d4bc7f052",
+      "status": 200
+    },
+    {
+      "service": "claim",
+      "method": "GET",
+      "path": "/v1/claim-operations/dab21bd7-594f-4fab-8723-743d4bc7f052",
+      "status": 200
+    },
+    {
+      "service": "item",
+      "method": "GET",
+      "path": "/v1/items/19867f90-2aaf-4e9c-b414-0ea54e2d5649",
+      "status": 200
+    }
+  ],
+  "email_delivery_tested": false,
+  "camera_tested": false
+}

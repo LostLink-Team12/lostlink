@@ -1,0 +1,50 @@
+{
+  "completed_at": "2026-10-23T01:27:39.018164+00:00",
+  "origin": "https://d37mn7oo1kv0ok.cloudfront.net",
+  "report_id": "eb05eb92-b8dd-4c44-a308-824bf1c694cb",
+  "report_state": "closed",
+  "has_photo": false,
+  "text_cutoff": 0.63,
+  "photo_cutoff": 0.78,
+  "observed_score": 0.6333683103354257,
+  "notification_inbox_observed": true,
+  "email_delivery_tested": false,
+  "checks": [
+    {
+      "service": "matching",
+      "method": "POST",
+      "path": "/v1/lost-reports",
+      "status": 201
+    },
+    {
+      "service": "matching",
+      "method": "GET",
+      "path": "/v1/lost-reports/eb05eb92-b8dd-4c44-a308-824bf1c694cb/matches",
+      "status": 200
+    },
+    {
+      "service": "notification",
+      "method": "GET",
+      "path": "/v1/notifications",
+      "status": 200
+    },
+    {
+      "service": "matching",
+      "method": "GET",
+      "path": "/v1/lost-reports/eb05eb92-b8dd-4c44-a308-824bf1c694cb",
+      "status": 200
+    },
+    {
+      "service": "matching",
+      "method": "POST",
+      "path": "/v1/lost-reports/eb05eb92-b8dd-4c44-a308-824bf1c694cb/close",
+      "status": 200
+    },
+    {
+      "service": "matching",
+      "method": "GET",
+      "path": "/v1/lost-reports/eb05eb92-b8dd-4c44-a308-824bf1c694cb",
+      "status": 200
+    }
+  ]
+}

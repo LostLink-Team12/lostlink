@@ -3,25 +3,39 @@
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
+from lostlink_common.worker_health import heartbeat
 from sqlalchemy import select
 
 from item_app.models import AuditEntry, Item, Photo, WorkJob
 
 
-def cleanup(database, storage, bucket, *, now=None, grace_hours=24, page_size=100, stopped=None):
+def cleanup(
+    database,
+    storage,
+    bucket,
+    *,
+    now=None,
+    grace_hours=24,
+    page_size=100,
+    stopped=None,
+    prefixes=("staging/", "sealed/"),
+):
     if grace_hours < 24:
         raise ValueError("Photo cleanup requires at least 24 hours of grace")
     if not 1 <= page_size <= 1000:
         raise ValueError("Cleanup pages must contain 1-1000 objects")
     cutoff, deleted = (now or datetime.now(UTC)) - timedelta(hours=grace_hours), 0
     client = storage.client
-    for prefix in ["staging/", "sealed/"]:
+    for prefix in prefixes:
+        if prefix not in {"staging/", "sealed/"}:
+            raise ValueError("Unsupported cleanup prefix")
         pages = client.get_paginator("list_objects_v2").paginate(
             Bucket=bucket,
             Prefix=prefix,
             PaginationConfig={"PageSize": page_size},
         )
         for page in pages:
+            heartbeat()
             for obj in page.get("Contents", []):
                 if stopped is not None and stopped.is_set():
                     return deleted

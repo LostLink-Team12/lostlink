@@ -1,0 +1,16 @@
+{
+  "started_at": "2026-10-23T00:57:25.878233+00:00",
+  "finished_at": "2026-10-23T01:07:57.502916+00:00",
+  "run_id": "c3-current-worker-20261023",
+  "summary_available": true,
+  "import_count": 256,
+  "mode": "bulk",
+  "origin": "https://d37mn7oo1kv0ok.cloudfront.net",
+  "k6_exit_code": 0,
+  "collector_exit_code": 0,
+  "cooldown_and_drain_observed": true,
+  "historical_failed_jobs_before": 7.0,
+  "failed_jobs_after": 7.0,
+  "prometheus_p95_window": null,
+  "search_latency_source": "not measured by bulk k6; optional canary is separate"
+}

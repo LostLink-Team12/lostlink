@@ -1,0 +1,16 @@
+# Build native dependencies in the same Linux/Python runtime as the deployed ZIP.
+FROM public.ecr.aws/lambda/python:3.12 AS package
+COPY requirements.lock /tmp/requirements.lock
+RUN python -m pip install --no-cache-dir --no-compile --only-binary=:all: \
+    --target /asset -r /tmp/requirements.lock
+COPY libs/src/lostlink_common /asset/lostlink_common
+COPY services/venue-service/venue_app /asset/venue_app
+RUN PYTHONPATH=/asset python -c "import psycopg, pydantic_core, cryptography; from venue_app.token_trigger import handler; assert callable(handler)"
+# Trivy fs reads requirements files, not installed .dist-info directories. Describe
+# the actual Linux install so the artifact dependency scan cannot silently scan zero packages.
+RUN python -c "from importlib.metadata import distributions; from pathlib import Path; Path('/asset/requirements.txt').write_text(''.join(sorted(d.metadata['Name'].replace('_', '-').lower() + '==' + d.version + '\n' for d in distributions(path=['/asset']))), encoding='utf-8')"
+
+# Export only the function and dependencies, not the runtime image or build context.
+FROM scratch AS artifact
+USER 1000:1000
+COPY --from=package /asset/ /

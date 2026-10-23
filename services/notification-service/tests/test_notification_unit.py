@@ -27,6 +27,26 @@ def settings(**values):
     return NotificationSettings(_env_file=None, **values)
 
 
+def test_deployed_consumer_starts_without_sender_secrets():
+    config = settings(
+        environment="dev",
+        process_mode="worker",
+        worker_mode="consume",
+        worker_database_url="postgresql+psycopg://notification_worker:x@db/lostlink",
+    )
+    assert config.machine_client_secret is None
+    assert config.ses_from_address is None
+    with pytest.raises(ValidationError):
+        settings(
+            environment="dev",
+            process_mode="worker",
+            worker_mode="tasks",
+            worker_database_url="postgresql+psycopg://notification_worker:x@db/lostlink",
+        )
+    with pytest.raises(ValidationError):
+        settings(environment="dev", process_mode="worker", worker_mode="consume")
+
+
 def test_template_escapes_content_and_uses_the_configured_origin_only():
     match_id = uuid4()
     message = render_match_found(
@@ -124,6 +144,18 @@ def test_configuration_rejects_capture_in_deployments_and_untrusted_urls():
         settings(ses_from_address="a@b.c, evil@x.y")
     with pytest.raises(ValidationError):
         settings(user_client_ids=["web"], operator_client_ids=["web"])
+
+
+def test_only_the_sender_worker_requires_matching_and_ses_settings():
+    worker = {
+        "environment": "dev",
+        "process_mode": "worker",
+        "worker_database_url": "postgresql+psycopg://lostlink_notification_worker:x@db/lostlink",
+    }
+    assert settings(**worker, worker_mode="consume").worker_mode == "consume"
+    for mode in ["tasks", None]:
+        with pytest.raises(ValidationError):
+            settings(**worker, worker_mode=mode)
 
 
 def test_matching_client_outcomes():
