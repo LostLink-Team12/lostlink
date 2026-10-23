@@ -249,3 +249,73 @@ def test_cancellation_and_owner_isolation(delivery_env):
     assert missing.status_code == 428
     done = env.client.post(path, headers=headers("owner", key="cancel-second-1", version=1))
     assert done.status_code == 200 and done.json()["state"] == "cancelled"
+
+
+def test_counter_collection_revokes_pending_shipment_and_partner_address(delivery_env):
+    env = delivery_env
+    claim_id, item_id = approved_claim(env)
+    shipment = authorize(env, claim_id).json()
+    detail_path = f"/v1/partner/shipments/{shipment['id']}"
+    before = env.client.get(detail_path, headers=headers("courier-a"))
+    assert before.json()["delivery_address"] == ADDRESS
+
+    event = handed_over(env, claim_id, item_id, mode="counter")
+    assert env.worker.consume(event) == "shipment_cancelled"
+    assert env.worker.consume(event) == "duplicate"
+    assert env.worker.consume(handed_over(env, claim_id, item_id, mode="counter")) == "counter"
+
+    after = env.client.get(detail_path, headers=headers("courier-a"))
+    assert after.status_code == 200
+    assert after.json()["state"] == "cancelled" and after.json()["terminal"]
+    assert after.headers["ETag"] == '"2"'
+    assert after.json().get("delivery_address") is None
+    assert "Example Road" not in after.text
+    assert [entry["to_state"] for entry in after.json()["history"]] == [
+        "awaiting_pickup",
+        "cancelled",
+    ]
+    assert after.json()["history"][-1]["note"] == "collected_at_counter"
+    active = env.client.get("/v1/partner/shipments", headers=headers("courier-a"))
+    assert active.json()["items"] == []
+    assert partner_update(env, shipment["id"], "in_transit", 2).status_code == 409
+    assert authorize(env, claim_id).json()["error"]["code"] == "claim_not_approved"
+    events = outbox(env)
+    assert [event.data["to_state"] for event in events] == ["awaiting_pickup", "cancelled"]
+    assert "Example Road" not in str([event.model_dump(mode="json") for event in events])
+
+
+def test_authorization_waits_for_claim_closure_without_projection_write_grants(delivery_env):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+
+    from delivery_app.models import ClaimApproval
+    from sqlalchemy import event
+
+    env = delivery_env
+    claim_id, _ = approved_claim(env)
+    reached_lock = Event()
+
+    def observe_lock(_connection, _cursor, statement, _parameters, _context, _many):
+        if "pg_advisory_xact_lock" in statement:
+            reached_lock.set()
+
+    event.listen(env.db["api"].engine, "before_cursor_execute", observe_lock)
+    try:
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            with env.worker.session() as session:
+                session.execute(
+                    text("SELECT pg_advisory_xact_lock(:key)"),
+                    {"key": int.from_bytes(claim_id.bytes[:8], signed=True)},
+                )
+                approval = session.get(ClaimApproval, claim_id, with_for_update=True)
+                approval.state = "handed_over"
+                future = executor.submit(authorize, env, claim_id)
+                assert reached_lock.wait(5)
+                assert not future.done()
+            # The blocked API reads the committed terminal projection after acquiring the lock.
+            response = future.result(timeout=5)
+            assert response.status_code == 409
+            assert response.json()["error"]["code"] == "claim_not_approved"
+    finally:
+        event.remove(env.db["api"].engine, "before_cursor_execute", observe_lock)
+    assert env.client.get("/v1/shipments", headers=headers("owner")).json()["items"] == []

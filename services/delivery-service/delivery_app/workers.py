@@ -30,6 +30,7 @@ from lostlink_common.observability import configure_logging
 from sqlalchemy import and_, func, or_, select, text
 
 from delivery_app.config import DeliverySettings
+from delivery_app.domain import State
 from delivery_app.handlers import MissingAuthorization, on_claim_cancelled, on_claim_handed_over
 from delivery_app.models import (
     DATABASE_REVISION,
@@ -136,7 +137,7 @@ class DeliveryWorker:
             # Raises MissingAuthorization for a courier pickup with no authorized shipment.
             outcome = on_claim_handed_over(data, event.tenant_id, current)
             if outcome:
-                code = "picked_up"
+                code = "shipment_cancelled" if outcome[0].state is State.CANCELLED else "picked_up"
             else:
                 code = "counter" if data.get("mode") == "counter" else "duplicate_pickup"
         else:

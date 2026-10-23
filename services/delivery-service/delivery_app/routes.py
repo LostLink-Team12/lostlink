@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Header, Query, Request
 from fastapi.responses import JSONResponse
 from lostlink_common.auth import Principal, get_principal
 from lostlink_common.crypto import DecryptionFailed
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 
 from delivery_app import schemas
 from delivery_app.config import PARTNER_SCOPE
@@ -143,6 +143,11 @@ def authorize(
     sealer = cipher(request)
 
     def create(session):
+        # Use the consumer's claim lock without granting API writes to the projection.
+        session.execute(
+            text("SELECT pg_advisory_xact_lock(:key)"),
+            {"key": int.from_bytes(body.claim_id.bytes[:8], signed=True)},
+        )
         approval = session.get(ClaimApproval, body.claim_id)
         if approval is None or approval.owner_sub != principal.subject:
             fail(404, "claim_not_found", "No approved claim of yours has this ID")

@@ -19,14 +19,27 @@ class MissingAuthorization(Exception):
 def on_claim_handed_over(
     data: dict, tenant_id: UUID, shipment: Shipment | None
 ) -> tuple[Shipment, StatusChange] | None:
-    """Courier handover confirmed by the venue's QR scan marks the shipment picked up."""
+    """Confirm courier pickup or revoke an unused shipment after counter collection."""
     event = ClaimHandedOver.model_validate(data)
-    if event.mode == "counter":
-        return None  # the owner collected the item in person; nothing to deliver
-    if shipment is None or shipment.claim_id != event.claim_id:
+    if shipment is None:
+        if event.mode == "counter":
+            return None
         raise MissingAuthorization(f"No delivery authorization for claim {event.claim_id}")
-    if shipment.tenant_id != tenant_id or shipment.item_id != event.item_id:
+    if (
+        shipment.claim_id != event.claim_id
+        or shipment.tenant_id != tenant_id
+        or shipment.item_id != event.item_id
+        or shipment.owner_id != event.owner_id
+    ):
         raise MissingAuthorization("Handover does not match the authorized shipment")
+    if event.mode == "counter":
+        if shipment.state is State.CANCELLED:
+            return None
+        # The owner collected the item; the courier no longer needs the address.
+        # Transport states deliberately reject this conflicting event for DLQ investigation.
+        return shipment.transition(
+            State.CANCELLED, Actor.SYSTEM, event.handed_over_at, note="collected_at_counter"
+        )
     if shipment.state is State.PICKED_UP:
         return None  # duplicate delivery of an at-least-once event
     return shipment.transition(State.PICKED_UP, Actor.SYSTEM, event.handed_over_at)
