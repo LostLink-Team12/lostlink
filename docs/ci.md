@@ -38,7 +38,11 @@ Images use the merge commit's full SHA:
 ```
 
 The published URI appears in each publishing job's summary. C3 can use this tag
-for deployment. This workflow does not deploy to EKS.
+for deployment. On `main`, publishing now leads to `Deploy dev EKS`; see the
+[CD runbook](../infra/deploy/README.md#automatic-application-cd). A separate OIDC
+identity patches existing application workloads; PR runs never deploy.
+The frontend gateway is also built, tested, scanned and published by this CI run,
+so its image and the backend images share the deployed source SHA.
 
 ## Matching inference image
 

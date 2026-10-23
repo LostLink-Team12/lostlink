@@ -36,6 +36,54 @@ Helm values, raw Kubernetes Secret objects, request tokens or S3 upload fields.
 
 ## Deploy
 
+### Automatic application CD
+
+`main` pushes and manual `CI` runs on `main` now publish scanned backend and
+frontend images, then run `Deploy dev EKS`. PRs never publish or deploy.
+Deployment uses exact ECR digests from this CI source SHA, is serialized, and
+skips superseded main builds before requesting AWS credentials.
+
+The separate main-only OIDC role `lostlink-dev-github-deploy` can describe the
+six required ECR images and manage endpoint access for only `lostlink-dev`.
+Namespace RBAC permits patching only 20 named existing application/exporter
+Deployments and the `lostlink-runtime` / `lostlink-cd-state` ConfigMaps. It has
+no Secrets, RBAC, ServiceAccount, Job, pod-exec or database-master access.
+
+The runner leases its public IPv4 `/32` on the existing EKS endpoint allowlist;
+the `always()` cleanup removes only the added entry, preserving other operators'
+changes. A hard runner loss can prevent cleanup: remove that exact runner `/32`
+printed in the lease step, preserving the rest of the allowlist. No world-open
+CIDR is introduced. Terraform/network changes must not run concurrently with CD.
+
+One-time operator setup after reviewing/applying `cd.tf`:
+
+```powershell
+gh variable set AWS_DEPLOY_ROLE_ARN --body 'arn:aws:iam::152174417545:role/lostlink-dev-github-deploy'
+.venv-c3/Scripts/python.exe infra/deploy/cd_bootstrap.py --source <actual-deployed-source-sha> --manifest <reviewed-build-evidence.json>
+```
+
+Bootstrap verifies actual API digests against the reviewed manifest, installs
+the narrow Role/RoleBinding and records approved migration hashes and the HTTPS
+origin. It does not modify workloads. Any migration-source change blocks CD
+before workload mutation: complete the operator-managed migration and release
+procedure below, then refresh the approved baseline using that deployed release.
+Actions does not receive migration credentials.
+
+CD changes only application images, runtime scripts and revision annotations.
+Environment/IRSA, resources, replicas, scaling and TLS remain operator managed.
+Helm chart/configuration changes and new services still use the operator flow;
+Delivery/partner deployment is outside the existing five-service C3 target set.
+Helm's saved image values can predate CD: consult `lostlink-cd-state` and actual
+Deployment images. Regenerate values for the intended images before manual Helm
+upgrades. Do not use an old local manifest to overwrite a newer CD release.
+
+CD waits for rollout and the real HTTPS entry/private-route checks. Failure
+restores previous runtime data and image/revision fields and waits for rollback;
+rollback failure explicitly requests operator intervention. Device/email and
+performance acceptance remain separate.
+
+### Initial bootstrap or operator configuration updates
+
 1. Run `python infra/deploy/configure.py infrastructure`. This creates ignored
    `.local/infrastructure.tfvars.json`, including a random origin header and
    two baseline nodes and a five-node demo ceiling. Preserve this file for
@@ -220,8 +268,9 @@ derived hashes and historical failures are retained. Review `.local/photo-repair
 
 This dev-only CloudFront distribution intentionally defers a paid WAF policy;
 the scoped Trivy exception is documented beside that resource. Provision a
-reviewed WAF policy before using this as a production service. Deployments in
-this change are operator-driven; `c3.yml` validates charts, not cloud CD.
+reviewed WAF policy before using this as a production service. Chart and
+infrastructure changes are operator-driven. `c3.yml` validates charts; the `CI`
+workflow now also deploys application updates through the narrow CD stage above.
 
 ## Verification
 

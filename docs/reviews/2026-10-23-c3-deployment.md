@@ -153,7 +153,8 @@ max 9 → 5。最终 EKS ACTIVE、两节点 Ready、22 个 Deployment 全部就�
   保留 C1 的明确 dev 例外；新增仅针对这一个 dev CloudFront 的无 WAF 例外，投产前需完善。
 - 监控为私有 ClusterIP，仅端口转发；Prometheus/Grafana 使用 bounded emptyDir。
   导出证据后再缩节点；短期保护原有实例并在缩容后恢复原保护标志，不构成持久化或容灾。
-- 部署是操作员驱动。新增 `c3.yml` 检查 chart，不等于合并后自动云端 CD。
+- 本次验收时部署由操作员驱动，`c3.yml` 只检查 chart。后续自动应用 CD 见
+  [部署 runbook](../../infra/deploy/README.md#automatic-application-cd)，不改变本记录的实测镜像版本。
 - 承接 #17 的标定配置：照片/融合阈值 0.78，纯文字 0.63；新增两条持久化匹配路径对文字阈值
   的消费及回退测试。未重新标定 duplicate-photo 数据，也未声称生产匹配质量已验收。
 - 同一真实镜像以只读根目录、无网络、1 CPU、4 GiB 无 swap 限制测试 16 MP 图片的文字/
