@@ -78,6 +78,7 @@ runnable/leased/delayed 均排空，五个 API 和 Matching tasks 回到各 1 �
 | v3 | 5 节点，Matching 8、Item 8；历史 2500 MiB 模型预留 | 11,113 / 14.221 | 13,306.957 | 10.6452% | 失败 |
 | v4 | 9 节点，Matching 8、Item 8；4 GiB 模型预留 | 14,535 / 18.592 | 9,470.191 | 1.8782% | 失败 |
 | v5 | 同 v4；去除向量传输、复用 TLS 上下文 | 15,115 / 19.328 | 11,751.581 | 3.5131% | 失败 |
+| v6 | 同 v5；启用无过滤 HNSW 检索 | 15,440 / 19.739 | 11,939.383 | 1.1010% | 失败 |
 
 v2/v3 是早期文字压测配置，不是大图容量保证。合入 #17 后，模板强制模型 requests/limits
 至少 4 GiB，默认 Matching API/tasks 各上限 2。t3.large 的可分配内存只能容纳一个这样的
@@ -98,16 +99,24 @@ v5 使用提交 `fed9245325d2bfcd05e5e4da131f30c5c8ac90f1` 的干净构建。数
 有分类、场馆或日期过滤时保留原精确检索，避免 pgvector 0.7 对高选择性过滤的召回限制。
 同分候选在截断边界的成员可能变化；候选集合内稳定按距离与 ID 排序，原有截断提示保留。
 
-v6 将验证这次索引修复；本记录还需补入完整运行、冷却、同时间范围 Grafana 截图及最终两节点
-恢复结果。当前不能将其判为通过。
+v6 的搜索中位数降至 974 ms，但 Item 连接池排队仍使尾延迟和严格响应契约失败；170 个请求
+失败，不能把中位数改善当作验收成功。原始汇总和冷却证据继续保留。
+
+峰值 Item 内部请求还暴露了单连接池的排队超时。RDS 实测总连接上限 79、保留 3，不能
+简单把全局池调大。新增独立 `INTERNAL_DB_POOL_SIZE`，仅将 Item 内部池从 1 调到 2；
+用户 API 与其他进程维持 1，overflow 均为 0。按八 Matching API 的压测上限加上其他
+HPA/KEDA 上限，应用池合计 64，另留监控 2、实测后台 8、操作员 2 和保留连接 3。
+部署契约检查该预算；不要与迁移并行运行该压测配置。下一轮将验证此配置。
 
 KEDA/HPA 不提供节点容量；本次节点容量由操作员通过 Terraform 调整，没有安装节点自动伸缩器。
 压测是一个 owner token 的并发 VU，并非 200 个独立用户。
 
 ## 回归检查与实际限制
 
-- 后端单元：232 passed，83 deselected（integration/model/scale）；本地未重跑全套容器集成。
-- 部署真实 Settings + 五 charts 渲染：4 passed。
+- 后端单元：238 passed，83 deselected（integration/model/scale）；本地未重跑全套容器集成。
+- 部署真实 Settings + 五 charts 渲染及峰值连接预算：5 passed。
+- Matching 的真实隔离 pgvector 集成：12 passed、1 skipped（本地未启用 LocalStack 事件端点）；
+  覆盖跨场馆、过滤、版本墓碑、持久化匹配与通知复核。临时测试容器已删除。
 - Terraform mock：16 passed，0 failed；没有使用真实 backend state。
 - 与当前主线合并后，压测工具 + 实际 k6 localhost 契约：11 passed。
 - 前端此前 28 tests 和生产构建通过；两端真实 Cognito 浏览器登录通过。

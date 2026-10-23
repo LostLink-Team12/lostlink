@@ -74,6 +74,10 @@ def helm_values(outputs, images, *, origin, revision, proxy_image):
                 ][f"database/{service}/{'api' if mode == 'api' else 'worker'}"]
             }
             if mode == "api":
+                if service == "item":
+                    # Five authoritative reads per search need a small dedicated
+                    # internal pool; the user API and all other pools stay at one.
+                    env["INTERNAL_DB_POOL_SIZE"] = "2"
                 extra = {
                     "venue": "platform",
                     "item": "internal",

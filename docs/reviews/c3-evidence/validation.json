@@ -1,8 +1,8 @@
 {
-  "source_commit": "fed9245325d2bfcd05e5e4da131f30c5c8ac90f1",
+  "source_commit": "1f7291b",
   "local": {
     "backend_unit": {
-      "passed": 232,
+      "passed": 236,
       "deselected": 83,
       "excluded_markers": [
         "integration",
@@ -21,6 +21,12 @@
     },
     "frontend": {
       "passed": 28
+    },
+    "matching_database_integration": {
+      "passed": 12,
+      "skipped": 1,
+      "skip_reason": "LocalStack event endpoint not configured",
+      "database_image": "pgvector/pgvector@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a"
     }
   },
   "remote_ci": {
@@ -33,7 +39,8 @@
       39872963293,
       39872963361
     ],
-    "includes_real_container_integration": true
+    "includes_real_container_integration": true,
+    "source_commit": "fed9245325d2bfcd05e5e4da131f30c5c8ac90f1"
   },
   "local_full_container_integration_rerun": false
 }

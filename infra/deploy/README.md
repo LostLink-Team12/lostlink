@@ -88,7 +88,14 @@ Helm values, raw Kubernetes Secret objects, request tokens or S3 upload fields.
 The normal scripts refuse the wrong AWS account/cluster before transferring
 credentials. Runtime launchers read only their process's authorized secret ARNs
 via IRSA, construct TLS-verified database URLs in memory, and exec PID 1. Each
-database pool has size 1 and no overflow. Claim outbox and Notification consume
+database pool has size 1 and no overflow, except Item API's separate internal
+pool, which has size 2; its user-facing pool stays at 1. The observed dev RDS
+limit is 79 connections, including 3 reserved. At all configured HPA/KEDA caps
+(including the explicit eight-Matching-API benchmark override), application
+pools budget 64, monitoring 2, RDS/background 8 and operators 2, leaving the
+3 reserved connections. Do not run migrations concurrently with this profile.
+The deployment contract test rejects expanding past this envelope.
+Claim outbox and Notification consume
 validate only the configuration required by their mode. Item cleanup runs hourly
 with loop health and only scans `staging/`, matching its existing IAM boundary.
 

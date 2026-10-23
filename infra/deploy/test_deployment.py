@@ -86,6 +86,28 @@ def test_every_deployed_process_passes_real_settings_validation(generated):
             assert process["roleArn"].endswith("/" + service + "-" + mode)
 
 
+def test_peak_database_connection_budget_retains_operator_headroom(generated):
+    peak = 0
+    for service, values in generated.items():
+        for mode, process in values["processes"].items():
+            env = {**values["env"], **process["env"]}
+            assert int(env["DB_MAX_OVERFLOW"]) == 0
+            if mode == "api":
+                replicas = 8 if service == "matching" else values["hpa"]["maxReplicas"]
+            else:
+                replicas = values["keda"]["maxReplicas"] if process["keda"] else 1
+            for name in json.loads(env["DATABASE_SECRET_ARNS"]):
+                pool = (
+                    env.get("INTERNAL_DB_POOL_SIZE", env["DB_POOL_SIZE"])
+                    if name == "INTERNAL_DATABASE_URL"
+                    else env["DB_POOL_SIZE"]
+                )
+                peak += replicas * int(pool)
+    # Actual dev RDS: 79 total, 3 reserved, 8 observed RDS/background sessions.
+    # Leave two monitoring connections and two operator connections as well.
+    assert peak + 3 + 8 + 2 + 2 <= 79
+
+
 def test_background_consumers_do_not_receive_sender_or_crypto_credentials(generated):
     for service, mode in [("claim", "outbox"), ("notification", "consume")]:
         env = generated[service]["processes"][mode]["env"]

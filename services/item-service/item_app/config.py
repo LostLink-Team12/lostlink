@@ -12,6 +12,7 @@ class ItemSettings(Settings):
     service_name: str = "item-service"
     process_mode: Literal["api", "worker"] = "api"
     internal_database_url: SecretStr | None = None
+    internal_db_pool_size: int | None = Field(default=None, ge=1, le=50)
     worker_database_url: SecretStr | None = None
     user_client_ids: list[str] = Field(default_factory=list)
     claim_client_ids: list[str] = Field(default_factory=list)
