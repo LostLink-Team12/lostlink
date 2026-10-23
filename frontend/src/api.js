@@ -1,5 +1,13 @@
 export class ApiError extends Error {
-  constructor(status, code, message) { super(message); this.status = status; this.code = code; }
+  constructor(status, code, message, details = []) { super(message); this.status = status; this.code = code; this.details = details; }
+}
+
+function validationMessage(error) {
+  const issues = Array.isArray(error?.details) ? error.details : [];
+  if (issues.some(issue => issue?.type === 'invalid_date_range')) return 'Found from must be earlier than or equal to Found until.';
+  const dateIssue = issues.find(issue => Array.isArray(issue?.location) && ['found_from', 'found_until'].includes(issue.location.at(-1)));
+  if (dateIssue) return `${dateIssue.location.at(-1) === 'found_from' ? 'Found from' : 'Found until'} must be a valid date and time with a timezone.`;
+  return error?.message;
 }
 
 export function createApi(bases, token, fetcher = fetch) {
@@ -21,7 +29,10 @@ export function createApi(bases, token, fetcher = fetch) {
       signal: AbortSignal.timeout(30000), redirect: 'error',
     });
     const value = await response.json().catch(() => ({}));
-    if (!response.ok) throw new ApiError(response.status, value.error?.code || 'request_failed', value.error?.message || `Request failed (${response.status})`);
+    if (!response.ok) {
+      const message = response.status === 422 && service === 'matching' ? validationMessage(value.error) : value.error?.message;
+      throw new ApiError(response.status, value.error?.code || 'request_failed', message || `Request failed (${response.status})`, Array.isArray(value.error?.details) ? value.error.details : []);
+    }
     retries.delete(signature);
     return value;
   };

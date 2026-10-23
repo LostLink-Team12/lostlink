@@ -3,6 +3,7 @@
 from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
+from pydantic_core import PydanticCustomError
 
 MAX_BASE64 = 4 * ((5 * 1024 * 1024 + 2) // 3)
 
@@ -17,7 +18,9 @@ class Filters(BaseModel):
     @model_validator(mode="after")
     def date_range(self):
         if self.found_from and self.found_until and self.found_from > self.found_until:
-            raise ValueError("found_from must not exceed found_until")
+            raise PydanticCustomError(
+                "invalid_date_range", "found_from must not exceed found_until"
+            )
         return self
 
 

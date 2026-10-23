@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ItemPhoto } from './ItemPhoto';
+import { FoundDateFilters, foundDateError, foundDateRange } from './SearchDates';
 import { HandoverCode, MatchLink, Members, ScanToken } from './MissingFlows';
 import { photoBase64, registerItem, validatePhoto, waitOperation } from './api.js';
 
@@ -65,8 +66,8 @@ export function OwnerApp({ api }: { api: Api }) {
   const [claim, setClaim] = useState<{ item_id: string; title: string; questions: Question[] } | null>(null);
   const [matches, setMatches] = useState<string | null>(null);
   const query = async (data: FormData) => {
-    const photo = file(data);
-    return { ...(text(data, 'description') ? { text: text(data, 'description') } : {}), ...(photo ? { photo_base64: await photoBase64(photo) } : {}), ...(text(data, 'category') ? { category: text(data, 'category') } : {}), ...(text(data, 'venue') ? { venue_id: text(data, 'venue') } : {}), ...(text(data, 'from') ? { found_from: new Date(text(data, 'from')).toISOString() } : {}), ...(text(data, 'until') ? { found_until: new Date(text(data, 'until')).toISOString() } : {}) };
+    const photo = file(data), dates = foundDateRange(text(data, 'from'), text(data, 'until'));
+    return { ...(text(data, 'description') ? { text: text(data, 'description') } : {}), ...(photo ? { photo_base64: await photoBase64(photo) } : {}), ...(text(data, 'category') ? { category: text(data, 'category') } : {}), ...(text(data, 'venue') ? { venue_id: text(data, 'venue') } : {}), ...dates };
   };
   const choose = (item: Item) => claimAction.run(async () => {
     setClaimItem(item); setClaim(null); setClaimSubmitted(false);
@@ -76,7 +77,7 @@ export function OwnerApp({ api }: { api: Api }) {
   });
   return <>
     <section><p className="eyebrow">OWNER APP</p><h1>Find what matters.</h1><p>Search found items across venues, or save a lost report for future matches.</p>
-      <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); const mode = (e.nativeEvent as SubmitEvent).submitter?.getAttribute('value'); void action.run(async () => {
+      <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); const mode = (e.nativeEvent as SubmitEvent).submitter?.getAttribute('value'); if (foundDateError(text(data, 'from'), text(data, 'until'))) { const input = e.currentTarget.elements.namedItem('from') as HTMLInputElement; const filters = input.closest('details'); if (filters) filters.open = true; input.focus(); return; } void action.run(async () => {
         const body = await query(data);
         if (mode === 'report') {
           if (!body.text) throw Error('Describe your lost item before saving a report.');
@@ -89,7 +90,7 @@ export function OwnerApp({ api }: { api: Api }) {
         }
       }); }}>
         <Field label="Describe your lost item" name="description" required={false} /><Photo />
-        <details><summary>Filter results</summary><div className="grid"><Field label="Category" name="category" maxLength={100} required={false} /><Field label="Venue ID" name="venue" required={false} /><Field label="Found from" name="from" type="datetime-local" required={false} /><Field label="Found until" name="until" type="datetime-local" required={false} /></div></details>
+        <details><summary>Filter results</summary><div className="grid"><Field label="Category" name="category" maxLength={100} required={false} /><Field label="Venue ID" name="venue" required={false} /><FoundDateFilters /></div></details>
         <div className="actions"><button disabled={action.busy} value="search">Search items</button><button disabled={action.busy} value="report" className="secondary">Save lost report</button></div>
       </form>{action.status}
     </section>
