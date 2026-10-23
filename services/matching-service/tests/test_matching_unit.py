@@ -47,8 +47,8 @@ def test_rematching_applies_the_calibrated_cutoff_to_each_report_modality(
     assert bool(saved) is expected
 
 
-def test_unconfigured_text_cutoff_preserves_the_existing_single_threshold():
-    settings = MatchingSettings(_env_file=None, match_threshold=0.42)
+def test_explicit_null_text_cutoff_preserves_the_existing_single_threshold():
+    settings = MatchingSettings(_env_file=None, match_threshold=0.42, match_threshold_text=None)
     assert settings.automatic_match_threshold(False) == 0.42
     assert settings.automatic_match_threshold(True) == 0.42
 
@@ -357,3 +357,14 @@ def test_http_readiness_authentication_and_role_boundaries():
             ).status_code
             == 422
         )
+
+
+def test_automatic_match_threshold_depends_on_report_photo():
+    defaults = MatchingSettings(_env_file=None)
+    assert defaults.automatic_match_threshold(True) == 0.78
+    assert defaults.automatic_match_threshold(False) == 0.63
+    settings = MatchingSettings(_env_file=None, match_threshold=0.81, match_threshold_text=0.67)
+    assert settings.automatic_match_threshold(True) == 0.81
+    assert settings.automatic_match_threshold(False) == 0.67
+    with pytest.raises(ValidationError):
+        MatchingSettings(_env_file=None, match_threshold_text=1.5)

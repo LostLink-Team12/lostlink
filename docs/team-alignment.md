@@ -90,7 +90,8 @@
 
 ## 5. Yang Dongwei：匹配、契约与 Seed 2
 
-- Matching 和 Embedding 已在 `matching-service` 中实现（独立进程，共享 `matching` schema）：真实 OpenCLIP ViT-B/32、512 维向量、权重 SHA256 固定。API 和 tasks 必须使用同一份权重。自动匹配阈值 0.25 只是初值，需要用演示数据重新标定。
+- Matching 和 Embedding 已在 `matching-service` 中实现（独立进程，共享 `matching` schema）：真实 OpenCLIP ViT-B/32、512 维向量、权重 SHA256 固定。API 和 tasks 必须使用同一份权重。自动匹配阈值已用 102 对标注数据标定（#9）：带照片的报告 `MATCH_THRESHOLD=0.78`，纯文字报告 `MATCH_THRESHOLD_TEXT=0.63`，均按精确率 ≥0.8 选取；模型或标注数据变化后重新运行 Match threshold calibration 工作流。
+- 阈值配置对齐（#22 与 #24）：统一使用 `MatchingSettings.automatic_match_threshold`，新报告匹配与物品更新后的重新匹配都按报告是否含照片选择阈值。代码默认值与部署值一致（照片 0.78、纯文字 0.63）；需要沿用单一阈值时，通过配置对象显式传入 `match_threshold_text=None`，纯文字报告回退到 `MATCH_THRESHOLD`。
 - Embedding 的成功/失败结果必须原样带回登记事件的 `correlation_id` 和 `item_version`。Matching 只展示 `available` 状态的物品，其他状态保留版本墓碑。
 - 通知上下文接口 `GET /internal/v1/matches/{id}/notification-context` 由 Notification 在每次发送前调用复核。`venue_name` 目前为 null，等 Venue 提供公开目录后再填充。
 - A1 契约：[docs/api](api/README.md) 由 `scripts/export_contracts.py` 从代码生成。请作为架构负责人审阅，后续修改以代码为准，生成后再提交。

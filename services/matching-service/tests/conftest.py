@@ -169,6 +169,7 @@ def matching_env():
                     notification_client_ids=["notify"],
                     item_photo_buckets=["test-photos"],
                     match_threshold=0.5,
+                    match_threshold_text=0.5,
                 )
                 encoder = TestEncoder()
                 app = create_app(

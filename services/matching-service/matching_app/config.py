@@ -26,8 +26,12 @@ class MatchingSettings(Settings):
     clip_checkpoint: str | None = None
     clip_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
     clip_device: Literal["cpu", "cuda"] = "cpu"
-    match_threshold: float = Field(default=0.25, ge=-1, le=1)
-    match_threshold_text: float | None = Field(default=None, ge=-1, le=1)
+    # Calibrated on the 102 labelled D1 pairs (calibration workflow, issue #9). Reports with a
+    # photo score much higher against fused item vectors than text-only reports, so each gets
+    # its own cut-off at precision >= 0.8: text+photo 0.78 (P 0.85, R 1.00), text 0.63
+    # (P 0.80, R 0.24). Re-run the workflow when the model or the labelled data changes.
+    match_threshold: float = Field(default=0.78, ge=-1, le=1)
+    match_threshold_text: float | None = Field(default=0.63, ge=-1, le=1)
     candidate_limit: int = Field(default=100, ge=20, le=100)
 
     def automatic_match_threshold(self, has_photo: bool) -> float:
