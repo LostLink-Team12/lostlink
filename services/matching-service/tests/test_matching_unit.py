@@ -15,6 +15,36 @@ from matching_app.schemas import NewReport, Search
 from pydantic import ValidationError
 
 
+def test_search_diagnostics_record_failed_encoding_without_query_or_identity_labels():
+    class Verifier:
+        def verify(self, token):
+            return Principal(subject="private-owner", client_id="web", roles={"owner"})
+
+    class UnavailableEncoder:
+        def encode(self, *args):
+            raise EmbeddingError()
+
+    app = create_app(
+        MatchingSettings(_env_file=None, user_client_ids=["web"]),
+        token_verifier=Verifier(),
+        encoder=UnavailableEncoder(),
+    )
+    with TestClient(app) as client:
+        result = client.post(
+            "/v1/search",
+            json={"text": "private-query"},
+            headers={"Authorization": "Bearer private-token"},
+        )
+        assert result.status_code == 503
+        metrics = client.get("/metrics").text
+    assert 'lostlink_search_phase_duration_seconds_count{phase="encode"} 1.0' in metrics
+    assert "lostlink_search_item_context_calls_total 0.0" in metrics
+    assert "lostlink_search_results_count 0.0" in metrics
+    assert all(
+        value not in metrics for value in ("private-owner", "private-query", "private-token")
+    )
+
+
 @pytest.mark.parametrize("value", [[], [0.0] * 512, [float("nan")] * 512, [1.0] * 511])
 def test_vectors_reject_wrong_dimensions_or_nonfinite_or_zero(value):
     with pytest.raises(EmbeddingError):

@@ -35,6 +35,11 @@ The scaling demo scripts and evidence workflow are documented below under issue 
 Their demo thresholds do not replace the separate Issue #7 search investigation
 and its 500 ms per-case criterion documented above.
 
+Search phase instrumentation and the 500 ms investigation criterion are documented
+in [the backend readiness checklist](../../docs/backend-readiness.md#搜索性能诊断准备).
+The 5-second smoke/scaling-demo thresholds do not replace Issue #7's 500 ms
+search investigation criterion.
+
 ## Demo dataset and import (D1)
 
 Requires Node.js 22.12+. From the repository root:

@@ -4,6 +4,16 @@ resource "aws_cognito_user_pool" "this" {
   auto_verified_attributes = ["email"]
   deletion_protection      = "ACTIVE"
   mfa_configuration        = "OPTIONAL"
+  user_pool_tier           = "ESSENTIALS"
+  dynamic "lambda_config" {
+    for_each = var.attach_token_trigger ? [1] : []
+    content {
+      pre_token_generation_config {
+        lambda_arn     = aws_lambda_function.token_trigger[0].arn
+        lambda_version = "V2_0"
+      }
+    }
+  }
   software_token_mfa_configuration {
     enabled = true
   }

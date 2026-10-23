@@ -13,6 +13,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from matching_app.clients import make_item_client
 from matching_app.config import MatchingSettings
 from matching_app.database import MatchingDatabase
+from matching_app.diagnostics import SearchMetrics
 from matching_app.embedding import ClipEncoder
 from matching_app.errors import install_matching_errors
 from matching_app.limits import BodyLimitMiddleware
@@ -55,6 +56,7 @@ def create_app(
 
     app = FastAPI(title="LostLink Matching Service", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
+    app.state.search_metrics = SearchMetrics(metrics.registry)
     app.state.database, app.state.internal_database = database, internal_database
     app.state.encoder = encoder or ClipEncoder(
         settings.clip_checkpoint, settings.clip_sha256, settings.clip_device
