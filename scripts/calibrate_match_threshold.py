@@ -20,7 +20,8 @@ Usage from the repository root:
         --min-precision 0.8
 
 The report gives a recommended threshold per query modality and overall. Today the
-worker applies one MATCH_THRESHOLD to every report; see docs/adr/0007.
+worker selects MATCH_THRESHOLD for photo reports and MATCH_THRESHOLD_TEXT for text-only
+reports. Calibration never changes runtime configuration automatically.
 """
 
 import argparse
@@ -34,6 +35,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "services" / "matching-service"))
 
 from matching_app.calibration import (  # noqa: E402
+    DEFAULT_START,
+    DEFAULT_STEP,
+    DEFAULT_STOP,
     LabelledScore,
     report,
     threshold_grid,
@@ -103,9 +107,9 @@ def main(argv: list[str] | None = None) -> int:
     source.add_argument("--scores", type=Path, help="precomputed modality,score,is_match rows")
     parser.add_argument("--write-scores", type=Path, help="save computed scores as CSV")
     parser.add_argument("--min-precision", type=float, default=0.8)
-    parser.add_argument("--start", type=float, default=0.10)
-    parser.add_argument("--stop", type=float, default=0.45)
-    parser.add_argument("--step", type=float, default=0.01)
+    parser.add_argument("--start", type=float, default=DEFAULT_START)
+    parser.add_argument("--stop", type=float, default=DEFAULT_STOP)
+    parser.add_argument("--step", type=float, default=DEFAULT_STEP)
     parser.add_argument("--checkpoint", default=os.getenv("CLIP_CHECKPOINT"))
     parser.add_argument("--sha256", default=os.getenv("CLIP_SHA256"))
     parser.add_argument("--device", default=os.getenv("CLIP_DEVICE", "cpu"))

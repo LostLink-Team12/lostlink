@@ -13,6 +13,8 @@ from collections import defaultdict
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
+DEFAULT_START, DEFAULT_STOP, DEFAULT_STEP = -1.0, 1.0, 0.01
+
 MODALITIES = ("text", "photo", "text+photo")
 
 
@@ -66,7 +68,9 @@ def evaluate(scores: Iterable[LabelledScore], threshold: float) -> ThresholdMetr
     return ThresholdMetrics(threshold, tp, fp, fn)
 
 
-def threshold_grid(start: float = 0.10, stop: float = 0.45, step: float = 0.01) -> list[float]:
+def threshold_grid(
+    start: float = DEFAULT_START, stop: float = DEFAULT_STOP, step: float = DEFAULT_STEP
+) -> list[float]:
     if step <= 0 or stop < start:
         raise ValueError("Use a positive step and stop >= start")
     count = round((stop - start) / step)
@@ -106,9 +110,9 @@ def report(
     thresholds: Sequence[float] | None = None,
     min_precision: float = 0.8,
 ) -> dict:
-    """Recommendation per modality plus the single threshold the worker uses today."""
+    """Recommendations per modality and overall, including the exact search grid."""
     grid = list(thresholds or threshold_grid())
-    result = {"min_precision": min_precision, "modalities": {}}
+    result = {"min_precision": min_precision, "thresholds": grid, "modalities": {}}
     for modality, rows in sorted(by_modality(scores).items()):
         best = recommend(rows, grid, min_precision)
         result["modalities"][modality] = {
