@@ -1,0 +1,19 @@
+{
+  "resource": "aws_iam_role.github_deploy[0]",
+  "add": 0,
+  "update": 1,
+  "destroy": 0,
+  "old_subject": "repo:LostLink-Team12/lostlink:ref:refs/heads/main",
+  "new_subject": "repo:LostLink-Team12@343981760/lostlink@1423380955:ref:refs/heads/main",
+  "only_subject_changed": true,
+  "applied": true,
+  "aws_role_trust_verified": true,
+  "github_oidc_subject_verified": true,
+  "cluster_status": "ACTIVE",
+  "published_main_images_resolved": 6,
+  "live_sdk_clients_closed": true,
+  "application_workloads_changed": false,
+  "full_github_oidc_deployment_verified": false,
+  "local_deployment_tests_passed": 34,
+  "terraform_mock_tests_passed": 17
+}

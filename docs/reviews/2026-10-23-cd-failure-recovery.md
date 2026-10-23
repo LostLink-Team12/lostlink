@@ -28,8 +28,8 @@ repo:LostLink-Team12@343981760/lostlink@1423380955:ref:refs/heads/main
 没有开放其他分支、PR 或通配符，也不应把仓库 OIDC 改回旧格式来绕过问题。
 新增 Terraform mock 断言检查整个条件对象、主体、Action、Effect 和单条 Statement。
 
-本机没有 AWS 操作身份，没有读取或更新线上 IAM。日志中的拒绝与仓库信任配置不匹配一致；
-线上策略的最终内容仍需有权限的组员核实。参考
+原 PR 提交环境没有 AWS 操作身份，当时未读取或更新线上 IAM。随后操作员已在保留原有
+profile/state 的环境核实并应用信任策略，实际结果见本文末尾。参考
 [GitHub 官方 OIDC 文档](https://docs.github.com/en/actions/reference/security/oidc)。
 
 ### boto3 client 生命周期错误
@@ -43,7 +43,7 @@ repo:LostLink-Team12@343981760/lostlink@1423380955:ref:refs/heads/main
 新增 CLI 入口测试使用显式假凭据、真实 SDK client、Stubber 和网络阻断；验证申请/清理成功与异常、
 错误账号/集群的拒绝、镜像查询失败、发布失败及 client 关闭。原有租约并发保留、回滚和权限约束继续有效。
 
-## 组员需要执行：更新线上部署角色信任策略
+## 更新线上部署角色信任策略的步骤（本 dev 已执行）
 
 需要有权管理 `152174417545` 账号中 `lostlink-dev-github-deploy` 信任策略的组员执行。
 不需要把个人 AWS key 发给 Agent，也不需要给现有 CI 发布角色增加部署权限。
@@ -107,7 +107,8 @@ gh run watch <new-run-id> --repo LostLink-Team12/lostlink --exit-status
 ```
 
 不要重跑旧提交 `6e342ada...` 的失败部署来验证 Python 修复；旧 run 使用旧脚本，且较旧 main 会被跳过。
-手动新建整个 CI run 会重新构建和推送；ECR 标签不可变，重复使用已有 SHA 标签可能被拒绝，
+手动新建整个 CI run 会重新构建和推送；前端 ECR 仓库的标签不可变，重复使用已有 SHA
+标签可能被拒绝（五个服务仓库目前为 MUTABLE），
 因此部署失败后优先重跑新 main run 的失败 job，而不是重跑所有成功的发布 job。
 当前流程从选定 main 提交构建、扫描、发布并部署对应 digest，不提供任意镜像选择。
 
@@ -121,4 +122,23 @@ gh run watch <new-run-id> --repo LostLink-Team12/lostlink --exit-status
 - Ruff 检查及格式检查通过。
 - Terraform 1.16.6：格式、validate 和 17 项 dev mock 测试全部通过；backend 禁用。
 - PR CI 结果见本次 PR 的检查记录。
-- 未执行 AWS apply、未触发真实部署；线上身份及完整发布验收待组员完成上述操作。
+- 原提交未执行 AWS apply、未触发真实部署；后续操作员结果如下。
+
+## 本次操作员恢复结果
+
+- 恢复已有 `lostlink-console` 短期登录，并通过 `lostlink-dev` 核实为原账号
+  `152174417545` 的 `lu-jingxing` IAM 身份，未使用 root 或长期 key。
+- 核对线上旧 subject 与仓库 immutable 配置不一致；正常 Terraform 计划仅包含
+  `aws_iam_role.github_deploy[0]` 原地更新，程序断言只修改 subject，其他角色属性不变。
+- 已应用保存的计划：0 新增、1 更新、0 销毁。再次读取 AWS 角色确认精确 subject、
+  audience、provider，与 GitHub 仓库 API 的实际配置一致。权限策略、EKS access entry、
+  namespace RBAC、节点及应用工作负载均未变更。
+- 本地复核：部署测试 34 passed，Terraform validate 和 17 项 mock 检查通过，Ruff
+  检查及格式检查通过。修复前提交 `2a0a95b` 的远端 CI 为 24 项通过、2 项预期跳过。
+- 使用 `contextlib.closing` 对真实 STS/EKS/ECR client 做只读检查，成功解析已发布 main
+  的六个部署镜像；不存在 lease 时清理正常退出。脱敏结果见
+  [CD 信任恢复证据](c3-evidence/cd-trust-recovery.json)。
+
+**线上 IAM 已修复，Python 修复仍需 PR #26 合并 main 后生效。** 合并后新的 main CI 会
+自动尝试部署；当前没有声称 GitHub OIDC、租约、20 项 rollout、HTTPS 和清理这一整条
+链路已通过，也没有为了验证而用操作员权限更新共享 dev 应用。
