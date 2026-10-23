@@ -18,7 +18,14 @@ from uuid import UUID, uuid4
 
 from lostlink_common.db import Database
 from lostlink_common.event_schemas import ClaimApproved
-from lostlink_common.events import DomainEvent, SnsPublisher, aws_client, decode_message
+from lostlink_common.events import (
+    DomainEvent,
+    SnsPublisher,
+    acknowledge_message,
+    aws_client,
+    decode_message,
+    receive_messages,
+)
 from lostlink_common.observability import configure_logging
 from sqlalchemy import and_, func, or_, select, text
 
@@ -140,12 +147,7 @@ class DeliveryWorker:
         return code
 
     def poll(self, client, queue_url, *, wait_seconds=10):
-        messages = client.receive_message(
-            QueueUrl=queue_url,
-            WaitTimeSeconds=wait_seconds,
-            VisibilityTimeout=60,
-            MaxNumberOfMessages=1,
-        ).get("Messages", [])
+        messages = receive_messages(client, queue_url, wait_seconds=wait_seconds)
         for message in messages:
             try:
                 self.consume(decode_message(message["Body"]))
@@ -158,7 +160,7 @@ class DeliveryWorker:
                     "delivery_message_rejected", extra={"error_type": type(exc).__name__}
                 )
                 continue
-            client.delete_message(QueueUrl=queue_url, ReceiptHandle=message["ReceiptHandle"])
+            acknowledge_message(client, queue_url, message["ReceiptHandle"])
         return bool(messages)
 
     def lease(self):
