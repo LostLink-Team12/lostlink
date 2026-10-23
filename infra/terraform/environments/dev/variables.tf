@@ -127,15 +127,15 @@ variable "frontend_origins" {
   type        = list(string)
   description = "Exact frontend origins for S3 CORS; localhost is allowed for development."
   validation {
-    condition     = length(var.frontend_origins) > 0 && alltrue([for origin in var.frontend_origins : can(regex("^https://[^/*]+$|^http://localhost(:[0-9]+)?$", origin))])
-    error_message = "Use exact HTTPS origins or http://localhost[:port], without wildcard or path."
+    condition     = length(var.frontend_origins) > 0 && alltrue([for origin in var.frontend_origins : can(regex("^https://[^/*]+$|^http://(localhost|127\\.0\\.0\\.1)(:[0-9]+)?$", origin))])
+    error_message = "Use exact HTTPS origins or localhost/127.0.0.1 HTTP development origins, without wildcard or path."
   }
 }
 
 variable "cognito_callback_urls" {
   type = list(string)
   validation {
-    condition     = length(var.cognito_callback_urls) > 0 && alltrue([for url in var.cognito_callback_urls : can(regex("^https://[^*]+$|^http://localhost(:[0-9]+)?(/[^*]*)?$", url))])
+    condition     = length(var.cognito_callback_urls) > 0 && alltrue([for url in var.cognito_callback_urls : can(regex("^https://[^*]+$|^http://(localhost|127\\.0\\.0\\.1)(:[0-9]+)?(/[^*]*)?$", url))])
     error_message = "Specify exact HTTPS callback URLs, or localhost development URLs."
   }
 }
@@ -143,7 +143,7 @@ variable "cognito_callback_urls" {
 variable "cognito_logout_urls" {
   type = list(string)
   validation {
-    condition     = length(var.cognito_logout_urls) > 0 && alltrue([for url in var.cognito_logout_urls : can(regex("^https://[^*]+$|^http://localhost(:[0-9]+)?(/[^*]*)?$", url))])
+    condition     = length(var.cognito_logout_urls) > 0 && alltrue([for url in var.cognito_logout_urls : can(regex("^https://[^*]+$|^http://(localhost|127\\.0\\.0\\.1)(:[0-9]+)?(/[^*]*)?$", url))])
     error_message = "Specify exact HTTPS logout URLs, or localhost development URLs."
   }
 }
