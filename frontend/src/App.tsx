@@ -124,12 +124,12 @@ export function OwnerApp({ api }: { api: Api }) {
     }); }}><label>Closure reason<select name="reason"><option value="found">Found my item</option><option value="no_longer_needed">No longer needed</option></select></label><button disabled={action.busy}>Close lost report</button></form>}</article>)}</PageList></section>
     {matches && <section><h2>Report matches</h2><PageList api={api} service="matching" path={`/v1/lost-reports/${id(matches)}/matches`} revision={revision}>{rows => <ItemCards api={api} items={rows.map(row => row.item)} choose={choose} busy={claimAction.busy || action.busy} />}</PageList></section>}
     </>}
-    {page === 'claims' && <section><h1>My claims</h1><PageList api={api} service="claim" path="/v1/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue={false} refresh={() => setRevision(x => x + 1)} />}</PageList></section>}
+    {page === 'claims' && <section><h1>My claims</h1><p>View your requests, collect an approved item, or withdraw a request you no longer need.</p><button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh claims</button><PageList api={api} service="claim" path="/v1/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue={false} refresh={() => setRevision(x => x + 1)} />}</PageList></section>}
   </PortalLayout>;
 }
 
 function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; venue: boolean; refresh: () => void }) {
-  const action = useAction(), [selected, setSelected] = useState<Claim | null>(null), [qr, setQr] = useState('');
+  const action = useAction(), [selected, setSelected] = useState<Claim | null>(null), [qr, setQr] = useState(''), [withdrawing, setWithdrawing] = useState(false);
   const path = `/v1/${venue ? 'venue/claims' : 'claims'}`;
   const approve = () => action.run(async () => {
     const result = await api('claim', `${path}/${id(selected!.id)}/approve`, { body: {}, version: selected!.version });
@@ -137,9 +137,9 @@ function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; ven
     if (done.claim_state !== 'approved') throw Error(`Approval ended with state ${done.claim_state}. Refresh before continuing.`);
     setSelected(null); refresh(); action.setMessage('Claim approved.');
   });
-  return <>{rows.map(row => <article key={row.id}><h3>{row.item_title}</h3><p>Status: {row.state}</p><button disabled={action.busy} aria-label={`${venue ? 'Review' : 'View'} ${row.item_title}`} onClick={() => void action.run(async () => { setQr(''); setSelected(await api('claim', `${path}/${id(row.id)}`)); })}>{venue ? 'Review claim' : 'View claim'}</button></article>)}
+  return <>{rows.map(row => <article key={row.id}><h3>{row.item_title}</h3><p>Status: {row.state}</p><button disabled={action.busy} aria-label={`${venue ? 'Review' : 'View'} ${row.item_title}`} onClick={() => void action.run(async () => { setQr(''); setWithdrawing(false); setSelected(await api('claim', `${path}/${id(row.id)}`)); })}>{venue ? 'Review claim' : 'View claim'}</button></article>)}
     {selected && <article className="review"><h3>{selected.item_title}</h3><p>Status: {selected.state}</p><button disabled={action.busy} onClick={() => void action.run(async () => { setQr(''); setSelected(await api('claim', path + '/' + id(selected.id))); })}>Refresh claim details</button>{selected.answers?.map(answer => <div key={answer.question_id}><strong>{answer.prompt}</strong><p>{answer.answer}</p></div>)}
-      {selected.active_operation_id && <button disabled={action.busy} onClick={() => void action.run(async () => { const done = await waitOperation(api, 'claim', selected.active_operation_id!); if (selected.state === 'handover_pending' && done.claim_state !== 'handed_over') throw Error('Handover not completed. Refresh before continuing.'); setSelected(await api('claim', `${path}/${id(selected.id)}`)); refresh(); action.setMessage('Operation completed.'); })}>Check pending operation</button>}
+      {selected.active_operation_id && <button disabled={action.busy} onClick={() => void action.run(async () => { const done = await waitOperation(api, 'claim', selected.active_operation_id!); if (selected.state === 'cancellation_pending' && done.claim_state !== 'cancelled') throw Error('Withdrawal not completed. Refresh before continuing.'); if (selected.state === 'handover_pending' && done.claim_state !== 'handed_over') throw Error('Handover not completed. Refresh before continuing.'); setSelected(await api('claim', `${path}/${id(selected.id)}`)); refresh(); action.setMessage('Operation completed.'); })}>Check pending operation</button>}
       {venue && selected.state === 'submitted' && <><button disabled={action.busy} onClick={() => void approve()}>Approve claim</button><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
         const value = await api('claim', path + '/' + id(selected.id) + '/reject', { body: { reason_code: text(data, 'reason_code') }, version: selected.version });
         setSelected(value); refresh(); action.setMessage('Claim rejected.');
@@ -151,6 +151,24 @@ function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; ven
         if (done.claim_state !== 'handed_over') throw Error('Handover not completed. Refresh before continuing.');
         setSelected(await api('claim', path + '/' + id(selected.id))); refresh(); action.setMessage('Item handed over.');
       })} />}
+      {!venue && ['submitted', 'approval_pending', 'approved'].includes(selected.state) && <>
+        <button className="secondary" disabled={action.busy} onClick={() => setWithdrawing(true)}>Withdraw claim</button>
+        {withdrawing && <form aria-label="Withdraw claim" onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
+          const value = await api('claim', `${path}/${id(selected.id)}/cancel`, { body: { reason_code: text(data, 'withdrawal_reason') }, version: selected.version });
+          setQr(''); setWithdrawing(false);
+          if (value.operation_id) {
+            setSelected({ ...selected, state: 'cancellation_pending', version: value.version, active_operation_id: value.operation_id }); refresh();
+            const done = await waitOperation(api, 'claim', value.operation_id);
+            if (done.claim_state !== 'cancelled') throw Error('Withdrawal not completed. Refresh before continuing.');
+            setSelected(await api('claim', `${path}/${id(selected.id)}`));
+          } else { setSelected(value); }
+          refresh(); action.setMessage('Claim withdrawn. This request is no longer active.');
+        }); }}>
+          <p>Withdrawing cancels this request and releases any item reservation. The record remains in your history.</p>
+          <label>Withdrawal reason<select name="withdrawal_reason"><option value="no_longer_needed">No longer needed</option><option value="found_elsewhere">Found elsewhere</option><option value="submitted_in_error">Submitted in error</option><option value="other">Other</option></select></label>
+          <button disabled={action.busy}>Confirm withdrawal</button><button type="button" className="secondary" disabled={action.busy} onClick={() => setWithdrawing(false)}>Keep claim</button>
+        </form>}
+      </>}
       {!venue && selected.state === 'approved' && <button disabled={action.busy} onClick={() => void action.run(async () => {
         const value = await api('claim', `${path}/${id(selected.id)}/handover-token`, { body: {} });
         setQr(value.qr_payload); action.setMessage(`Handover code expires ${new Date(value.expires_at).toLocaleString()}. Show the code at the venue.`);
