@@ -16,3 +16,11 @@ main{max-width:1320px}
 .portal-sidebar a[aria-disabled=true]{opacity:.55;cursor:wait}
 .portal-content{min-width:0}
 @media(max-width:800px){.portal-layout{grid-template-columns:1fr;gap:20px}.portal-sidebar{position:static;padding:12px}.portal-sidebar>.eyebrow{display:none}.portal-sidebar nav{flex-direction:row;flex-wrap:wrap;gap:4px}.portal-sidebar a{flex:1;min-width:130px;padding:10px}.portal-sidebar a span{display:none}}
+
+.claim-layout{display:grid;grid-template-columns:minmax(240px,.85fr) minmax(0,1.15fr);gap:24px;align-items:start}
+.claim-layout>section,.claim-item{min-width:0}
+.claim-item{padding:24px;background:#edf2e9;border:1px solid #dbe3da;border-radius:12px}
+.claim-item .cards{display:block}.claim-item article{background:white;margin:0}
+.claim-item article img{height:260px}.claim-layout h1{font-size:30px;letter-spacing:-.6px;overflow-wrap:anywhere}
+.claim-layout form{margin-top:20px}.claim-layout input{width:100%}
+@media(max-width:1050px){.claim-layout{grid-template-columns:1fr}.claim-item .cards article img{height:220px}}
