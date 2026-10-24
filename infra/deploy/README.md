@@ -75,6 +75,27 @@ before workload mutation: complete the operator-managed migration and release
 procedure below, then refresh the approved baseline using that deployed release.
 Actions does not receive migration credentials.
 
+When CI stops with `Database migrations changed`, check out the failed run's
+published source SHA and review its migration before recovering it as an operator:
+
+```powershell
+.venv-c3/Scripts/python.exe infra/deploy/cd_migrate.py --sha <failed-main-source-sha>
+gh run rerun <failed-main-run-id> --failed --repo LostLink-Team12/lostlink
+```
+
+The operator helper resolves the published images, runs the existing isolated
+database bootstrap/migration and role-verification procedure, and approves the
+migration hashes only after successful cleanup. It uses a compare-and-swap on
+CD state, preserves the deployed source/images, and does not grant migration
+access to Actions. Existing Alembic revisions must not be rewritten. If either
+the migration or verification fails, the baseline remains unchanged; inspect
+any leftover bootstrap namespace/temporary CREATE grants before retrying.
+Schema revision readiness is exact: the previous Claim version can report
+unready after the schema upgrade until the retried deployment installs the new
+version. Run this recovery in a short maintenance window and retry deployment
+immediately. Do not rerun successful publishing jobs: immutable frontend tags
+may reject republishing the same SHA.
+
 CD changes only application images, runtime scripts and revision annotations.
 Environment/IRSA, resources, replicas, scaling and TLS remain operator managed.
 Helm chart/configuration changes and new services still use the operator flow;
