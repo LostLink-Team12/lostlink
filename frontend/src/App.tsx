@@ -131,7 +131,9 @@ export function OwnerApp({ api }: { api: Api }) {
 }
 
 function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; venue: boolean; refresh: () => void }) {
-  const action = useAction(), [selected, setSelected] = useState<Claim | null>(null), [qr, setQr] = useState(''), [withdrawing, setWithdrawing] = useState(false);
+  const action = useAction(), [selected, setSelected] = useState<Claim | null>(null), [qr, setQr] = useState(''), [withdrawing, setWithdrawing] = useState(false), [expandedId, setExpandedId] = useState<string | null>(null);
+  const details = useRef<HTMLDivElement>(null);
+  useEffect(() => { details.current?.focus({ preventScroll: true }); }, [selected?.id]);
   const path = `/v1/${venue ? 'venue/claims' : 'claims'}`;
   const approve = () => action.run(async () => {
     const result = await api('claim', `${path}/${id(selected!.id)}/approve`, { body: {}, version: selected!.version });
@@ -139,8 +141,17 @@ function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; ven
     if (done.claim_state !== 'approved') throw Error(`Approval ended with state ${done.claim_state}. Refresh before continuing.`);
     setSelected(null); refresh(); action.setMessage('Claim approved.');
   });
-  return <>{rows.map(row => <article key={row.id}><h3>{row.item_title}</h3><p>Status: {row.state}</p><button disabled={action.busy} aria-label={`${venue ? 'Review' : 'View'} ${row.item_title}`} onClick={() => void action.run(async () => { setQr(''); setWithdrawing(false); setSelected(await api('claim', `${path}/${id(row.id)}`)); })}>{venue ? 'Review claim' : 'View claim'}</button></article>)}
-    {selected && <article className="review"><h3>{selected.item_title}</h3><p>Status: {selected.state}</p><button disabled={action.busy} onClick={() => void action.run(async () => { setQr(''); setSelected(await api('claim', path + '/' + id(selected.id))); })}>Refresh claim details</button>{selected.answers?.map(answer => <div key={answer.question_id}><strong>{answer.prompt}</strong><p>{answer.answer}</p></div>)}
+  return <>{rows.map(row => {
+    const expanded = expandedId === row.id, loaded = expanded && selected?.id === row.id;
+    const shown = loaded ? selected! : row;
+    return <article key={row.id} className={expanded ? 'review' : undefined} aria-label={`Claim for ${row.item_title}`} aria-busy={expanded && action.busy}>
+      <h3>{shown.item_title}</h3><p>Status: {shown.state}</p>
+      {!loaded ? <button disabled={action.busy} aria-expanded={expanded} aria-controls={`claim-details-${row.id}`} aria-label={`${venue ? 'Review' : 'View'} ${row.item_title}`} onClick={() => void action.run(async () => {
+        setExpandedId(row.id); setSelected(null); setQr(''); setWithdrawing(false);
+        setSelected(await api('claim', `${path}/${id(row.id)}`));
+      })}>{venue ? 'Review claim' : 'View claim'}</button> : <button className="secondary" disabled={action.busy} aria-expanded="true" aria-controls={`claim-details-${row.id}`} onClick={() => { setExpandedId(null); setSelected(null); setQr(''); setWithdrawing(false); }}>Hide details</button>}
+      {loaded && selected && <div id={`claim-details-${row.id}`} ref={details} tabIndex={-1}>
+<button disabled={action.busy} onClick={() => void action.run(async () => { setQr(''); setSelected(await api('claim', path + '/' + id(selected.id))); })}>Refresh claim details</button>{selected.answers?.map(answer => <div key={answer.question_id}><strong>{answer.prompt}</strong><p>{answer.answer}</p></div>)}
       {selected.active_operation_id && <button disabled={action.busy} onClick={() => void action.run(async () => { const done = await waitOperation(api, 'claim', selected.active_operation_id!); if (selected.state === 'cancellation_pending' && done.claim_state !== 'cancelled') throw Error('Withdrawal not completed. Refresh before continuing.'); if (selected.state === 'handover_pending' && done.claim_state !== 'handed_over') throw Error('Handover not completed. Refresh before continuing.'); setSelected(await api('claim', `${path}/${id(selected.id)}`)); refresh(); action.setMessage('Operation completed.'); })}>Check pending operation</button>}
       {venue && selected.state === 'submitted' && <><button disabled={action.busy} onClick={() => void approve()}>Approve claim</button><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
         const value = await api('claim', path + '/' + id(selected.id) + '/reject', { body: { reason_code: text(data, 'reason_code') }, version: selected.version });
@@ -176,7 +187,11 @@ function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; ven
         setQr(value.qr_payload); action.setMessage(`Handover code expires ${new Date(value.expires_at).toLocaleString()}. Show the code at the venue.`);
       })}>Get handover code</button>}
       {qr && <HandoverCode payload={qr} />}
-    </article>}{action.status}</>;
+
+      </div>}
+      {expanded && action.status}
+    </article>;
+  })}</>;
 }
 
 type PortalAccess = { venue: { name: string } | null; can_manage_venue: boolean; can_manage_members: boolean; can_onboard_venues: boolean };
