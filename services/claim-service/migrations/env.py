@@ -32,10 +32,11 @@ TENANT = "tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid"
 OWNER = "owner_sub = NULLIF(current_setting('app.user_sub', true), '')"
 ACTOR = "actor_sub = NULLIF(current_setting('app.user_sub', true), '')"
 OWNER_OR_TENANT = f"({OWNER}) OR ({TENANT})"
-# Venue staff see contact details only while an approved claim still awaits handover.
+# Venue staff can contact claimants during review and pending handover.
 CONTACT = (
     f"({OWNER}) OR (({TENANT}) AND EXISTS (SELECT 1 FROM claim.claims c "
-    "WHERE c.id = claim_id AND c.state IN ('approved','handover_pending')))"
+    "WHERE c.id = claim_id AND c.state IN "
+    "('submitted','approval_pending','approved','handover_pending')))"
 )
 
 POLICIES = {
@@ -77,6 +78,7 @@ PERMISSIONS = {
 COLUMN_UPDATES = {
     "api": {
         "claims": "state,version,reviewed_by,decision_code,approved_at,closed_at",
+        "claim_contacts": "key_id,encrypted_contact",
         "claim_operations": "kind,available_at",
         "handover_tokens": "state,handover_id,replay_key_id,replay_ciphertext,replay_expires_at",
     },

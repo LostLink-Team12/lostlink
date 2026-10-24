@@ -37,7 +37,9 @@ def test_claim_approval_qr_and_handover_main_flow(claim_env):
     assert [row["id"] for row in listed["items"]] == [claim["id"]]
     assert listed["items"][0]["owner_sub"] == "owner-1"
     hidden = env.client.get(f"/v1/venue/claims/{claim['id']}/contact", headers=headers("a"))
-    assert hidden.status_code == 403
+    assert hidden.status_code == 200
+    assert hidden.json()["phone"] == "+65 8000 0000"
+    assert hidden.headers["cache-control"] == "no-store"
     assert (
         env.client.get(f"/v1/venue/claims/{claim['id']}", headers=headers("b")).status_code == 404
     )
@@ -108,3 +110,99 @@ def test_courier_handover_is_published_for_seed2_delivery(claim_env):
     events = claim_events(env, claim["id"])
     assert [e.event_type for e in events] == ["claim.approved", "claim.handed_over"]
     assert events[1].data["mode"] == "courier"
+
+
+def test_two_way_contacts_are_scoped_encrypted_and_approval_gated(claim_env):
+    from uuid import UUID
+
+    from claim_app.models import ClaimContact
+    from sqlalchemy import text
+
+    env = claim_env
+    claim = submit(env, make_item(env))
+    path = f"/v1/claims/{claim['id']}/venue-contact"
+    staff_path = f"/v1/venue/claims/{claim['id']}"
+    assert env.client.get(path, headers=headers()).status_code == 403
+    assert env.client.get(path, headers=headers("owner2")).status_code == 404
+    assert env.client.get(staff_path + "/contact", headers=headers("b")).status_code == 404
+    with env.db["claim_api"].scoped_session(
+        subject="staff-b", tenant_id=env.tenants["b"]
+    ) as session:
+        assert session.scalar(text("SELECT count(*) FROM claim.claim_contacts")) == 0
+    contact = {"name": "Campus counter", "phone": "+65 6123 4567"}
+    request_headers = headers("a", version=claim["version"])
+    response = env.client.post(
+        staff_path + "/approve", headers=request_headers, json={"contact": contact}
+    )
+    assert response.status_code == 202, response.text
+    assert (
+        env.client.post(
+            staff_path + "/approve", headers=request_headers, json={"contact": contact}
+        ).json()
+        == response.json()
+    )
+    assert env.client.get(path, headers=headers()).status_code == 403
+    drain(env)
+    shared = env.client.get(path, headers=headers())
+    assert shared.status_code == 200, shared.text
+    assert shared.json() == {**contact, "email": "admin-a@example.com"}
+    assert shared.headers["cache-control"] == "no-store"
+    assert env.client.get(f"/v1/claims/{claim['id']}/contact", headers=headers()).json() == {
+        "name": "Alex Owner",
+        "phone": "+65 8000 0000",
+        "email": "owner1@example.com",
+    }
+    approved = owner_claim(env, claim["id"])
+    update_headers = headers("a", version=approved["version"])
+    update = env.client.put(
+        staff_path + "/reply-contact",
+        headers=update_headers,
+        json={"name": "Service desk", "phone": "+65 6333 4444"},
+    )
+    assert update.status_code == 200, update.text
+    assert env.client.get(path, headers=headers()).json()["name"] == "Service desk"
+    assert (
+        env.client.put(
+            staff_path + "/reply-contact",
+            headers=update_headers,
+            json={"name": "Service desk", "phone": "+65 6333 4444"},
+        ).json()
+        == update.json()
+    )
+    assert (
+        env.client.put(
+            staff_path + "/reply-contact", headers=headers("a", version=1), json=contact
+        ).status_code
+        == 412
+    )
+    assert (
+        env.client.put(
+            staff_path + "/reply-contact", headers=headers("b", version=1), json=contact
+        ).status_code
+        == 404
+    )
+    with env.db["claim_api"].scoped_session(subject="owner-1") as session:
+        row = session.get(ClaimContact, UUID(claim["id"]))
+        assert b"Campus counter" not in row.encrypted_contact
+        assert b"Service desk" not in row.encrypted_contact
+        assert b"example.com" not in row.encrypted_contact
+
+
+def test_legacy_approval_can_publish_contact_later(claim_env):
+    env = claim_env
+    claim = submit(env, make_item(env))
+    approve(env, claim)
+    path = f"/v1/claims/{claim['id']}/venue-contact"
+    assert env.client.get(path, headers=headers()).status_code == 404
+    approved = owner_claim(env, claim["id"])
+    response = env.client.put(
+        f"/v1/venue/claims/{claim['id']}/reply-contact",
+        headers=headers("a", version=approved["version"]),
+        json={"name": "Campus counter"},
+    )
+    assert response.status_code == 200, response.text
+    assert env.client.get(path, headers=headers()).json() == {
+        "name": "Campus counter",
+        "phone": None,
+        "email": "admin-a@example.com",
+    }

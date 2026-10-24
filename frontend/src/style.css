@@ -59,3 +59,5 @@ header .secondary{margin:0;font-size:13px;padding:8px 14px}
 
 /* Static content receives focus for screen-reader navigation without a control outline. */
 .content-focus-target:focus{outline:none}
+
+.claim-contact{margin:20px 0;padding:16px;border:1px solid #c4d3c6;border-radius:8px;background:#fff;overflow-wrap:anywhere}.claim-contact h4{margin:0 0 10px}.claim-contact dl{margin:0}.claim-contact dt{font-weight:600}.claim-contact dd{margin:0 0 8px}

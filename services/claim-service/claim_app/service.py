@@ -260,10 +260,12 @@ class ClaimService:
         expected_version(version, claim.version)
         return claim
 
-    def approve(self, principal, claim_id, version):
+    def approve(self, principal, claim_id, version, venue_contact=None):
         claim = self.review_target(principal, claim_id, version)
         if claim.state != "submitted":
             fail(409, "claim_not_submitted", "Only submitted claims can be approved")
+        if venue_contact is not None:
+            self.save_venue_contact(claim, venue_contact)
         claim.state, claim.reviewed_by = "approval_pending", principal.subject
         claim.version += 1
         self.flush_unique("item_claim_in_progress", "Another claim for this item is being handled")
@@ -422,7 +424,7 @@ class ClaimService:
         self.session.flush()
         return self.accepted(claim, operation)
 
-    def contact(self, claim, action):
+    def contact_value(self, claim):
         row = self.session.get(ClaimContact, claim.id)
         if row is None:
             fail(404, "contact_not_available", "Contact details are not available")
@@ -434,5 +436,30 @@ class ClaimService:
             )
         except DecryptionFailed:
             fail(503, "contact_unavailable", "Contact details cannot be read")
-        self.audit(claim, action)
         return value
+
+    def contact(self, claim, action, *, venue=False):
+        value = self.contact_value(claim)
+        if venue:
+            value = value.get("venue_contact")
+            if not value:
+                fail(404, "contact_not_available", "The venue has not shared contact details yet")
+        self.audit(claim, action)
+        return {key: value.get(key) for key in ("name", "phone", "email")}
+
+    def save_venue_contact(self, claim, contact):
+        value = self.contact_value(claim)
+        value["venue_contact"] = contact
+        sealed = self.cipher.encrypt(json.dumps(value).encode(), contact_context(claim.id))
+        row = self.session.get(ClaimContact, claim.id)
+        row.key_id, row.encrypted_contact = sealed.key_id, sealed.ciphertext
+        self.audit(claim, "contact.venue_shared")
+
+    def share_venue_contact(self, principal, claim_id, version, contact):
+        claim = self.review_target(principal, claim_id, version)
+        if claim.state not in {"approved", "handover_pending"}:
+            fail(409, "claim_not_approved", "Contact updates require a pending handover")
+        self.save_venue_contact(claim, contact)
+        claim.version += 1
+        self.session.flush()
+        return self.detail(claim, venue=True), 200, etag(claim)

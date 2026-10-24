@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ItemPhoto } from './ItemPhoto';
+import { ClaimContact, VenueContactFields } from './ClaimContact';
 import { ReportClaimMarker } from './ReportClaimMarker';
 import { RecordTimes } from './RecordTimes';
 import { StatusBadge } from './StatusBadge';
@@ -158,8 +159,8 @@ function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; ven
   const details = useRef<HTMLDivElement>(null);
   useEffect(() => { details.current?.focus({ preventScroll: true }); }, [selected?.id]);
   const path = `/v1/${venue ? 'venue/claims' : 'claims'}`;
-  const approve = () => action.run(async () => {
-    const result = await api('claim', `${path}/${id(selected!.id)}/approve`, { body: {}, version: selected!.version });
+  const approve = (contact: { name: string; phone?: string }) => action.run(async () => {
+    const result = await api('claim', `${path}/${id(selected!.id)}/approve`, { body: { contact }, version: selected!.version });
     const done = await waitOperation(api, 'claim', result.operation_id);
     if (done.claim_state !== 'approved') throw Error(`Approval ended with state ${done.claim_state}. Refresh before continuing.`);
     setSelected(null); refresh(); action.setMessage('Claim approved.');
@@ -176,11 +177,16 @@ function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; ven
       })}>{venue ? 'Review claim' : 'View claim'}</button> : <button className="secondary" disabled={action.busy} aria-expanded="true" aria-controls={`claim-details-${row.id}`} onClick={() => { setExpandedId(null); setSelected(null); setQr(''); setWithdrawing(false); }}>Hide details</button>}
       {loaded && selected && <div id={`claim-details-${row.id}`} className="content-focus-target" ref={details} tabIndex={-1}>
 <button disabled={action.busy} onClick={() => void action.run(async () => { setQr(''); setSelected(await api('claim', path + '/' + id(selected.id))); })}>Refresh claim details</button>{selected.answers?.map(answer => <div key={answer.question_id}><strong>{answer.prompt}</strong><p>{answer.answer}</p></div>)}
+      <ClaimContact key={`${selected.id}:${selected.state}:${selected.version}`} api={api} claimId={selected.id} venue={venue} state={selected.state} version={selected.version} />
       {selected.active_operation_id && <button disabled={action.busy} onClick={() => void action.run(async () => { const done = await waitOperation(api, 'claim', selected.active_operation_id!); if (selected.state === 'cancellation_pending' && done.claim_state !== 'cancelled') throw Error('Withdrawal not completed. Refresh before continuing.'); if (selected.state === 'handover_pending' && done.claim_state !== 'handed_over') throw Error('Handover not completed. Refresh before continuing.'); setSelected(await api('claim', `${path}/${id(selected.id)}`)); refresh(); action.setMessage('Operation completed.'); })}>Check pending operation</button>}
-      {venue && selected.state === 'submitted' && <><button disabled={action.busy} onClick={() => void approve()}>Approve claim</button><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
+      {venue && selected.state === 'submitted' && <><form aria-label="Approve claim" onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void approve({ name: text(data, 'venue_name'), ...(text(data, 'venue_phone') ? { phone: text(data, 'venue_phone') } : {}) }); }}><VenueContactFields /><button disabled={action.busy}>Approve claim</button></form><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
         const value = await api('claim', path + '/' + id(selected.id) + '/reject', { body: { reason_code: text(data, 'reason_code') }, version: selected.version });
         setSelected(value); refresh(); action.setMessage('Claim rejected.');
       }); }}><label>Rejection reason<select name="reason_code"><option value="answers_incorrect">Answers incorrect</option><option value="insufficient_detail">Insufficient detail</option><option value="duplicate">Duplicate</option><option value="other">Other</option></select></label><button disabled={action.busy}>Reject claim</button></form></>}
+      {venue && ['approved', 'handover_pending'].includes(selected.state) && <form aria-label="Update venue contact" onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
+        setSelected(await api('claim', `${path}/${id(selected.id)}/reply-contact`, { method: 'PUT', version: selected.version, body: { name: text(data, 'venue_name'), ...(text(data, 'venue_phone') ? { phone: text(data, 'venue_phone') } : {}) } }));
+        refresh(); action.setMessage('Venue contact shared with the owner.');
+      }); }}><VenueContactFields /><button disabled={action.busy}>Save venue contact</button></form>}
       {venue && selected.state === 'approved' && <ScanToken busy={action.busy} submit={token => action.run(async () => {
         const result = await api('claim', path + '/' + id(selected.id) + '/handover', { body: { token }, version: selected.version });
         setSelected({ ...selected, state: 'handover_pending', active_operation_id: result.operation_id });
