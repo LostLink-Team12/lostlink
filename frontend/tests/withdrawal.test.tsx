@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { it, expect, vi } from 'vitest';
 import { OwnerApp } from '../src/App';
 
@@ -48,4 +48,24 @@ it('keeps an accepted withdrawal resumable after polling fails without reporting
 it.each(['cancelled', 'rejected', 'handed_over', 'handover_pending', 'cancellation_pending'])('does not offer withdrawal for %s', async state => {
   await openClaim(async (_s: string, path: string) => path.includes('?') ? { items: [{ id: 'c1', item_title: 'Blue bag', state, version: 4 }] } : { id: 'c1', item_title: 'Blue bag', state, version: 4 });
   expect(screen.queryByRole('button', { name: 'Withdraw claim' })).not.toBeInTheDocument();
+});
+
+it('retains the pending withdrawal detail while the claim list refreshes over a slow connection', async () => {
+  let rejectPoll!: (error: Error) => void;
+  let listReads = 0;
+  const api = vi.fn(async (_s, path) => {
+    if (path.endsWith('/cancel')) return { operation_id: 'op1', version: 5 };
+    if (path.includes('claim-operations')) return new Promise((_resolve, reject) => { rejectPoll = reject; });
+    const claim = { id: 'c1', item_title: 'Blue bag', state: 'approved', version: 4 };
+    if (path.includes('?')) { listReads++; return { items: [claim] }; }
+    return claim;
+  });
+  await openClaim(api);
+  fireEvent.click(screen.getByRole('button', { name: 'Withdraw claim' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm withdrawal' }));
+  await waitFor(() => expect(listReads).toBe(2));
+  expect(screen.getByRole('button', { name: 'Check pending operation' })).toBeInTheDocument();
+  rejectPoll(Error('Connection interrupted'));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Connection interrupted');
+  expect(screen.getByRole('button', { name: 'Check pending operation' })).toBeEnabled();
 });

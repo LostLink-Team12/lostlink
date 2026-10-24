@@ -80,7 +80,7 @@ export function PortalShell({ settings, redirect = (url: string) => location.ass
   };
   return <><PortalHeader signedIn={!!session} email={session?.email} isVenue={portal === 'venue'} signOut={signOut} navigate={next => void switchPortal(next)} />
     <main>{error && <p role="alert">{error}</p>}
-      {loading ? <section><h1>{session ? 'Opening your workspace' : 'Signing you in'}</h1><p role="status">{session ? 'Switching portals securely…' : 'Completing sign-in…'}</p></section> : session ? portal === 'venue' ? <VenueApp api={api} /> : <OwnerApp api={api} /> :
+      {loading ? <section><h1>{session ? 'Opening your workspace' : 'Signing you in'}</h1><p role="status">{session ? 'Switching portals securely…' : 'Completing sign-in…'}</p></section> : session ? portal === 'venue' ? <VenueApp api={api} goToOwner={() => void switchPortal('owner')} /> : <OwnerApp api={api} /> :
         <section className="sign-in"><div><p className="eyebrow">LOSTLINK</p><h1>A way back to you.</h1><p>Find your belongings, follow your claims, and help lost items get home.</p><button onClick={() => void signIn()}>Sign in with Cognito</button><p className="sign-in-note">One account for finding belongings and managing your venue.</p></div><div className="sign-in-story" aria-hidden="true"><span>LOST</span><div className="sign-in-line" /><span>FOUND</span><p>Small details.<br />Meaningful connections.</p></div></section>}
     </main><footer>LostLink · Team 12 · Connecting people with their belongings</footer></>;
 }

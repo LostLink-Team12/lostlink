@@ -21,7 +21,8 @@ export async function finishLogin(config, query, storage = sessionStorage, fetch
   const body = new URLSearchParams({ grant_type: 'authorization_code', client_id: config.clientId, redirect_uri: config.redirectUri, code: params.get('code'), code_verifier: saved.verifier });
   const response = await fetcher(new URL('/oauth2/token', config.domain), { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body, signal: AbortSignal.timeout(30000) });
   const value = await response.json();
-  if (!response.ok || !value.access_token || !Number.isFinite(value.expires_in)) throw Error('Could not complete login. Sign in again.');
+  if (!response.ok || !value.access_token || (!Number.isFinite(value.expires_in) || value.expires_in <= 0)) throw Error('Could not complete login. Sign in again.');
+  const expiresAt = Date.now() + value.expires_in * 1000;
   // userInfo is display data only; backend authorization always uses the access token.
   let email = '';
   try {
@@ -35,5 +36,5 @@ export async function finishLogin(config, query, storage = sessionStorage, fetch
     }
   } catch { /* A profile outage must not discard a valid login. */ }
   const returnPath = /^\/(owner-app|venue-portal)\/$/.test(saved.returnPath || '') || /^\/matches\/[^/?#]+\/?$/.test(saved.returnPath || '') ? saved.returnPath : undefined;
-  return { accessToken: value.access_token, expiresAt: Date.now() + value.expires_in * 1000, email, returnPath };
+  return { accessToken: value.access_token, expiresAt, email, returnPath };
 }

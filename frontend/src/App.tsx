@@ -33,13 +33,14 @@ function Photo({ required = false }: { required?: boolean }) {
 }
 
 export function PageList({ api, service, path, revision = 0, children }: { api: Api; service: string; path: string; revision?: number; children: (rows: any[]) => React.ReactNode }) {
-  const [page, setPage] = useState({ items: [] as any[], has_more: false }), [offset, setOffset] = useState(0), [error, setError] = useState(''), [loading, setLoading] = useState(true);
+  const [page, setPage] = useState({ items: [] as any[], has_more: false, source: '' }), [offset, setOffset] = useState(0), [error, setError] = useState(''), [loading, setLoading] = useState(true);
+  const source = `${service}:${path}`;
   useEffect(() => {
     let current = true; setLoading(true); setError('');
-    api(service, `${path}${path.includes('?') ? '&' : '?'}limit=20&offset=${offset}`).then(value => { if (current) setPage(value); }).catch(e => { if (current) setError(e.message); }).finally(() => { if (current) setLoading(false); });
+    api(service, `${path}${path.includes('?') ? '&' : '?'}limit=20&offset=${offset}`).then(value => { if (current) setPage({ ...value, source }); }).catch(e => { if (current) setError(e.message); }).finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
   }, [api, service, path, offset, revision]);
-  return <>{loading ? <p role="status">Loading…</p> : error ? <p role="alert">{error}</p> : <>{page.items.length ? children(page.items) : <p>No records yet.</p>}<div className="pagination"><button disabled={!offset} onClick={() => setOffset(x => x - 20)}>Previous</button><span>Page {offset / 20 + 1}</span><button disabled={!page.has_more} onClick={() => setOffset(x => x + 20)}>Next</button></div></>}</>;
+  return <>{loading && <p role="status">{page.source === source ? 'Refreshing…' : 'Loading…'}</p>}{error && <p role="alert">{error}</p>}{page.source === source && <>{page.items.length ? children(page.items) : <p>No records yet.</p>}<div className="pagination"><button disabled={!offset} onClick={() => setOffset(x => x - 20)}>Previous</button><span>Page {offset / 20 + 1}</span><button disabled={!page.has_more} onClick={() => setOffset(x => x + 20)}>Next</button></div></>}</>;
 }
 
 export function ItemCards({ items, choose, busy = false, api }: { items: Item[]; choose?: (item: Item) => void; busy?: boolean; api?: Api }) {
@@ -101,7 +102,7 @@ export function OwnerApp({ api }: { api: Api }) {
         <Field label="Describe your lost item" name="description" required={false} /><Photo />
         <details><summary>Filter results</summary><div className="grid"><Field label="Category" name="category" maxLength={100} required={false} /><Field label="Venue ID" name="venue" required={false} /><FoundDateFilters /></div></details>
         <div className="actions"><button disabled={action.busy} value="search">Search items</button><button disabled={action.busy} value="report" className="secondary">Save lost report</button></div>
-      </form>{page == 'search' && action.status}
+      </form>{page === 'search' && action.status}
     </section>
     <MatchLink api={api} choose={choose} revision={revision} busy={claimAction.busy || action.busy} />
     {results && <section><h2>Search results</h2>{!results.length && <p>No matches. Try another description or save a lost report.</p>}{truncated && <p>Results may be incomplete. Narrow your filters.</p>}<ItemCards api={api} items={results} choose={choose} busy={claimAction.busy || action.busy} /></section>}
@@ -179,7 +180,7 @@ function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; ven
 
 type PortalAccess = { venue: { name: string } | null; can_manage_venue: boolean; can_manage_members: boolean; can_onboard_venues: boolean };
 
-export function VenueApp({ api }: { api: Api }) {
+export function VenueApp({ api, goToOwner }: { api: Api; goToOwner?: () => void }) {
   const action = useAction(), onboardingAction = useAction(), [revision, setRevision] = useState(0);
   const [route, navigate] = usePortalPage('register');
   const [access, setAccess] = useState<PortalAccess | null>(null), [accessError, setAccessError] = useState(''), [accessAttempt, setAccessAttempt] = useState(0);
@@ -191,12 +192,12 @@ export function VenueApp({ api }: { api: Api }) {
     api('venue', '/v1/session').then(value => { if (current) setAccess(value); }).catch(e => { if (current) setAccessError(e instanceof Error ? e.message : 'Could not verify venue access.'); });
     return () => { current = false; };
   }, [api, accessAttempt]);
-  if (accessError) return <section><h1>Venue access unavailable</h1><p role="alert">Could not verify your venue access. {accessError}</p><button onClick={() => setAccessAttempt(x => x + 1)}>Retry access check</button><a href="/owner-app/">Go to Owner App</a></section>;
+  if (accessError) return <section><h1>Venue access unavailable</h1><p role="alert">Could not verify your venue access. {accessError}</p><button onClick={() => setAccessAttempt(x => x + 1)}>Retry access check</button><a href="/owner-app/" onClick={e => { if (goToOwner) { e.preventDefault(); goToOwner(); } }}>Go to Owner App</a></section>;
   if (!access) return <section><h1>Venue Portal</h1><p role="status">Checking venue access…</p></section>;
   const staff = access.can_manage_venue === true;
   const administrator = staff && access.can_manage_members === true;
   const platform = access.can_onboard_venues === true;
-  if (!staff && !platform) return <section><h1>Venue access required</h1><p>Your account does not have active venue access. Ask a venue administrator to add you, then sign in again after membership sync completes.</p><a href="/owner-app/">Go to Owner App</a><button onClick={() => setAccessAttempt(x => x + 1)}>Check access again</button></section>;
+  if (!staff && !platform) return <section><h1>Venue access required</h1><p>Your account does not have active venue access. Ask a venue administrator to add you, then sign in again after membership sync completes.</p><a href="/owner-app/" onClick={e => { if (goToOwner) { e.preventDefault(); goToOwner(); } }}>Go to Owner App</a><button onClick={() => setAccessAttempt(x => x + 1)}>Check access again</button></section>;
   const links = [
     ...(staff ? [
       { id: 'register', label: 'Register item', description: 'Record a found belonging' },
