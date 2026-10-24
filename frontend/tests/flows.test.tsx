@@ -53,7 +53,7 @@ it('saves a lost report using description instead of the search-only text field'
   render(<OwnerApp api={api} />);
   fireEvent.change(screen.getByLabelText('Describe your lost item'), { target: { value: 'Black umbrella' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save lost report' }));
-  await screen.findByText('Lost report saved. New matches will appear below.');
+  await screen.findByText('Lost report saved. View it in My lost reports.');
   expect(api).toHaveBeenCalledWith('matching', '/v1/lost-reports', { body: { description: 'Black umbrella' } });
 });
 

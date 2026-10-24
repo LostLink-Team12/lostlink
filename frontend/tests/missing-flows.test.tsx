@@ -65,6 +65,7 @@ it('closes a report with its version and selected reason', async () => {
     return { items: [] };
   });
   render(<OwnerApp api={api} />);
+  fireEvent.click(screen.getByRole('link', { name: /My lost reports/ }));
   fireEvent.change(await screen.findByLabelText('Closure reason'), { target: { value: 'no_longer_needed' } });
   fireEvent.click(screen.getByRole('button', { name: 'Close lost report' }));
   await screen.findByText('Lost report closed.');

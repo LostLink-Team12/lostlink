@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ItemPhoto } from './ItemPhoto';
+import { PortalLayout, usePortalPage } from './PortalLayout';
 import { FoundDateFilters, foundDateError, foundDateRange } from './SearchDates';
 import { HandoverCode, MatchLink, Members, ScanToken } from './MissingFlows';
 import { photoBase64, registerItem, validatePhoto, waitOperation } from './api.js';
@@ -54,6 +55,8 @@ export function ItemCards({ items, choose, busy = false, api }: { items: Item[];
 
 export function OwnerApp({ api }: { api: Api }) {
   const action = useAction(), claimAction = useAction();
+  const [route, navigate] = usePortalPage('search');
+  const page = ['search', 'reports', 'claims'].includes(route) ? route : 'search';
   const claimHeading = useRef<HTMLHeadingElement>(null);
   const [claimItem, setClaimItem] = useState<Item | null>(null), [claimSubmitted, setClaimSubmitted] = useState(false);
   useEffect(() => {
@@ -75,7 +78,12 @@ export function OwnerApp({ api }: { api: Api }) {
     if (!itemId) throw Error('This item is missing its identifier. Search again.');
     setClaim(await api('claim', `/v1/claim-questions?item_id=${id(itemId)}`));
   });
-  return <>
+  return <PortalLayout label="Owner" links={[
+    { id: 'search', label: 'Search', description: 'Find your belongings' },
+    { id: 'reports', label: 'My lost reports', description: 'Track future matches' },
+    { id: 'claims', label: 'My claims', description: 'Follow your requests' },
+  ]} current={page} navigate={navigate}>
+    <div hidden={page !== 'search'}>
     <section><p className="eyebrow">OWNER APP</p><h1>Find what matters.</h1><p>Search found items across venues, or save a lost report for future matches.</p>
       <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); const mode = (e.nativeEvent as SubmitEvent).submitter?.getAttribute('value'); if (foundDateError(text(data, 'from'), text(data, 'until'))) { const input = e.currentTarget.elements.namedItem('from') as HTMLInputElement; const filters = input.closest('details'); if (filters) filters.open = true; input.focus(); return; } void action.run(async () => {
         const body = await query(data);
@@ -83,7 +91,7 @@ export function OwnerApp({ api }: { api: Api }) {
           if (!body.text) throw Error('Describe your lost item before saving a report.');
           const { text: description, ...filters } = body;
           await api('matching', '/v1/lost-reports', { body: { description, ...filters } });
-          setRevision(x => x + 1); action.setMessage('Lost report saved. New matches will appear below.');
+          setRevision(x => x + 1); action.setMessage('Lost report saved. View it in My lost reports.');
         } else {
           if (!body.text && !body.photo_base64) throw Error('Enter a description or choose a photo.');
           const value = await api('matching', '/v1/search', { body: { ...body, limit: 20 } }); setResults(value.items); setTruncated(value.potentially_truncated);
@@ -92,7 +100,7 @@ export function OwnerApp({ api }: { api: Api }) {
         <Field label="Describe your lost item" name="description" required={false} /><Photo />
         <details><summary>Filter results</summary><div className="grid"><Field label="Category" name="category" maxLength={100} required={false} /><Field label="Venue ID" name="venue" required={false} /><FoundDateFilters /></div></details>
         <div className="actions"><button disabled={action.busy} value="search">Search items</button><button disabled={action.busy} value="report" className="secondary">Save lost report</button></div>
-      </form>{action.status}
+      </form>{page == 'search' && action.status}
     </section>
     {claimItem && <section aria-labelledby="claim-heading">
       <h2 id="claim-heading" ref={claimHeading} tabIndex={-1}>Claim {claimItem.title}</h2>
@@ -107,13 +115,15 @@ export function OwnerApp({ api }: { api: Api }) {
     </section>}
     <MatchLink api={api} choose={choose} revision={revision} busy={claimAction.busy || action.busy} />
     {results && <section><h2>Search results</h2>{!results.length && <p>No matches. Try another description or save a lost report.</p>}{truncated && <p>Results may be incomplete. Narrow your filters.</p>}<ItemCards api={api} items={results} choose={choose} busy={claimAction.busy || action.busy} /></section>}
-    <section><h2>My lost reports</h2><button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh records</button><PageList api={api} service="matching" path="/v1/lost-reports" revision={revision}>{rows => rows.map(report => <article key={report.id}><h3>{report.description}</h3><p>{report.state}</p><button onClick={() => setMatches(report.id)}>View matches</button>{report.state === 'open' && <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
+    </div>
+    {page === 'reports' && <><section><h1>My lost reports</h1><p>Save a report from Search, then check for new matches here.</p>{action.status}<button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh records</button><PageList api={api} service="matching" path="/v1/lost-reports" revision={revision}>{rows => rows.map(report => <article key={report.id}><h3>{report.description}</h3><p>{report.state}</p><button onClick={() => setMatches(report.id)}>View matches</button>{report.state === 'open' && <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
       await api('matching', '/v1/lost-reports/' + id(report.id) + '/close', { body: { reason: text(data, 'reason') }, version: report.version });
       setRevision(x => x + 1); action.setMessage('Lost report closed.');
     }); }}><label>Closure reason<select name="reason"><option value="found">Found my item</option><option value="no_longer_needed">No longer needed</option></select></label><button disabled={action.busy}>Close lost report</button></form>}</article>)}</PageList></section>
     {matches && <section><h2>Report matches</h2><PageList api={api} service="matching" path={`/v1/lost-reports/${id(matches)}/matches`} revision={revision}>{rows => <ItemCards api={api} items={rows.map(row => row.item)} choose={choose} busy={claimAction.busy || action.busy} />}</PageList></section>}
-    <section><h2>My claims</h2><PageList api={api} service="claim" path="/v1/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue={false} refresh={() => setRevision(x => x + 1)} />}</PageList></section>
-  </>;
+    </>}
+    {page === 'claims' && <section><h1>My claims</h1><PageList api={api} service="claim" path="/v1/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue={false} refresh={() => setRevision(x => x + 1)} />}</PageList></section>}
+  </PortalLayout>;
 }
 
 function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; venue: boolean; refresh: () => void }) {
