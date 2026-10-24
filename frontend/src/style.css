@@ -24,3 +24,7 @@ main{max-width:1320px}
 .claim-item article img{height:260px}.claim-layout h1{font-size:30px;letter-spacing:-.6px;overflow-wrap:anywhere}
 .claim-layout form{margin-top:20px}.claim-layout input{width:100%}
 @media(max-width:1050px){.claim-layout{grid-template-columns:1fr}.claim-item .cards article img{height:220px}}
+
+.account-email{font-size:13px;color:#5b7067;overflow-wrap:anywhere;max-width:260px;user-select:text}
+header>nav{justify-content:flex-end;flex-wrap:wrap}
+@media(max-width:600px){header{padding:18px 5%}.account-email{flex-basis:100%;max-width:none;text-align:right}}

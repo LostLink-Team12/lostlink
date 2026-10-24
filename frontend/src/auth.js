@@ -22,5 +22,17 @@ export async function finishLogin(config, query, storage = sessionStorage, fetch
   const response = await fetcher(new URL('/oauth2/token', config.domain), { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body, signal: AbortSignal.timeout(30000) });
   const value = await response.json();
   if (!response.ok || !value.access_token || !Number.isFinite(value.expires_in)) throw Error('Could not complete login. Sign in again.');
-  return { accessToken: value.access_token, expiresAt: Date.now() + value.expires_in * 1000 };
+  // userInfo is display data only; backend authorization always uses the access token.
+  let email = '';
+  try {
+    const profileResponse = await fetcher(new URL('/oauth2/userInfo', config.domain), {
+      headers: { Authorization: `Bearer ${value.access_token}` },
+      cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(10000),
+    });
+    if (profileResponse.ok) {
+      const profile = await profileResponse.json();
+      if (typeof profile.sub === 'string' && typeof profile.email === 'string') email = profile.email;
+    }
+  } catch { /* A profile outage must not discard a valid login. */ }
+  return { accessToken: value.access_token, expiresAt: Date.now() + value.expires_in * 1000, email };
 }
