@@ -10,7 +10,7 @@ it('disables matches for an already closed report without loading its results', 
   const button = await screen.findByRole('button', { name: 'View matches' });
   expect(button).toBeDisabled(); fireEvent.click(button);
   expect(screen.queryByRole('region', { name: 'Report matches' })).not.toBeInTheDocument();
-  expect(api.mock.calls.some(([,p]) => p.includes('/r1/matches'))).toBe(false);
+  expect(api.mock.calls.some(([,p]) => p.includes('/r1/candidates'))).toBe(false);
   expect(screen.getByText('Matching has stopped for this closed report.')).toBeInTheDocument();
 });
 

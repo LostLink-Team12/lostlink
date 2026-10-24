@@ -35,15 +35,32 @@ function Photo({ required = false }: { required?: boolean }) {
   return <label>Photo (JPEG, PNG or WebP)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" required={required} /></label>;
 }
 
-export function PageList({ api, service, path, revision = 0, children }: { api: Api; service: string; path: string; revision?: number; children: (rows: any[]) => React.ReactNode }) {
-  const [page, setPage] = useState({ items: [] as any[], has_more: false, source: '' }), [offset, setOffset] = useState(0), [error, setError] = useState(''), [loading, setLoading] = useState(true);
-  const source = `${service}:${path}`;
+type PageListProps = { api: Api; service: string; path: string; revision?: number; label?: string; children: (rows: any[]) => React.ReactNode };
+
+export function PageList(props: PageListProps) {
+  // A new resource starts on page one; refreshing the same resource retains operation details.
+  return <ListPage key={`${props.service}:${props.path}`} {...props} />;
+}
+
+function ListPage({ api, service, path, revision = 0, label = 'Record pages', children }: PageListProps) {
+  const [page, setPage] = useState({ items: [] as any[], has_more: false, source: '', candidate_limit: 0, potentially_truncated: false });
+  const [offset, setOffset] = useState(0), [error, setError] = useState(''), [loading, setLoading] = useState(true);
+  const source = `${service}:${path}`, size = 20;
   useEffect(() => {
     let current = true; setLoading(true); setError('');
-    api(service, `${path}${path.includes('?') ? '&' : '?'}limit=20&offset=${offset}`).then(value => { if (current) setPage({ ...value, source }); }).catch(e => { if (current) setError(e.message); }).finally(() => { if (current) setLoading(false); });
+    api(service, `${path}${path.includes('?') ? '&' : '?'}limit=${size}&offset=${offset}`).then(value => { if (current) setPage({ ...value, source }); }).catch(e => { if (current) setError(e.message); }).finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
   }, [api, service, path, offset, revision]);
-  return <>{loading && <p role="status">{page.source === source ? 'Refreshing…' : 'Loading…'}</p>}{error && <p role="alert">{error}</p>}{page.source === source && <>{page.items.length ? children(page.items) : <p>No records yet.</p>}<div className="pagination"><button disabled={!offset} onClick={() => setOffset(x => x - 20)}>Previous</button><span>Page {offset / 20 + 1}</span><button disabled={!page.has_more} onClick={() => setOffset(x => x + 20)}>Next</button></div></>}</>;
+  return <>{loading && <p role="status">{page.source === source ? 'Refreshing…' : 'Loading…'}</p>}{error && <p role="alert">{error}</p>}{page.source === source && <>
+    {page.items.length ? children(page.items) : <p>No records yet.</p>}
+    {page.potentially_truncated && <p>The candidate window is limited to {page.candidate_limit} items. Use more specific filters in Search to narrow the results.</p>}
+    <nav className="pagination" aria-label={label} aria-busy={loading}>
+      <button disabled={loading || offset === 0} title={loading ? 'Loading records' : offset === 0 ? 'This is the first page' : 'Previous page'} onClick={() => setOffset(x => Math.max(0, x - size))}>Previous</button>
+      <span>Page {offset / size + 1}</span>
+      {page.items.length > 0 && <span className="page-range">Showing {offset + 1}–{offset + page.items.length}</span>}
+      <button disabled={loading || !page.has_more} title={loading ? 'Loading records' : page.has_more ? 'Next page' : 'No more results'} onClick={() => setOffset(x => x + size)}>Next</button>
+    </nav>
+  </>}</>;
 }
 
 export function ItemCards({ items, choose, busy = false, api }: { items: Item[]; choose?: (item: Item, reportId?: string) => void; busy?: boolean; api?: Api }) {
@@ -120,16 +137,16 @@ export function OwnerApp({ api }: { api: Api }) {
         await api('claim', '/v1/claims', { body: { item_id: claim.item_id, ...(claimReport ? { lost_report_id: claimReport } : {}), answers: claim.questions.map(q => ({ question_id: q.id, version: q.version, answer: text(data, q.id) })), ...(Object.keys(contact).length ? { contact } : {}) } });
         setClaim(null); setClaimSubmitted(true); setRevision(x => x + 1); claimAction.setMessage('Claim submitted. The venue will review your answers.');
       }); }}>{claim.questions.map(q => <Field key={q.id} label={q.prompt} name={q.id} maxLength={1000} />)}<Field label="Contact name" name="name" required={false} maxLength={120} /><Field label="Phone" name="phone" type="tel" required={false} maxLength={32} /><button disabled={claimAction.busy}>Submit claim</button></form></>}
-      {!claim && !claimSubmitted && !claimAction.busy && <button onClick={() => void choose(claimItem)}>Retry loading questions</button>}
+      {!claim && !claimSubmitted && !claimAction.busy && <button onClick={() => void choose(claimItem, claimReport || undefined)}>Retry loading questions</button>}
       <button type="button" disabled={claimAction.busy} className="secondary" onClick={() => { setClaimItem(null); setClaim(null); navigate('search'); }}>{claimSubmitted ? 'Close' : 'Cancel'}</button>
     </section></div>}
     {page === 'claim' && !claimItem && <section><h1>Select an item to claim</h1><p>Return to Search and choose an item to see its current details and verification questions.</p><button onClick={() => navigate('search')}>Back to Search</button></section>}
-    {page === 'reports' && <><section><h1>My lost reports</h1><p>Save a report from Search, then check for new matches here.</p>{action.status}<button className="secondary" onClick={() => { setMatches(null); setRevision(x => x + 1); }}>Refresh records</button><PageList api={api} service="matching" path="/v1/lost-reports" revision={revision}>{rows => rows.map(report => <article key={report.id} aria-label={`Lost report: ${report.description}`}><h3>{report.description}</h3><p><StatusBadge state={closedReports.includes(report.id) ? 'closed' : report.state} /></p><RecordTimes entries={[{ label: 'Reported', value: report.created_at }]} /><ReportClaimMarker api={api} reportId={report.id} revision={revision} /><button disabled={action.busy || report.state !== 'open' || closedReports.includes(report.id)} onClick={() => setMatches(report.id)}>View matches</button>{(report.state !== 'open' || closedReports.includes(report.id)) && <p>Matching has stopped for this closed report.</p>}{report.state === 'open' && !closedReports.includes(report.id) && <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
+    {page === 'reports' && <><section><h1>My lost reports</h1><p>Save a report from Search, then check for new matches here.</p>{action.status}<button className="secondary" onClick={() => { setMatches(null); setRevision(x => x + 1); }}>Refresh records</button><PageList api={api} service="matching" path="/v1/lost-reports" label="Lost report pages" revision={revision}>{rows => rows.map(report => <article key={report.id} aria-label={`Lost report: ${report.description}`}><h3>{report.description}</h3><p><StatusBadge state={closedReports.includes(report.id) ? 'closed' : report.state} /></p><RecordTimes entries={[{ label: 'Reported', value: report.created_at }]} /><ReportClaimMarker api={api} reportId={report.id} revision={revision} /><button disabled={action.busy || report.state !== 'open' || closedReports.includes(report.id)} onClick={() => setMatches(report.id)}>View matches</button>{(report.state !== 'open' || closedReports.includes(report.id)) && <p>Matching has stopped for this closed report.</p>}{report.state === 'open' && !closedReports.includes(report.id) && <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
       await api('matching', '/v1/lost-reports/' + id(report.id) + '/close', { body: { reason: text(data, 'reason') }, version: report.version });
       setClosedReports(current => [...current, report.id]); setMatches(current => current === report.id ? null : current);
       setRevision(x => x + 1); action.setMessage('Lost report closed.');
     }); }}><label>Closure reason<select name="reason"><option value="found">Found my item</option><option value="no_longer_needed">No longer needed</option></select></label><button disabled={action.busy}>Close lost report</button></form>}</article>)}</PageList></section>
-    {matches && <section aria-labelledby="report-matches-heading"><h2 id="report-matches-heading">Report matches</h2><PageList api={api} service="matching" path={`/v1/lost-reports/${id(matches)}/matches`} revision={revision}>{rows => <ItemCards api={api} items={rows.map(row => row.item)} choose={item => void choose(item, matches)} busy={claimAction.busy || action.busy} />}</PageList></section>}
+    {matches && <section aria-labelledby="report-matches-heading"><h2 id="report-matches-heading">Report matches</h2><p>Browse similar items using your saved description, photo and filters, ranked like Search. Automatic email matches use a stricter confidence threshold.</p><PageList api={api} service="matching" path={`/v1/lost-reports/${id(matches)}/candidates`} label="Similar item pages" revision={revision}>{rows => <ItemCards api={api} items={rows} choose={item => void choose(item, matches)} busy={claimAction.busy || action.busy} />}</PageList></section>}
     </>}
     {page === 'claims' && <section><h1>My claims</h1><p>View your requests, collect an approved item, or withdraw a request you no longer need.</p><button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh claims</button><PageList api={api} service="claim" path="/v1/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue={false} refresh={() => setRevision(x => x + 1)} />}</PageList></section>}
   </PortalLayout>;

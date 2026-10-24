@@ -88,6 +88,15 @@ class SearchResults(BaseModel):
     potentially_truncated: bool
 
 
+class ReportCandidatesPage(BaseModel):
+    items: list[SearchHit]
+    limit: int
+    offset: int
+    has_more: bool
+    candidate_limit: int
+    potentially_truncated: bool
+
+
 class MatchView(BaseModel):
     id: UUID
     report_id: UUID
