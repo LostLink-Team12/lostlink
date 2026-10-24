@@ -149,7 +149,9 @@ def questions(item_id: UUID, request: Request, principal: Owner):
     responses=error_responses(404, 409, 428),
 )
 def create(body: schemas.NewClaim, request: Request, principal: Owner, key: Key = None):
-    operation, payload = "POST /v1/claims", body.model_dump(mode="json")
+    # Keep legacy idempotency hashes unchanged for claims without report provenance.
+    excluded = {"lost_report_id"} if body.lost_report_id is None else set()
+    operation, payload = "POST /v1/claims", body.model_dump(mode="json", exclude=excluded)
     scope, request_hash = identity(principal, operation, key, payload, None)
     # Replay before external calls: a later Item state must not change a committed answer.
     with owner_session(request, principal) as session:

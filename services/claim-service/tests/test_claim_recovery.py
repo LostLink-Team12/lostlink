@@ -468,3 +468,16 @@ def test_report_provenance_is_atomic_replayable_and_owner_filtered(claim_env):
     assert cancelled.status_code == 200
     row = env.client.get(filtered, headers=headers()).json()["items"][0]
     assert row["state"] == "cancelled" and row["lost_report_id"] == str(report_id)
+
+
+def test_report_source_migration_keeps_existing_claims(claim_env):
+    env = claim_env
+    claim = submit(env, make_item(env))
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setenv("MIGRATION_DATABASE_URL", env.migration_url)
+        for key, role in env.roles.items():
+            patch.setenv(key.upper() + "_ROLE", role)
+        command.downgrade(env.configs["claim"], "0001_claim")
+        command.upgrade(env.configs["claim"], "head")
+    saved = owner_claim(env, claim["id"])
+    assert saved["state"] == "submitted" and saved["lost_report_id"] is None

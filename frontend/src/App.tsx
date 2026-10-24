@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ItemPhoto } from './ItemPhoto';
 import { ReportClaimMarker } from './ReportClaimMarker';
 import { RecordTimes } from './RecordTimes';
+import { StatusBadge } from './StatusBadge';
 import { PortalLayout, usePortalPage } from './PortalLayout';
 import { FoundDateFilters, foundDateError, foundDateRange } from './SearchDates';
 import { HandoverCode, MatchLink, Members, ScanToken } from './MissingFlows';
@@ -24,7 +25,7 @@ export function useAction() {
     try { await action(); } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); }
     finally { locked.current = false; setBusy(false); }
   };
-  return { busy, run, setMessage, status: <><p role="status" aria-live="polite">{busy ? 'Working…' : message}</p>{error && <p role="alert">{error}</p>}</> };
+  return { busy, run, setMessage, status: <><p className={busy ? 'action-status action-pending' : 'action-status action-success'} role="status" aria-live="polite">{busy ? 'Working…' : message}</p>{error && <p role="alert">{error}</p>}</> };
 }
 
 function Field({ label, name, type = 'text', required = true, maxLength = 2000 }: { label: string; name: string; type?: string; required?: boolean; maxLength?: number }) {
@@ -51,7 +52,7 @@ export function ItemCards({ items, choose, busy = false, api }: { items: Item[];
     <span className="tag">{item.category}</span><h3>{item.title}</h3><p>{item.description}</p>
     {item.public_location_hint && <p>{item.public_location_hint}</p>}
     {item.score !== undefined && <p>Similarity {item.score.toFixed(3)}</p>}
-    {item.state && <p>Status: {item.state}</p>}
+    {item.state && <p><StatusBadge state={item.state} /></p>}
     <RecordTimes entries={[{ label: 'Found', value: item.found_at }, { label: 'Registered', value: item.created_at }]} />
     {choose && <button disabled={busy} onClick={() => choose(item)} aria-label={`Claim ${item.title}`}>This could be mine</button>}
   </article>)}</div>;
@@ -122,7 +123,7 @@ export function OwnerApp({ api }: { api: Api }) {
       <button type="button" disabled={claimAction.busy} className="secondary" onClick={() => { setClaimItem(null); setClaim(null); navigate('search'); }}>{claimSubmitted ? 'Close' : 'Cancel'}</button>
     </section></div>}
     {page === 'claim' && !claimItem && <section><h1>Select an item to claim</h1><p>Return to Search and choose an item to see its current details and verification questions.</p><button onClick={() => navigate('search')}>Back to Search</button></section>}
-    {page === 'reports' && <><section><h1>My lost reports</h1><p>Save a report from Search, then check for new matches here.</p>{action.status}<button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh records</button><PageList api={api} service="matching" path="/v1/lost-reports" revision={revision}>{rows => rows.map(report => <article key={report.id}><h3>{report.description}</h3><p>{report.state}</p><RecordTimes entries={[{ label: 'Reported', value: report.created_at }]} /><ReportClaimMarker api={api} reportId={report.id} revision={revision} /><button onClick={() => setMatches(report.id)}>View matches</button>{report.state === 'open' && <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
+    {page === 'reports' && <><section><h1>My lost reports</h1><p>Save a report from Search, then check for new matches here.</p>{action.status}<button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh records</button><PageList api={api} service="matching" path="/v1/lost-reports" revision={revision}>{rows => rows.map(report => <article key={report.id}><h3>{report.description}</h3><p><StatusBadge state={report.state} /></p><RecordTimes entries={[{ label: 'Reported', value: report.created_at }]} /><ReportClaimMarker api={api} reportId={report.id} revision={revision} /><button onClick={() => setMatches(report.id)}>View matches</button>{report.state === 'open' && <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
       await api('matching', '/v1/lost-reports/' + id(report.id) + '/close', { body: { reason: text(data, 'reason') }, version: report.version });
       setRevision(x => x + 1); action.setMessage('Lost report closed.');
     }); }}><label>Closure reason<select name="reason"><option value="found">Found my item</option><option value="no_longer_needed">No longer needed</option></select></label><button disabled={action.busy}>Close lost report</button></form>}</article>)}</PageList></section>
@@ -147,7 +148,7 @@ function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; ven
     const expanded = expandedId === row.id, loaded = expanded && selected?.id === row.id;
     const shown = loaded ? selected! : row;
     return <article key={row.id} className={expanded ? 'review' : undefined} aria-label={`Claim for ${row.item_title}`} aria-busy={expanded && action.busy}>
-      <h3>{shown.item_title}</h3><p>Status: {shown.state}</p>
+      <h3>{shown.item_title}</h3><p><StatusBadge state={shown.state} /></p>
       <RecordTimes entries={[{ label: 'Submitted', value: shown.created_at }, { label: 'Approved', value: shown.approved_at }, { label: 'Closed', value: shown.closed_at }]} />
       {!loaded ? <button disabled={action.busy} aria-expanded={expanded} aria-controls={`claim-details-${row.id}`} aria-label={`${venue ? 'Review' : 'View'} ${row.item_title}`} onClick={() => void action.run(async () => {
         setExpandedId(row.id); setSelected(null); setQr(''); setWithdrawing(false);

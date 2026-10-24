@@ -24,5 +24,5 @@ it('persists claim provenance from report matches and restores the marker after 
   cleanup(); history.replaceState({}, '', '/owner-app/#reports');
   render(<OwnerApp api={api} />);
   expect(await screen.findByText('Claim submitted', { exact: true })).toBeInTheDocument();
-  expect(screen.getByText('open', { exact: true })).toBeInTheDocument();
+  expect(screen.getByLabelText('Status: Open')).toBeInTheDocument();
 });
