@@ -181,6 +181,7 @@ type PortalAccess = { venue: { name: string } | null; can_manage_venue: boolean;
 
 export function VenueApp({ api }: { api: Api }) {
   const action = useAction(), onboardingAction = useAction(), [revision, setRevision] = useState(0);
+  const [route, navigate] = usePortalPage('register');
   const [access, setAccess] = useState<PortalAccess | null>(null), [accessError, setAccessError] = useState(''), [accessAttempt, setAccessAttempt] = useState(0);
   const progress = useRef<Record<string, any>>({}), [lockedForm, setLockedForm] = useState(false);
   const draft = useRef<{ item: object; photo: File } | null>(null);
@@ -196,9 +197,19 @@ export function VenueApp({ api }: { api: Api }) {
   const administrator = staff && access.can_manage_members === true;
   const platform = access.can_onboard_venues === true;
   if (!staff && !platform) return <section><h1>Venue access required</h1><p>Your account does not have active venue access. Ask a venue administrator to add you, then sign in again after membership sync completes.</p><a href="/owner-app/">Go to Owner App</a><button onClick={() => setAccessAttempt(x => x + 1)}>Check access again</button></section>;
-  return <>
+  const links = [
+    ...(staff ? [
+      { id: 'register', label: 'Register item', description: 'Record a found belonging' },
+      { id: 'items', label: 'Found items', description: 'Browse your inventory' },
+      { id: 'reviews', label: 'Claims to review', description: 'Review and hand over' },
+    ] : []),
+    ...(administrator ? [{ id: 'members', label: 'Staff management', description: 'Manage venue access' }] : []),
+    ...(platform ? [{ id: 'onboarding', label: 'Venue onboarding', description: 'Create a new venue' }] : []),
+  ];
+  const page = links.some(link => link.id === route) ? route : links[0].id;
+  return <PortalLayout label="Venue" links={links} current={page} navigate={navigate} locked={action.busy || onboardingAction.busy}>
     <section><p className="eyebrow">VENUE PORTAL</p><h1>{access.venue?.name || 'Venue Portal'}</h1><p>Register found items and help them get home.</p><button className="secondary" onClick={() => { refresh(); setAccessAttempt(x => x + 1); }}>Refresh records</button></section>
-    {staff && <><section><h2>Register a found item</h2><form onSubmit={e => { e.preventDefault(); const form = e.currentTarget, data = new FormData(form); void action.run(async () => {
+    {staff && <div hidden={page !== 'register'}><section><h2 data-page-heading>Register a found item</h2><form onSubmit={e => { e.preventDefault(); const form = e.currentTarget, data = new FormData(form); void action.run(async () => {
       if (!draft.current) {
         validatePhoto(file(data), 10);
         draft.current = { photo: file(data)!, item: { title: text(data, 'title'), description: text(data, 'description'), category: text(data, 'category'), found_at: new Date(text(data, 'found_at')).toISOString(), public_location_hint: text(data, 'location') || null, verification_questions: [{ prompt: text(data, 'question'), reference_answer: text(data, 'answer') }] } };
@@ -210,11 +221,12 @@ export function VenueApp({ api }: { api: Api }) {
       <fieldset disabled={lockedForm || action.busy}><div className="grid"><Field label="Item title" name="title" maxLength={120} /><Field label="Category" name="category" maxLength={100} /></div><Field label="Description" name="description" /><Field label="Found at" name="found_at" type="datetime-local" /><Field label="Public location hint" name="location" required={false} maxLength={300} /><Photo required /><Field label="Verification question" name="question" maxLength={300} /><Field label="Private reference answer" name="answer" maxLength={1000} /></fieldset>
       <button disabled={action.busy}>{lockedForm ? 'Retry registration' : 'Register item'}</button>
     </form>{lockedForm && <p>Registration started. Keep this page open and retry with the same photo if the connection fails.</p>}{action.status}</section>
-    <section><h2>Found items</h2><PageList api={api} service="item" path="/v1/items" revision={revision}>{rows => <ItemCards items={rows} />}</PageList></section>
-    <section><h2>Claims to review</h2><PageList api={api} service="claim" path="/v1/venue/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue refresh={refresh} />}</PageList></section></>}
-    {administrator && <Members api={api} />}
-    {platform && <section><details><summary>Venue onboarding (platform administrators)</summary><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void onboardingAction.run(async () => {
+    </div>}
+    {staff && page === 'items' && <section><h2 data-page-heading>Found items</h2><PageList api={api} service="item" path="/v1/items" revision={revision}>{rows => <ItemCards items={rows} />}</PageList></section>}
+    {staff && page === 'reviews' && <section><h2 data-page-heading>Claims to review</h2><PageList api={api} service="claim" path="/v1/venue/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue refresh={refresh} />}</PageList></section>}
+    {administrator && page === 'members' && <Members api={api} expanded />}
+    {platform && page === 'onboarding' && <section><h2 data-page-heading>Venue onboarding (platform administrators)</h2><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void onboardingAction.run(async () => {
       await api('venue', '/v1/admin/venues', { body: { name: text(data, 'name'), slug: text(data, 'slug'), initial_admin_sub: text(data, 'admin') } }); onboardingAction.setMessage('Venue created. The initial administrator must sign in again after identity sync.');
-    }); }}><Field label="Venue name" name="name" maxLength={120} /><Field label="Venue slug" name="slug" maxLength={80} /><Field label="Initial administrator Cognito subject" name="admin" maxLength={128} /><button disabled={onboardingAction.busy}>Create venue</button></form>{onboardingAction.status}</details></section>}
-  </>;
+    }); }}><Field label="Venue name" name="name" maxLength={120} /><Field label="Venue slug" name="slug" maxLength={80} /><Field label="Initial administrator Cognito subject" name="admin" maxLength={128} /><button disabled={onboardingAction.busy}>Create venue</button></form>{onboardingAction.status}</section>}
+  </PortalLayout>;
 }

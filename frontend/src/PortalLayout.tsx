@@ -23,7 +23,7 @@ export function PortalLayout({ label, links, current, navigate, locked = false, 
 }) {
   const content = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const heading = Array.from(content.current?.querySelectorAll<HTMLElement>('h1, h2') || []).find(node => !node.closest('[hidden]'));
+    const heading = Array.from(content.current?.querySelectorAll<HTMLElement>('[data-page-heading], h1, h2') || []).find(node => node.hasAttribute('data-page-heading') && !node.closest('[hidden]')) || Array.from(content.current?.querySelectorAll<HTMLElement>('h1, h2') || []).find(node => !node.closest('[hidden]'));
     heading?.setAttribute('tabindex', '-1'); heading?.focus({ preventScroll: true });
   }, [current]);
   return <div className="portal-layout">

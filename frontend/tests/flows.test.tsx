@@ -34,6 +34,7 @@ it('venue loads private answers, sends If-Match and waits for approval completio
     return { items: [] };
   });
   render(<VenueApp api={api} />);
+  fireEvent.click(await screen.findByRole('link', { name: /Claims to review/ }));
   fireEvent.click(await screen.findByRole('button', { name: 'Review Blue bag' }));
   await screen.findByText('Notebook');
   fireEvent.click(screen.getByRole('button', { name: 'Approve claim' }));

@@ -20,6 +20,7 @@ function venueApi(state = 'submitted') {
 
 it.each(['answers_incorrect', 'insufficient_detail', 'duplicate', 'other'])('rejects using reason %s and the detail version', async reason => {
   const api = venueApi(); render(<VenueApp api={api} />);
+  fireEvent.click(await screen.findByRole('link', { name: /Claims to review/ }));
   fireEvent.click(await screen.findByRole('button', { name: 'Review Bag' }));
   fireEvent.change(await screen.findByLabelText('Rejection reason'), { target: { value: reason } });
   fireEvent.click(screen.getByRole('button', { name: 'Reject claim' }));
@@ -29,6 +30,7 @@ it.each(['answers_incorrect', 'insufficient_detail', 'duplicate', 'other'])('rej
 
 it('submits the unmodified QR payload and polls the accepted handover operation', async () => {
   const api = venueApi('approved'); render(<VenueApp api={api} />);
+  fireEvent.click(await screen.findByRole('link', { name: /Claims to review/ }));
   fireEvent.click(await screen.findByRole('button', { name: 'Review Bag' }));
   const payload = '  lostlink:original-QR_payload+abc/==  ';
   fireEvent.change(await screen.findByLabelText('Handover payload'), { target: { value: payload } });
@@ -42,6 +44,7 @@ it('keeps an accepted handover operation resumable when polling fails', async ()
   const base = venueApi('approved');
   const api = vi.fn(async (s, p, o) => { if (p === '/v1/claim-operations/op1') throw Error('Polling unavailable'); return base(s,p,o); });
   render(<VenueApp api={api} />);
+  fireEvent.click(await screen.findByRole('link', { name: /Claims to review/ }));
   fireEvent.click(await screen.findByRole('button', { name: 'Review Bag' }));
   fireEvent.change(await screen.findByLabelText('Handover payload'), { target: { value: 'original-payload-long-enough' } });
   fireEvent.click(screen.getByRole('button', { name: 'Complete handover' }));
@@ -77,6 +80,7 @@ it('shows version conflicts without claiming success', async () => {
   const base = venueApi();
   const api = vi.fn(async (s,p,o) => { if (p.endsWith('/reject')) throw Error('Version conflict. Refresh records.'); return base(s,p,o); });
   render(<VenueApp api={api} />);
+  fireEvent.click(await screen.findByRole('link', { name: /Claims to review/ }));
   fireEvent.click(await screen.findByRole('button', { name: 'Review Bag' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Reject claim' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Version conflict');
