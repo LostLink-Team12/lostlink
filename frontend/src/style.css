@@ -13,7 +13,7 @@ main{max-width:1320px}
 .portal-sidebar a:hover{background:#f9fbf6}
 .portal-sidebar a[aria-current=page]{background:white;border-color:#c4d3c6;box-shadow:0 2px 6px #183e3808}
 .portal-sidebar a[aria-current=page] strong{color:#174e40}
-.portal-sidebar a[aria-disabled=true]{opacity:.55;cursor:wait}
+.portal-sidebar a[aria-disabled=true]{opacity:.55;cursor:not-allowed}
 .portal-content{min-width:0}
 @media(max-width:800px){.portal-layout{grid-template-columns:1fr;gap:20px}.portal-sidebar{position:static;padding:12px}.portal-sidebar>.eyebrow{display:none}.portal-sidebar nav{flex-direction:row;flex-wrap:wrap;gap:4px}.portal-sidebar a{flex:1;min-width:130px;padding:10px}.portal-sidebar a span{display:none}}
 
@@ -55,7 +55,7 @@ header .secondary{margin:0;font-size:13px;padding:8px 14px}
 .action-status:not(:empty){padding:10px 14px;border-radius:6px;font-size:14px}
 .action-pending{color:#795009;background:#fff6df}.action-success{color:#1b5c37;background:#edf8ef}
 
-.pagination{justify-content:flex-start}.page-range{font-size:12px;color:#61766d}.pagination[aria-busy=true] button:disabled{cursor:wait}
+.pagination{justify-content:flex-start}.page-range{font-size:12px;color:#61766d}
 
 /* Static content receives focus for screen-reader navigation without a control outline. */
 .content-focus-target:focus{outline:none}

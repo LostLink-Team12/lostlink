@@ -43,22 +43,23 @@ export function PageList(props: PageListProps) {
 }
 
 function ListPage({ api, service, path, revision = 0, label = 'Record pages', children }: PageListProps) {
-  const [page, setPage] = useState({ items: [] as any[], has_more: false, source: '', candidate_limit: 0, potentially_truncated: false });
-  const [offset, setOffset] = useState(0), [error, setError] = useState(''), [loading, setLoading] = useState(true);
+  const [page, setPage] = useState({ items: [] as any[], has_more: false, source: '', offset: 0, candidate_limit: 0, potentially_truncated: false });
+  const [offset, setOffset] = useState(0), [attempt, setAttempt] = useState(0), [error, setError] = useState(''), [loading, setLoading] = useState(true);
   const source = `${service}:${path}`, size = 20;
+  const requestPage = (next: number) => { setOffset(next); setAttempt(value => value + 1); };
   useEffect(() => {
     let current = true; setLoading(true); setError('');
-    api(service, `${path}${path.includes('?') ? '&' : '?'}limit=${size}&offset=${offset}`).then(value => { if (current) setPage({ ...value, source }); }).catch(e => { if (current) setError(e.message); }).finally(() => { if (current) setLoading(false); });
+    api(service, `${path}${path.includes('?') ? '&' : '?'}limit=${size}&offset=${offset}`).then(value => { if (current) setPage({ ...value, source, offset }); }).catch(e => { if (current) setError(e.message); }).finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
-  }, [api, service, path, offset, revision]);
-  return <>{loading && <p role="status">{page.source === source ? 'Refreshing…' : 'Loading…'}</p>}{error && <p role="alert">{error}</p>}{page.source === source && <>
+  }, [api, service, path, offset, revision, attempt]);
+  return <>{loading && <p role="status">{page.source === source && page.offset === offset ? 'Refreshing…' : 'Loading…'}</p>}{error && <><p role="alert">{error}</p><button type="button" className="secondary" onClick={() => requestPage(offset)}>Retry loading records</button></>}{page.source === source && <>
     {page.items.length ? children(page.items) : <p>No records yet.</p>}
     {page.potentially_truncated && <p>The candidate window is limited to {page.candidate_limit} items. Use more specific filters in Search to narrow the results.</p>}
     <nav className="pagination" aria-label={label} aria-busy={loading}>
-      <button disabled={loading || offset === 0} title={loading ? 'Loading records' : offset === 0 ? 'This is the first page' : 'Previous page'} onClick={() => setOffset(x => Math.max(0, x - size))}>Previous</button>
-      <span>Page {offset / size + 1}</span>
-      {page.items.length > 0 && <span className="page-range">Showing {offset + 1}–{offset + page.items.length}</span>}
-      <button disabled={loading || !page.has_more} title={loading ? 'Loading records' : page.has_more ? 'Next page' : 'No more results'} onClick={() => setOffset(x => x + size)}>Next</button>
+      <button disabled={loading || page.offset === 0} title={loading ? 'Loading records' : page.offset === 0 ? 'This is the first page' : 'Previous page'} onClick={() => requestPage(Math.max(0, page.offset - size))}>Previous</button>
+      <span>Page {page.offset / size + 1}</span>
+      {page.items.length > 0 && <span className="page-range">Showing {page.offset + 1}–{page.offset + page.items.length}</span>}
+      <button disabled={loading || !page.has_more} title={loading ? 'Loading records' : page.has_more ? 'Next page' : 'No more results'} onClick={() => requestPage(page.offset + size)}>Next</button>
     </nav>
   </>}</>;
 }
@@ -148,7 +149,7 @@ export function OwnerApp({ api }: { api: Api }) {
     }); }}><label>Closure reason<select name="reason"><option value="found">Found my item</option><option value="no_longer_needed">No longer needed</option></select></label><button disabled={action.busy}>Close lost report</button></form>}</article>)}</PageList></section>
     {matches && <section aria-labelledby="report-matches-heading"><h2 id="report-matches-heading">Report matches</h2><p>Browse similar items using your saved description, photo and filters, ranked like Search. Automatic email matches use a stricter confidence threshold.</p><PageList api={api} service="matching" path={`/v1/lost-reports/${id(matches)}/candidates`} label="Similar item pages" revision={revision}>{rows => <ItemCards api={api} items={rows} choose={item => void choose(item, matches)} busy={claimAction.busy || action.busy} />}</PageList></section>}
     </>}
-    {page === 'claims' && <section><h1>My claims</h1><p>View your requests, collect an approved item, or withdraw a request you no longer need.</p><button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh claims</button><PageList api={api} service="claim" path="/v1/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue={false} refresh={() => setRevision(x => x + 1)} />}</PageList></section>}
+    {page === 'claims' && <section><h1>My claims</h1><p>View your requests, collect an approved item, or withdraw a request you no longer need.</p><button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh claims</button><PageList api={api} service="claim" path="/v1/claims" label="My claim pages" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue={false} refresh={() => setRevision(x => x + 1)} />}</PageList></section>}
   </PortalLayout>;
 }
 
@@ -262,8 +263,8 @@ export function VenueApp({ api, goToOwner }: { api: Api; goToOwner?: () => void 
       <button disabled={action.busy}>{lockedForm ? 'Retry registration' : 'Register item'}</button>
     </form>{lockedForm && <p>Registration started. Keep this page open and retry with the same photo if the connection fails.</p>}{action.status}</section>
     </div>}
-    {staff && page === 'items' && <section><h2 data-page-heading>Found items</h2><PageList api={api} service="item" path="/v1/items" revision={revision}>{rows => <ItemCards items={rows} />}</PageList></section>}
-    {staff && page === 'reviews' && <section><h2 data-page-heading>Claims to review</h2><PageList api={api} service="claim" path="/v1/venue/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue refresh={refresh} />}</PageList></section>}
+    {staff && page === 'items' && <section><h2 data-page-heading>Found items</h2><PageList api={api} service="item" path="/v1/items" label="Found item pages" revision={revision}>{rows => <ItemCards items={rows} />}</PageList></section>}
+    {staff && page === 'reviews' && <section><h2 data-page-heading>Claims to review</h2><PageList api={api} service="claim" path="/v1/venue/claims" label="Claim review pages" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue refresh={refresh} />}</PageList></section>}
     {administrator && page === 'members' && <Members api={api} expanded />}
     {platform && page === 'onboarding' && <section><h2 data-page-heading>Venue onboarding (platform administrators)</h2><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void onboardingAction.run(async () => {
       await api('venue', '/v1/admin/venues', { body: { name: text(data, 'name'), slug: text(data, 'slug'), initial_admin_sub: text(data, 'admin') } }); onboardingAction.setMessage('Venue created. The initial administrator must sign in again after identity sync.');

@@ -43,6 +43,8 @@ it('disables navigation only while a page request is pending and prevents double
   await waitFor(() => expect(api).toHaveBeenCalledTimes(2));
   expect(screen.getByRole('navigation', { name: 'Test pages' })).toHaveAttribute('aria-busy', 'true');
   expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
+  expect(screen.getByText('Page 1')).toBeInTheDocument();
+  expect(screen.getByText('Showing 1–1')).toBeInTheDocument();
   const next = screen.getByRole('button', { name: 'Next' });
   expect(next).toBeDisabled(); fireEvent.click(next);
   expect(api).toHaveBeenCalledTimes(2);
@@ -50,4 +52,33 @@ it('disables navigation only while a page request is pending and prevents double
   await screen.findByText('Last page');
   expect(screen.getByRole('navigation', { name: 'Test pages' })).toHaveAttribute('aria-busy', 'false');
   expect(screen.getByRole('button', { name: 'Previous' })).toBeEnabled();
+});
+
+it('retries a failed next page without advancing past it or relabelling old records', async () => {
+  let failed = false;
+  const api = vi.fn(async (_s, path) => {
+    if (path.endsWith('offset=0')) return { items: [{ title: 'Original page' }], has_more: true };
+    if (!failed) { failed = true; throw Error('Network interrupted'); }
+    return { items: [{ title: 'Recovered next page' }], has_more: false };
+  });
+  render(<PageList api={api} service="item" path="/v1/items">{rows => rows.map(row => <p key={row.title}>{row.title}</p>)}</PageList>);
+  await screen.findByText('Original page');
+  fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Network interrupted');
+  expect(screen.getByText('Page 1')).toBeInTheDocument();
+  expect(screen.getByText('Showing 1–1')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+  await screen.findByText('Recovered next page');
+  expect(api.mock.calls.map(([, path]) => path)).toEqual(['/v1/items?limit=20&offset=0', '/v1/items?limit=20&offset=20', '/v1/items?limit=20&offset=20']);
+  expect(screen.getByText('Page 2')).toBeInTheDocument();
+});
+
+it('can retry an initial list failure from its own error state', async () => {
+  const api = vi.fn().mockRejectedValueOnce(Error('Service unavailable')).mockResolvedValue({ items: [{ title: 'Loaded after retry' }], has_more: false });
+  render(<PageList api={api} service="claim" path="/v1/claims">{rows => rows.map(row => <p key={row.title}>{row.title}</p>)}</PageList>);
+  await screen.findByRole('alert');
+  fireEvent.click(screen.getByRole('button', { name: 'Retry loading records' }));
+  await screen.findByText('Loaded after retry');
+  expect(api).toHaveBeenCalledTimes(2);
 });
