@@ -178,13 +178,18 @@ def create(body: schemas.NewClaim, request: Request, principal: Owner, key: Key 
 
 
 @router.get("/v1/claims", response_model=schemas.ClaimsPage, tags=["Claims"])
-def list_claims(request: Request, principal: Owner, limit: Limit = 20, offset: Offset = 0):
+def list_claims(
+    request: Request,
+    principal: Owner,
+    limit: Limit = 20,
+    offset: Offset = 0,
+    lost_report_id: UUID | None = None,
+):
     with owner_session(request, principal) as session:
-        rows = list(
-            session.scalars(
-                page(select(Claim).where(Claim.owner_sub == principal.subject), limit, offset)
-            )
-        )
+        query = select(Claim).where(Claim.owner_sub == principal.subject)
+        if lost_report_id is not None:
+            query = query.where(Claim.lost_report_id == lost_report_id)
+        rows = list(session.scalars(page(query, limit, offset)))
         svc = service(session, principal, request)
         items = []
         for claim in rows[:limit]:

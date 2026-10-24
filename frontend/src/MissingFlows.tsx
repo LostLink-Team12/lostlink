@@ -57,7 +57,7 @@ export function Members({ api, expanded = false }: { api: Api; expanded?: boolea
 
 export function MatchLink({ api, choose, revision, busy = false }: { api: Api; choose: React.ComponentProps<typeof ItemCards>['choose']; revision: number; busy?: boolean }) {
   const matchId = location.pathname.match(/^\/matches\/([^/]+)\/?$/)?.[1];
-  const [item, setItem] = useState<any>(null), [error, setError] = useState(''), [loading, setLoading] = useState(true), [retry, setRetry] = useState(0);
+  const [item, setItem] = useState<any>(null), [reportId, setReportId] = useState<string | undefined>(), [error, setError] = useState(''), [loading, setLoading] = useState(true), [retry, setRetry] = useState(0);
   useEffect(() => {
     if (!matchId) return;
     let active = true;
@@ -74,13 +74,13 @@ export function MatchLink({ api, choose, revision, busy = false }: { api: Api; c
     };
     void pages('/v1/lost-reports', async report => report.state === 'open' && await pages('/v1/lost-reports/' + encodeURIComponent(report.id) + '/matches', async match => {
       if (match.id !== decodeURIComponent(matchId)) return false;
-      if (active) setItem(match.item);
+      if (active) { setItem(match.item); setReportId(report.id); }
       return true;
     })).then(found => { if (active && !found) setError('This match is no longer available or does not belong to your account.'); }).catch(e => { if (active) setError(e.message); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [api, matchId, revision, retry]);
   if (!matchId) return null;
-  return <section><h2>Your notified match</h2>{loading ? <p role="status">Loading match...</p> : error ? <><p role="alert">{error}</p><button onClick={() => setRetry(r => r + 1)}>Retry match</button></> : <ItemCards api={api} items={[item]} choose={choose} busy={busy} />}</section>;
+  return <section><h2>Your notified match</h2>{loading ? <p role="status">Loading match...</p> : error ? <><p role="alert">{error}</p><button onClick={() => setRetry(r => r + 1)}>Retry match</button></> : <ItemCards api={api} items={[item]} choose={value => choose?.(value, reportId)} busy={busy} />}</section>;
 }
 
 export function HandoverCode({ payload }: { payload: string }) {

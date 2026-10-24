@@ -433,5 +433,38 @@ def test_migration_downgrade_and_upgrade(claim_env):
             patch.setenv(key.upper() + "_ROLE", role)
         command.downgrade(env.configs["claim"], "base")
         command.upgrade(env.configs["claim"], "head")
-    env.db["claim_api"].check_ready("claim", "0001_claim")
+    env.db["claim_api"].check_ready("claim", "0002_claim_report")
     assert submit(env, make_item(env))["state"] == "submitted"
+
+
+def test_report_provenance_is_atomic_replayable_and_owner_filtered(claim_env):
+    env = claim_env
+    item_id = make_item(env)
+    report_id = uuid4()
+    body = {**claim_body(env, item_id), "lost_report_id": str(report_id)}
+    auth = headers(key="report-claim-create-1")
+    created = env.client.post("/v1/claims", headers=auth, json=body)
+    assert created.status_code == 201, created.text
+    claim = created.json()
+    assert claim["lost_report_id"] == str(report_id)
+    replay = env.client.post("/v1/claims", headers=auth, json=body)
+    assert replay.json() == claim
+    filtered = f"/v1/claims?lost_report_id={report_id}&limit=1&offset=0"
+    assert env.client.get(filtered, headers=headers()).json()["items"][0]["id"] == claim["id"]
+    assert env.client.get(filtered, headers=headers("owner2")).json()["items"] == []
+    assert (
+        env.client.get(f"/v1/claims?lost_report_id={uuid4()}", headers=headers()).json()["items"]
+        == []
+    )
+    conflict = env.client.post(
+        "/v1/claims", headers=auth, json={**body, "lost_report_id": str(uuid4())}
+    )
+    assert conflict.status_code == 409
+    cancelled = env.client.post(
+        f"/v1/claims/{claim['id']}/cancel",
+        headers=headers(version=claim["version"]),
+        json={"reason_code": "no_longer_needed"},
+    )
+    assert cancelled.status_code == 200
+    row = env.client.get(filtered, headers=headers()).json()["items"][0]
+    assert row["state"] == "cancelled" and row["lost_report_id"] == str(report_id)

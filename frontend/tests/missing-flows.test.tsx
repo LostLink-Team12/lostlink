@@ -111,7 +111,7 @@ it('resolves email match links across report and match pages', async () => {
   });
   const choose = vi.fn(); render(<MatchLink api={api} choose={choose} revision={0} />);
   fireEvent.click(await screen.findByRole('button', { name: 'Claim Notified bag' }));
-  expect(choose).toHaveBeenCalledWith(expect.objectContaining({ item_id: 'i1' }));
+  expect(choose).toHaveBeenCalledWith(expect.objectContaining({ item_id: 'i1' }), 'r1');
   expect(api.mock.calls.some(([,p]) => p.includes('/closed/matches'))).toBe(false);
 });
 

@@ -165,3 +165,12 @@ def test_probes_and_guards_fail_closed_without_dependencies():
         assert response.status_code == 503
         assert response.json()["error"]["code"] == "membership_unavailable"
         assert "/internal" not in str(client.get("/openapi.json").json()["paths"])
+
+
+def test_invalid_report_filter_is_rejected_before_database_access():
+    app = create_app(settings(user_client_ids=["web"]), token_verifier=Verifier())
+    with TestClient(app) as client:
+        response = client.get(
+            "/v1/claims?lost_report_id=not-a-uuid", headers={"Authorization": "Bearer owner"}
+        )
+        assert response.status_code == 422
