@@ -43,6 +43,7 @@ class ContactInput(Input):
 
 class NewClaim(Input):
     item_id: UUID
+    lost_report_id: UUID | None = None
     answers: list[AnswerInput] = Field(min_length=1, max_length=3)
     contact: ContactInput | None = None
 
@@ -90,6 +91,7 @@ class AnswerView(BaseModel):
 
 class ClaimView(BaseModel):
     id: UUID
+    lost_report_id: UUID | None = None
     item_id: UUID
     venue_id: UUID
     item_title: str

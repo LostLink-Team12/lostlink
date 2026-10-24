@@ -1,13 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ItemPhoto } from './ItemPhoto';
+import { ReportClaimMarker } from './ReportClaimMarker';
+import { RecordTimes } from './RecordTimes';
+import { StatusBadge } from './StatusBadge';
 import { PortalLayout, usePortalPage } from './PortalLayout';
 import { FoundDateFilters, foundDateError, foundDateRange } from './SearchDates';
 import { HandoverCode, MatchLink, Members, ScanToken } from './MissingFlows';
 import { photoBase64, registerItem, validatePhoto, waitOperation } from './api.js';
 
 export type Api = (service: string, path: string, options?: { body?: unknown; version?: number; key?: string; method?: string }) => Promise<any>;
-type Item = { id?: string; item_id?: string; title: string; description: string; category: string; state?: string; score?: number; photo_url?: string; public_location_hint?: string };
-type Claim = { id: string; item_title: string; state: string; version: number; answers?: { question_id: string; prompt: string; answer: string }[]; active_operation_id?: string };
+type Item = { id?: string; item_id?: string; title: string; description: string; category: string; state?: string; created_at?: string; found_at?: string; score?: number; photo_url?: string; public_location_hint?: string };
+type Claim = { id: string; item_title: string; state: string; version: number; created_at?: string; approved_at?: string | null; closed_at?: string | null; answers?: { question_id: string; prompt: string; answer: string }[]; active_operation_id?: string };
 type Question = { id: string; version: number; prompt: string };
 const id = encodeURIComponent;
 const text = (data: FormData, key: string) => String(data.get(key) || '').trim();
@@ -22,7 +25,7 @@ export function useAction() {
     try { await action(); } catch (e) { setError(e instanceof Error ? e.message : 'Request failed'); }
     finally { locked.current = false; setBusy(false); }
   };
-  return { busy, run, setMessage, status: <><p role="status" aria-live="polite">{busy ? 'Working…' : message}</p>{error && <p role="alert">{error}</p>}</> };
+  return { busy, run, setMessage, status: <><p className={busy ? 'action-status action-pending' : 'action-status action-success'} role="status" aria-live="polite">{busy ? 'Working…' : message}</p>{error && <p role="alert">{error}</p>}</> };
 }
 
 function Field({ label, name, type = 'text', required = true, maxLength = 2000 }: { label: string; name: string; type?: string; required?: boolean; maxLength?: number }) {
@@ -43,13 +46,14 @@ export function PageList({ api, service, path, revision = 0, children }: { api: 
   return <>{loading && <p role="status">{page.source === source ? 'Refreshing…' : 'Loading…'}</p>}{error && <p role="alert">{error}</p>}{page.source === source && <>{page.items.length ? children(page.items) : <p>No records yet.</p>}<div className="pagination"><button disabled={!offset} onClick={() => setOffset(x => x - 20)}>Previous</button><span>Page {offset / 20 + 1}</span><button disabled={!page.has_more} onClick={() => setOffset(x => x + 20)}>Next</button></div></>}</>;
 }
 
-export function ItemCards({ items, choose, busy = false, api }: { items: Item[]; choose?: (item: Item) => void; busy?: boolean; api?: Api }) {
+export function ItemCards({ items, choose, busy = false, api }: { items: Item[]; choose?: (item: Item, reportId?: string) => void; busy?: boolean; api?: Api }) {
   return <div className="cards">{items.map(item => <article key={item.item_id || item.id}>
     {item.photo_url && <ItemPhoto key={item.photo_url} itemId={(item.item_id || item.id)!} title={item.title} url={item.photo_url} api={api} />}
     <span className="tag">{item.category}</span><h3>{item.title}</h3><p>{item.description}</p>
     {item.public_location_hint && <p>{item.public_location_hint}</p>}
     {item.score !== undefined && <p>Similarity {item.score.toFixed(3)}</p>}
-    {item.state && <p>Status: {item.state}</p>}
+    {item.state && <p><StatusBadge state={item.state} /></p>}
+    <RecordTimes entries={[{ label: 'Found', value: item.found_at }, { label: 'Registered', value: item.created_at }]} />
     {choose && <button disabled={busy} onClick={() => choose(item)} aria-label={`Claim ${item.title}`}>This could be mine</button>}
   </article>)}</div>;
 }
@@ -68,13 +72,13 @@ export function OwnerApp({ api }: { api: Api }) {
   }, [claimItem]);
   const [results, setResults] = useState<Item[] | null>(null), [truncated, setTruncated] = useState(false), [revision, setRevision] = useState(0);
   const [claim, setClaim] = useState<{ item_id: string; title: string; questions: Question[] } | null>(null);
-  const [matches, setMatches] = useState<string | null>(null);
+  const [matches, setMatches] = useState<string | null>(null), [claimReport, setClaimReport] = useState<string | null>(null);
   const query = async (data: FormData) => {
     const photo = file(data), dates = foundDateRange(text(data, 'from'), text(data, 'until'));
     return { ...(text(data, 'description') ? { text: text(data, 'description') } : {}), ...(photo ? { photo_base64: await photoBase64(photo) } : {}), ...(text(data, 'category') ? { category: text(data, 'category') } : {}), ...(text(data, 'venue') ? { venue_id: text(data, 'venue') } : {}), ...dates };
   };
-  const choose = (item: Item) => claimAction.run(async () => {
-    setClaimItem(item); setClaim(null); setClaimSubmitted(false);
+  const choose = (item: Item, reportId?: string) => claimAction.run(async () => {
+    setClaimItem(item); setClaim(null); setClaimSubmitted(false); setClaimReport(reportId || null);
     const itemId = item.item_id || item.id;
     if (!itemId) throw Error('This item is missing its identifier. Search again.');
     navigate(`claim/${id(itemId)}`);
@@ -112,25 +116,27 @@ export function OwnerApp({ api }: { api: Api }) {
       {claimAction.status}
       {claim && <><p>Tell the venue details only the owner would know.</p><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void claimAction.run(async () => {
         const contact = { ...(text(data, 'name') ? { name: text(data, 'name') } : {}), ...(text(data, 'phone') ? { phone: text(data, 'phone') } : {}) };
-        await api('claim', '/v1/claims', { body: { item_id: claim.item_id, answers: claim.questions.map(q => ({ question_id: q.id, version: q.version, answer: text(data, q.id) })), ...(Object.keys(contact).length ? { contact } : {}) } });
+        await api('claim', '/v1/claims', { body: { item_id: claim.item_id, ...(claimReport ? { lost_report_id: claimReport } : {}), answers: claim.questions.map(q => ({ question_id: q.id, version: q.version, answer: text(data, q.id) })), ...(Object.keys(contact).length ? { contact } : {}) } });
         setClaim(null); setClaimSubmitted(true); setRevision(x => x + 1); claimAction.setMessage('Claim submitted. The venue will review your answers.');
       }); }}>{claim.questions.map(q => <Field key={q.id} label={q.prompt} name={q.id} maxLength={1000} />)}<Field label="Contact name" name="name" required={false} maxLength={120} /><Field label="Phone" name="phone" type="tel" required={false} maxLength={32} /><button disabled={claimAction.busy}>Submit claim</button></form></>}
       {!claim && !claimSubmitted && !claimAction.busy && <button onClick={() => void choose(claimItem)}>Retry loading questions</button>}
       <button type="button" disabled={claimAction.busy} className="secondary" onClick={() => { setClaimItem(null); setClaim(null); navigate('search'); }}>{claimSubmitted ? 'Close' : 'Cancel'}</button>
     </section></div>}
     {page === 'claim' && !claimItem && <section><h1>Select an item to claim</h1><p>Return to Search and choose an item to see its current details and verification questions.</p><button onClick={() => navigate('search')}>Back to Search</button></section>}
-    {page === 'reports' && <><section><h1>My lost reports</h1><p>Save a report from Search, then check for new matches here.</p>{action.status}<button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh records</button><PageList api={api} service="matching" path="/v1/lost-reports" revision={revision}>{rows => rows.map(report => <article key={report.id}><h3>{report.description}</h3><p>{report.state}</p><button onClick={() => setMatches(report.id)}>View matches</button>{report.state === 'open' && <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
+    {page === 'reports' && <><section><h1>My lost reports</h1><p>Save a report from Search, then check for new matches here.</p>{action.status}<button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh records</button><PageList api={api} service="matching" path="/v1/lost-reports" revision={revision}>{rows => rows.map(report => <article key={report.id}><h3>{report.description}</h3><p><StatusBadge state={report.state} /></p><RecordTimes entries={[{ label: 'Reported', value: report.created_at }]} /><ReportClaimMarker api={api} reportId={report.id} revision={revision} /><button onClick={() => setMatches(report.id)}>View matches</button>{report.state === 'open' && <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
       await api('matching', '/v1/lost-reports/' + id(report.id) + '/close', { body: { reason: text(data, 'reason') }, version: report.version });
       setRevision(x => x + 1); action.setMessage('Lost report closed.');
     }); }}><label>Closure reason<select name="reason"><option value="found">Found my item</option><option value="no_longer_needed">No longer needed</option></select></label><button disabled={action.busy}>Close lost report</button></form>}</article>)}</PageList></section>
-    {matches && <section><h2>Report matches</h2><PageList api={api} service="matching" path={`/v1/lost-reports/${id(matches)}/matches`} revision={revision}>{rows => <ItemCards api={api} items={rows.map(row => row.item)} choose={choose} busy={claimAction.busy || action.busy} />}</PageList></section>}
+    {matches && <section><h2>Report matches</h2><PageList api={api} service="matching" path={`/v1/lost-reports/${id(matches)}/matches`} revision={revision}>{rows => <ItemCards api={api} items={rows.map(row => row.item)} choose={item => void choose(item, matches)} busy={claimAction.busy || action.busy} />}</PageList></section>}
     </>}
     {page === 'claims' && <section><h1>My claims</h1><p>View your requests, collect an approved item, or withdraw a request you no longer need.</p><button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh claims</button><PageList api={api} service="claim" path="/v1/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue={false} refresh={() => setRevision(x => x + 1)} />}</PageList></section>}
   </PortalLayout>;
 }
 
 function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; venue: boolean; refresh: () => void }) {
-  const action = useAction(), [selected, setSelected] = useState<Claim | null>(null), [qr, setQr] = useState(''), [withdrawing, setWithdrawing] = useState(false);
+  const action = useAction(), [selected, setSelected] = useState<Claim | null>(null), [qr, setQr] = useState(''), [withdrawing, setWithdrawing] = useState(false), [expandedId, setExpandedId] = useState<string | null>(null);
+  const details = useRef<HTMLDivElement>(null);
+  useEffect(() => { details.current?.focus({ preventScroll: true }); }, [selected?.id]);
   const path = `/v1/${venue ? 'venue/claims' : 'claims'}`;
   const approve = () => action.run(async () => {
     const result = await api('claim', `${path}/${id(selected!.id)}/approve`, { body: {}, version: selected!.version });
@@ -138,8 +144,18 @@ function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; ven
     if (done.claim_state !== 'approved') throw Error(`Approval ended with state ${done.claim_state}. Refresh before continuing.`);
     setSelected(null); refresh(); action.setMessage('Claim approved.');
   });
-  return <>{rows.map(row => <article key={row.id}><h3>{row.item_title}</h3><p>Status: {row.state}</p><button disabled={action.busy} aria-label={`${venue ? 'Review' : 'View'} ${row.item_title}`} onClick={() => void action.run(async () => { setQr(''); setWithdrawing(false); setSelected(await api('claim', `${path}/${id(row.id)}`)); })}>{venue ? 'Review claim' : 'View claim'}</button></article>)}
-    {selected && <article className="review"><h3>{selected.item_title}</h3><p>Status: {selected.state}</p><button disabled={action.busy} onClick={() => void action.run(async () => { setQr(''); setSelected(await api('claim', path + '/' + id(selected.id))); })}>Refresh claim details</button>{selected.answers?.map(answer => <div key={answer.question_id}><strong>{answer.prompt}</strong><p>{answer.answer}</p></div>)}
+  return <>{rows.map(row => {
+    const expanded = expandedId === row.id, loaded = expanded && selected?.id === row.id;
+    const shown = loaded ? selected! : row;
+    return <article key={row.id} className={expanded ? 'review' : undefined} aria-label={`Claim for ${row.item_title}`} aria-busy={expanded && action.busy}>
+      <h3>{shown.item_title}</h3><p><StatusBadge state={shown.state} /></p>
+      <RecordTimes entries={[{ label: 'Submitted', value: shown.created_at }, { label: 'Approved', value: shown.approved_at }, { label: 'Closed', value: shown.closed_at }]} />
+      {!loaded ? <button disabled={action.busy} aria-expanded={expanded} aria-controls={`claim-details-${row.id}`} aria-label={`${venue ? 'Review' : 'View'} ${row.item_title}`} onClick={() => void action.run(async () => {
+        setExpandedId(row.id); setSelected(null); setQr(''); setWithdrawing(false);
+        setSelected(await api('claim', `${path}/${id(row.id)}`));
+      })}>{venue ? 'Review claim' : 'View claim'}</button> : <button className="secondary" disabled={action.busy} aria-expanded="true" aria-controls={`claim-details-${row.id}`} onClick={() => { setExpandedId(null); setSelected(null); setQr(''); setWithdrawing(false); }}>Hide details</button>}
+      {loaded && selected && <div id={`claim-details-${row.id}`} ref={details} tabIndex={-1}>
+<button disabled={action.busy} onClick={() => void action.run(async () => { setQr(''); setSelected(await api('claim', path + '/' + id(selected.id))); })}>Refresh claim details</button>{selected.answers?.map(answer => <div key={answer.question_id}><strong>{answer.prompt}</strong><p>{answer.answer}</p></div>)}
       {selected.active_operation_id && <button disabled={action.busy} onClick={() => void action.run(async () => { const done = await waitOperation(api, 'claim', selected.active_operation_id!); if (selected.state === 'cancellation_pending' && done.claim_state !== 'cancelled') throw Error('Withdrawal not completed. Refresh before continuing.'); if (selected.state === 'handover_pending' && done.claim_state !== 'handed_over') throw Error('Handover not completed. Refresh before continuing.'); setSelected(await api('claim', `${path}/${id(selected.id)}`)); refresh(); action.setMessage('Operation completed.'); })}>Check pending operation</button>}
       {venue && selected.state === 'submitted' && <><button disabled={action.busy} onClick={() => void approve()}>Approve claim</button><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
         const value = await api('claim', path + '/' + id(selected.id) + '/reject', { body: { reason_code: text(data, 'reason_code') }, version: selected.version });
@@ -175,7 +191,11 @@ function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; ven
         setQr(value.qr_payload); action.setMessage(`Handover code expires ${new Date(value.expires_at).toLocaleString()}. Show the code at the venue.`);
       })}>Get handover code</button>}
       {qr && <HandoverCode payload={qr} />}
-    </article>}{action.status}</>;
+
+      </div>}
+      {expanded && action.status}
+    </article>;
+  })}</>;
 }
 
 type PortalAccess = { venue: { name: string } | null; can_manage_venue: boolean; can_manage_members: boolean; can_onboard_venues: boolean };

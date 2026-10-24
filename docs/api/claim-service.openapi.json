@@ -427,6 +427,23 @@
               "default": 0,
               "title": "Offset"
             }
+          },
+          {
+            "name": "lost_report_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lost Report Id"
+            }
           }
         ],
         "responses": {
@@ -2869,6 +2886,18 @@
             "format": "uuid",
             "title": "Id"
           },
+          "lost_report_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lost Report Id"
+          },
           "item_id": {
             "type": "string",
             "format": "uuid",
@@ -3026,6 +3055,18 @@
             "type": "string",
             "format": "uuid",
             "title": "Id"
+          },
+          "lost_report_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lost Report Id"
           },
           "item_id": {
             "type": "string",
@@ -3360,6 +3401,18 @@
             "format": "uuid",
             "title": "Item Id"
           },
+          "lost_report_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lost Report Id"
+          },
           "answers": {
             "items": {
               "$ref": "#/components/schemas/AnswerInput"
@@ -3573,6 +3626,18 @@
             "format": "uuid",
             "title": "Id"
           },
+          "lost_report_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lost Report Id"
+          },
           "item_id": {
             "type": "string",
             "format": "uuid",
@@ -3710,6 +3775,18 @@
             "type": "string",
             "format": "uuid",
             "title": "Id"
+          },
+          "lost_report_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lost Report Id"
           },
           "item_id": {
             "type": "string",

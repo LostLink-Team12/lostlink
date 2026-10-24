@@ -39,3 +39,18 @@ header>nav{justify-content:flex-end;flex-wrap:wrap}
 .portal-switch:hover{color:#174e40;border-bottom-color:#b8ccbc}
 .portal-switch[aria-current=page]{font-weight:700;color:#174e40;border-bottom-color:#458374}
 header .secondary{margin:0;font-size:13px;padding:8px 14px}
+
+.record-times{display:flex;flex-wrap:wrap;gap:8px 24px;margin:14px 0;color:#526b61;font-size:12px}
+.record-times>div{min-width:0}.record-times dt{font-weight:600;color:#3f5d50}.record-times dd{margin:2px 0 0;overflow-wrap:anywhere}.record-times time{font-variant-numeric:tabular-nums}
+
+.status-badge{display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:4px 10px;border:1px solid;border-radius:999px;font-size:12px;font-weight:600;line-height:1.5;vertical-align:middle;overflow-wrap:anywhere}
+.status-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.status-info{color:#1e4e86;background:#eef5ff;border-color:#c7daf3}
+.status-success{color:#1b5c37;background:#edf8ef;border-color:#b7d9c0}
+.status-warning{color:#795009;background:#fff6df;border-color:#e7ce94}
+.status-danger{color:#962e32;background:#fff0f0;border-color:#e7b7ba}
+.status-neutral{color:#505b65;background:#f1f3f5;border-color:#cbd2d8}
+.status-reserved{color:#654083;background:#f5effc;border-color:#d7c3e9}
+.report-claim-marker{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:12px;color:#526b61}
+.action-status:not(:empty){padding:10px 14px;border-radius:6px;font-size:14px}
+.action-pending{color:#795009;background:#fff6df}.action-success{color:#1b5c37;background:#edf8ef}

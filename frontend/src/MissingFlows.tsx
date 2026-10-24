@@ -1,4 +1,5 @@
 ﻿import QRCode from 'qrcode';
+import { StatusBadge } from './StatusBadge';
 import React, { useEffect, useRef, useState } from 'react';
 import { type Api, ItemCards, PageList, useAction } from './App';
 
@@ -49,7 +50,7 @@ export function Members({ api, expanded = false }: { api: Api; expanded?: boolea
     <form onSubmit={e => { e.preventDefault(); const form = e.currentTarget, data = new FormData(form); void action.run(async () => {
       changed(await api('venue', '/v1/venues/current/members', { body: { user_sub: String(data.get('user_sub')).trim(), role: data.get('role') } })); form.reset();
     }); }}><label>Cognito subject<input name="user_sub" required maxLength={128} /></label><label>New member role<select name="role"><option value="venue_staff">Venue staff</option><option value="venue_admin">Venue administrator</option></select></label><button disabled={action.busy}>Add member</button></form>
-    <PageList api={api} service="venue" path="/v1/venues/current/members" revision={revision}>{rows => rows.map(member => <article key={member.id}><h3>{member.user_sub}</h3><p>{member.role} / {member.status}</p><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
+    <PageList api={api} service="venue" path="/v1/venues/current/members" revision={revision}>{rows => rows.map(member => <article key={member.id}><h3>{member.user_sub}</h3><p>{member.role} · <StatusBadge state={member.status} /></p><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
       changed(await api('venue', '/v1/venues/current/members/' + encodeURIComponent(member.id), { method: 'PATCH', version: member.version, body: { role: data.get('role'), status: data.get('status') } }));
     }); }}><label>Role for {member.user_sub}<select name="role" defaultValue={member.role}><option value="venue_staff">Venue staff</option><option value="venue_admin">Venue administrator</option></select></label><label>Status for {member.user_sub}<select name="status" defaultValue={member.status}><option value="active">Active</option><option value="suspended">Suspended</option></select></label><button disabled={action.busy}>Save member</button></form></article>)}</PageList></>}
     {action.status}</details></section>;
@@ -57,7 +58,7 @@ export function Members({ api, expanded = false }: { api: Api; expanded?: boolea
 
 export function MatchLink({ api, choose, revision, busy = false }: { api: Api; choose: React.ComponentProps<typeof ItemCards>['choose']; revision: number; busy?: boolean }) {
   const matchId = location.pathname.match(/^\/matches\/([^/]+)\/?$/)?.[1];
-  const [item, setItem] = useState<any>(null), [error, setError] = useState(''), [loading, setLoading] = useState(true), [retry, setRetry] = useState(0);
+  const [item, setItem] = useState<any>(null), [reportId, setReportId] = useState<string | undefined>(), [error, setError] = useState(''), [loading, setLoading] = useState(true), [retry, setRetry] = useState(0);
   useEffect(() => {
     if (!matchId) return;
     let active = true;
@@ -74,13 +75,13 @@ export function MatchLink({ api, choose, revision, busy = false }: { api: Api; c
     };
     void pages('/v1/lost-reports', async report => report.state === 'open' && await pages('/v1/lost-reports/' + encodeURIComponent(report.id) + '/matches', async match => {
       if (match.id !== decodeURIComponent(matchId)) return false;
-      if (active) setItem(match.item);
+      if (active) { setItem(match.item); setReportId(report.id); }
       return true;
     })).then(found => { if (active && !found) setError('This match is no longer available or does not belong to your account.'); }).catch(e => { if (active) setError(e.message); }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [api, matchId, revision, retry]);
   if (!matchId) return null;
-  return <section><h2>Your notified match</h2>{loading ? <p role="status">Loading match...</p> : error ? <><p role="alert">{error}</p><button onClick={() => setRetry(r => r + 1)}>Retry match</button></> : <ItemCards api={api} items={[item]} choose={choose} busy={busy} />}</section>;
+  return <section><h2>Your notified match</h2>{loading ? <p role="status">Loading match...</p> : error ? <><p role="alert">{error}</p><button onClick={() => setRetry(r => r + 1)}>Retry match</button></> : <ItemCards api={api} items={[item]} choose={value => choose?.(value, reportId)} busy={busy} />}</section>;
 }
 
 export function HandoverCode({ payload }: { payload: string }) {

@@ -26,7 +26,7 @@ def item_view(item):
             str(value)
             if name in {"id", "photo_id", "active_upload_id"} and value
             else value.isoformat()
-            if name == "found_at"
+            if name in {"found_at", "created_at"}
             else value
         )
         for name in [
@@ -35,6 +35,7 @@ def item_view(item):
             "description",
             "category",
             "found_at",
+            "created_at",
             "public_location_hint",
             "state",
             "item_version",

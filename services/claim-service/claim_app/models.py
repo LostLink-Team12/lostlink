@@ -10,7 +10,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.sql import func
 
 DATABASE_SCHEMA = "claim"
-DATABASE_REVISION = "0001_claim"
+DATABASE_REVISION = "0002_claim_report"
 
 OPEN_STATES = (
     "submitted",
@@ -65,11 +65,19 @@ class Claim(Record, Base):
         ),
         Index("ix_claims_tenant_created", "tenant_id", "created_at", "id"),
         Index("ix_claims_owner_created", "owner_sub", "created_at", "id"),
+        Index(
+            "ix_claims_owner_report",
+            "owner_sub",
+            "lost_report_id",
+            "created_at",
+            postgresql_where=sql_text("lost_report_id IS NOT NULL"),
+        ),
     )
     tenant_id: Mapped[UUID]
     item_id: Mapped[UUID]
     item_version: Mapped[int]
     item_title: Mapped[str] = mapped_column(String(120))
+    lost_report_id: Mapped[UUID | None]
     owner_sub: Mapped[str] = mapped_column(String(128))
     state: Mapped[str] = mapped_column(String(32), default="submitted")
     version: Mapped[int] = mapped_column(default=1)
