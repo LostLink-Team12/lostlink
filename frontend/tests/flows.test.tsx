@@ -18,7 +18,9 @@ it('owner searches, answers public verification questions and submits a claim', 
   fireEvent.click(screen.getByRole('button', { name: 'Submit claim' }));
   await screen.findByText('Claim submitted. The venue will review your answers.');
   expect(api).toHaveBeenCalledWith('claim', '/v1/claims', expect.objectContaining({ body: { item_id: 'item-1', answers: [{ question_id: 'q1', version: 2, answer: 'A red notebook' }] } }));
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
   expect(screen.getByText('Similarity 0.620')).toBeInTheDocument();
+  expect(location.hash).toBe('#search');
 });
 
 it('venue loads private answers, sends If-Match and waits for approval completion', async () => {
@@ -32,6 +34,7 @@ it('venue loads private answers, sends If-Match and waits for approval completio
     return { items: [] };
   });
   render(<VenueApp api={api} />);
+  fireEvent.click(await screen.findByRole('link', { name: /Claims to review/ }));
   fireEvent.click(await screen.findByRole('button', { name: 'Review Blue bag' }));
   await screen.findByText('Notebook');
   fireEvent.click(screen.getByRole('button', { name: 'Approve claim' }));
@@ -53,7 +56,7 @@ it('saves a lost report using description instead of the search-only text field'
   render(<OwnerApp api={api} />);
   fireEvent.change(screen.getByLabelText('Describe your lost item'), { target: { value: 'Black umbrella' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save lost report' }));
-  await screen.findByText('Lost report saved. New matches will appear below.');
+  await screen.findByText('Lost report saved. View it in My lost reports.');
   expect(api).toHaveBeenCalledWith('matching', '/v1/lost-reports', { body: { description: 'Black umbrella' } });
 });
 
@@ -74,7 +77,9 @@ it('opens and focuses the claim panel immediately while questions load, preventi
   const panel = await screen.findByRole('region', { name: 'Claim Blue bag' });
   expect(within(panel).getByRole('heading')).toHaveFocus();
   expect(within(panel).getByRole('status')).toHaveTextContent('Working');
-  expect(panel.compareDocumentPosition(screen.getByRole('heading', { name: 'Search results' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(screen.queryByRole('heading', { name: 'Search results' })).not.toBeInTheDocument();
+  expect(location.hash).toBe('#claim/item-1');
+  expect(screen.getAllByText('Backpack').some(node => !node.closest('[hidden]'))).toBe(true);
   expect(trigger).toBeDisabled();
   fireEvent.click(trigger);
   expect(api.mock.calls.filter(([, path]) => path.startsWith('/v1/claim-questions'))).toHaveLength(1);
@@ -82,6 +87,8 @@ it('opens and focuses the claim panel immediately while questions load, preventi
   await within(panel).findByLabelText('Inside?');
   fireEvent.click(within(panel).getByRole('button', { name: 'Cancel' }));
   expect(screen.queryByRole('region', { name: 'Claim Blue bag' })).not.toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Search results' })).toBeInTheDocument();
+  expect(screen.getByLabelText('Describe your lost item')).toHaveValue('bag');
 });
 
 it('shows question-loading errors in the claim panel and allows retry', async () => {

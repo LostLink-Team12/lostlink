@@ -29,8 +29,10 @@ it.each([
   render(<VenueApp api={api} />);
   await waitFor(() => expect(screen.queryByText('Checking venue access…')).not.toBeInTheDocument());
   expect(!!screen.queryByRole('button', { name: 'Register item' })).toBe(staff);
-  expect(!!screen.queryByText('Staff management (venue administrators)')).toBe(members);
-  expect(!!screen.queryByText('Venue onboarding (platform administrators)')).toBe(platform);
+  expect(!!screen.queryByRole('link', { name: /Staff management/ })).toBe(members);
+  expect(!!screen.queryByRole('link', { name: /Venue onboarding/ })).toBe(platform);
+  if (members) { fireEvent.click(screen.getByRole('link', { name: /Staff management/ })); await screen.findByLabelText('Cognito subject'); }
+  if (platform) { fireEvent.click(screen.getByRole('link', { name: /Venue onboarding/ })); expect(screen.getByRole('button', { name: 'Create venue' })).toBeInTheDocument(); }
   if (!staff) expect(api.mock.calls.every(([,p]) => p === '/v1/session')).toBe(true);
 });
 

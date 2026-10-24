@@ -21,7 +21,7 @@ it.each(['Search items', 'Save lost report'])('rejects reversed dates next to th
   fireEvent.change(screen.getByLabelText('Found until'), { target: { value: '2026-10-25T10:00' } });
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: button }));
-  await screen.findByText(button === 'Search items' ? 'No matches. Try another description or save a lost report.' : 'Lost report saved. New matches will appear below.');
+  await screen.findByText(button === 'Search items' ? 'No matches. Try another description or save a lost report.' : 'Lost report saved. View it in My lost reports.');
   expect(api).toHaveBeenCalledWith('matching', button === 'Search items' ? '/v1/search' : '/v1/lost-reports', expect.objectContaining({ body: expect.objectContaining(foundDateRange('2026-10-24T10:00', '2026-10-25T10:00')) }));
 });
 

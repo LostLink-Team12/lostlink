@@ -41,10 +41,10 @@ export function ScanToken({ busy, submit }: { busy: boolean; submit: (token: str
   </form>;
 }
 
-export function Members({ api }: { api: Api }) {
-  const action = useAction(), [revision, setRevision] = useState(0), [opened, setOpened] = useState(false);
+export function Members({ api, expanded = false }: { api: Api; expanded?: boolean }) {
+  const action = useAction(), [revision, setRevision] = useState(0), [opened, setOpened] = useState(expanded);
   const changed = (member: any) => { setRevision(r => r + 1); action.setMessage(member.identity_sync_operation_id ? 'Member saved. Identity sync pending; sign in again after sync completes.' : 'Member saved.'); };
-  return <section><details onToggle={e => setOpened(e.currentTarget.open)}><summary>Staff management (venue administrators)</summary>
+  return <section>{expanded && <h2 data-page-heading>Staff management</h2>}<details open={expanded || undefined} onToggle={e => setOpened(e.currentTarget.open)}><summary>Staff management (venue administrators)</summary>
     {opened && <><button disabled={action.busy} onClick={() => setRevision(r => r + 1)}>Refresh staff</button>
     <form onSubmit={e => { e.preventDefault(); const form = e.currentTarget, data = new FormData(form); void action.run(async () => {
       changed(await api('venue', '/v1/venues/current/members', { body: { user_sub: String(data.get('user_sub')).trim(), role: data.get('role') } })); form.reset();
