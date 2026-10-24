@@ -128,6 +128,7 @@ class ImportRepair(Input):
 
 class ItemView(BaseModel):
     id: UUID
+    created_at: AwareDatetime
     title: str
     description: str
     category: str

@@ -15,3 +15,10 @@ Claim 数据库需执行 Alembic 到 `0002_claim_report`，新增可空列及部
 ## 认领详情的原位展开
 
 Owner 的 View claim 与 Venue 的 Review claim 共用同一列表组件：选中后原卡片变为浅绿色并在原位置加载答案及操作；一次仅展开一条，支持 Hide details 收起。加载错误、撤回进度和操作反馈均属于被点击的卡片，不在分页器前追加新的详情卡片。列表刷新保留未完成异步操作的详情状态。
+
+## 时间戳
+
+- Venue Found items：Found（拾获时间）及 Registered（登记时间）。Item API 从已有数据库列补充返回 created_at，不新增数据列。
+- Owner My lost reports：Reported（报告创建时间）。
+- 两端认领列表和展开详情：Submitted（申请创建时间），以及存在时的 Approved 和 Closed 时间。收起卡片也可直接看见。
+- 时间按浏览器本地时区显示并附时区名称；HTML time 的 datetime 与提示保留 UTC。后端未提供或格式无效的时间不显示，绝不以当前时间代替历史时间。

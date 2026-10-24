@@ -4051,6 +4051,11 @@
             "format": "uuid",
             "title": "Id"
           },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
           "title": {
             "type": "string",
             "title": "Title"
@@ -4187,6 +4192,7 @@
         "type": "object",
         "required": [
           "id",
+          "created_at",
           "title",
           "description",
           "category",
@@ -4300,6 +4306,11 @@
             "format": "uuid",
             "title": "Id"
           },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
           "title": {
             "type": "string",
             "title": "Title"
@@ -4384,6 +4395,7 @@
         "type": "object",
         "required": [
           "id",
+          "created_at",
           "title",
           "description",
           "category",
@@ -4404,6 +4416,11 @@
             "type": "string",
             "format": "uuid",
             "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
           },
           "title": {
             "type": "string",
@@ -4482,6 +4499,7 @@
         "type": "object",
         "required": [
           "id",
+          "created_at",
           "title",
           "description",
           "category",
@@ -4667,6 +4685,11 @@
             "format": "uuid",
             "title": "Id"
           },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
           "title": {
             "type": "string",
             "title": "Title"
@@ -4749,6 +4772,7 @@
         "type": "object",
         "required": [
           "id",
+          "created_at",
           "title",
           "description",
           "category",

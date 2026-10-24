@@ -39,3 +39,6 @@ header>nav{justify-content:flex-end;flex-wrap:wrap}
 .portal-switch:hover{color:#174e40;border-bottom-color:#b8ccbc}
 .portal-switch[aria-current=page]{font-weight:700;color:#174e40;border-bottom-color:#458374}
 header .secondary{margin:0;font-size:13px;padding:8px 14px}
+
+.record-times{display:flex;flex-wrap:wrap;gap:8px 24px;margin:14px 0;color:#526b61;font-size:12px}
+.record-times>div{min-width:0}.record-times dt{font-weight:600;color:#3f5d50}.record-times dd{margin:2px 0 0;overflow-wrap:anywhere}.record-times time{font-variant-numeric:tabular-nums}
