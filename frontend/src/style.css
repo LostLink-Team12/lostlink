@@ -34,3 +34,8 @@ header>nav{justify-content:flex-end;flex-wrap:wrap}
 .sign-in-note{font-size:13px;margin-top:20px}.sign-in-story{background:#eaf1e6;padding:38px;border-radius:60px 12px 60px 12px;color:#215e50}
 .sign-in-story>span{font-weight:700;letter-spacing:4px;font-size:14px}.sign-in-line{height:60px;border-left:2px dashed #87a391;margin:14px 0 14px 20px}.sign-in-story p{font-size:22px;line-height:1.4}
 @media(max-width:650px){.sign-in{grid-template-columns:1fr;min-height:0}.sign-in-story{display:none}}
+
+.portal-switch{text-decoration:none;padding:8px 0;border-bottom:2px solid transparent;white-space:nowrap;font-weight:400;color:#526e62}
+.portal-switch:hover{color:#174e40;border-bottom-color:#b8ccbc}
+.portal-switch[aria-current=page]{font-weight:700;color:#174e40;border-bottom-color:#458374}
+header .secondary{margin:0;font-size:13px;padding:8px 14px}
