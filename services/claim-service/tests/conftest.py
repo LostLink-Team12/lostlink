@@ -223,6 +223,7 @@ def claim_env():
                             "owner-2": ("owner2@example.com", True),
                             "owner-3": ("owner3@example.com", False),
                             "admin-a": ("admin-a@example.com", True),
+                            "admin-b": ("admin-b@example.com", True),
                         }
                     )
                     app = create_app(

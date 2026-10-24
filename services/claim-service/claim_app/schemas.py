@@ -41,6 +41,10 @@ class ContactInput(Input):
         return value
 
 
+class Approval(Input):
+    contact: ContactInput | None = None
+
+
 class NewClaim(Input):
     item_id: UUID
     lost_report_id: UUID | None = None

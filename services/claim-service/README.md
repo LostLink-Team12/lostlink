@@ -58,8 +58,8 @@ or failing membership returns 503. Lists and details are pinned to the token's v
   submitted. Staff cannot approve or hand over their own claim.
 - POST .../reject with reason_code (answers_incorrect, insufficient_detail,
   duplicate, other) and If-Match: 200, only for submitted claims.
-- GET .../contact: name, phone and verified email, only while approved or
-  handover_pending. Every disclosure writes an audit entry.
+- GET .../contact: name, phone and verified email during review and pending handover;
+  contact access is tenant scoped. Every disclosure writes an audit entry.
 - POST .../handover with {"token": qr_payload} and If-Match: 202 with operation_id.
   Hand the item over only when the operation completes and the claim is handed_over.
 
@@ -114,3 +114,18 @@ Integration tests run the real Venue and Item applications in-process against on
 disposable database with nine restricted roles. Cognito identity lookups use the
 static double; real Cognito, SES and cloud IAM remain deployment work. Deployment
 requirements are in [the backend integration guide](../../docs/team-alignment.md).
+
+
+Venue approval accepts an optional `contact: {name, phone}` body. The staff email
+is resolved and verified through Cognito, then stored with that contact inside the
+existing encrypted claim contact record. Owners read it with
+`GET /v1/claims/{id}/venue-contact` after approval (including completed handovers).
+Staff can backfill or update it with `PUT /v1/venue/claims/{id}/reply-contact`
+while the handover is pending, using If-Match and Idempotency-Key. Contact reads
+are audited and return Cache-Control: no-store. Legacy empty-body approval stays
+compatible, and returns contact_not_available until staff shares a contact.
+
+Run `alembic upgrade head` for Claim before deploying: migrations/env.py refreshes
+contact RLS for submitted/approval_pending states and grants UPDATE only on
+key_id/encrypted_contact. No new columns or revision are required. The CD migration
+hash guard still requires the normal migration baseline approval.

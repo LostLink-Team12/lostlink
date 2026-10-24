@@ -355,7 +355,11 @@ def test_access_boundaries_privacy_and_self_review(claim_env):
 
     api, worker = env.db["claim_api"], env.db["claim_worker"]
     with api.scoped_session(subject="staff-a", tenant_id=env.tenants["a"]) as session:
-        assert session.scalar(text("SELECT count(*) FROM claim.claim_contacts")) == 0
+        assert session.scalar(text("SELECT count(*) FROM claim.claim_contacts")) == 1
+        assert (
+            str(session.scalar(text("SELECT claim_id FROM claim.claim_contacts")))
+            == same_venue["id"]
+        )
         assert session.scalar(text("SELECT count(*) FROM claim.claims")) >= 2
     denied = [
         (api.scoped_session(subject="owner-1"), "UPDATE claim.claims SET owner_sub = 'x'"),

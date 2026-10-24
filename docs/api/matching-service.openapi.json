@@ -1125,6 +1125,198 @@
         }
       }
     },
+    "/v1/lost-reports/{report_id}/candidates": {
+      "get": {
+        "summary": "Report Candidates",
+        "description": "Interactive retrieval from a saved query; automatic notification cutoffs are unchanged.",
+        "operationId": "report_candidates_v1_lost_reports__report_id__candidates_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Report Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 10000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportCandidatesPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "A valid Cognito access token is required.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "WWW-Authenticate": {
+                "schema": {
+                  "type": "string",
+                  "example": "Bearer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The client, role, scope or current membership does not permit this operation.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body exceeds the service size limit.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request validation failed or application input is invalid.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "An unexpected internal error occurred; details are not disclosed.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Required configuration, database access or an upstream dependency is unavailable.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The resource does not exist or is not visible to the caller.",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Request correlation ID, also returned in the response body.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/lost-reports/{report_id}/matches": {
       "get": {
         "summary": "List Matches",
@@ -1823,6 +2015,47 @@
           "venue_name"
         ],
         "title": "NotificationContext"
+      },
+      "ReportCandidatesPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SearchHit"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More"
+          },
+          "candidate_limit": {
+            "type": "integer",
+            "title": "Candidate Limit"
+          },
+          "potentially_truncated": {
+            "type": "boolean",
+            "title": "Potentially Truncated"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "limit",
+          "offset",
+          "has_more",
+          "candidate_limit",
+          "potentially_truncated"
+        ],
+        "title": "ReportCandidatesPage"
       },
       "ReportView": {
         "properties": {

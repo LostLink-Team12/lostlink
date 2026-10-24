@@ -213,6 +213,52 @@ def item_photo(item_id: UUID, request: Request, response: Response, principal: A
 
 
 @router.get(
+    "/v1/lost-reports/{report_id}/candidates",
+    response_model=schemas.ReportCandidatesPage,
+    responses=error_responses(404),
+)
+def report_candidates(
+    report_id: UUID,
+    request: Request,
+    response: Response,
+    principal: Actor,
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0, le=10000)] = 0,
+):
+    """Interactive retrieval from a saved query; automatic notification cutoffs are unchanged."""
+    owner(request, principal)
+    response.headers["Cache-Control"] = "no-store"
+    bound = request.app.state.settings.candidate_limit
+    with database(request).context(subject=principal.subject) as session:
+        row = report(session, report_id)
+        rows = (
+            candidates(session, row.embedding, row.model_version, row, bound, 0.0)
+            if row.state == "open"
+            else []
+        )
+    # Paginate live eligible results, rather than leaving gaps after stale-item filtering.
+    values, eligible = [], 0
+    if offset < len(rows):
+        for item, embedding, score in rows:
+            context = item_context(request, item.item_id)
+            if not is_current(context, item, embedding, row):
+                continue
+            if eligible >= offset:
+                values.append(hit(context, score))
+            eligible += 1
+            if len(values) > limit:
+                break
+    return {
+        "items": values[:limit],
+        "limit": limit,
+        "offset": offset,
+        "has_more": len(values) > limit,
+        "candidate_limit": bound,
+        "potentially_truncated": len(rows) == bound,
+    }
+
+
+@router.get(
     "/v1/lost-reports/{report_id}/matches",
     response_model=schemas.MatchesPage,
     responses=error_responses(404),

@@ -479,3 +479,28 @@ def test_localstack_sns_sqs_inbox_commits_before_ack_and_outbox_roundtrip(matchi
             sqs.delete_queue(QueueUrl=queue)
         sns.close()
         sqs.close()
+
+
+def test_saved_query_candidates_match_search_without_changing_automatic_matches(matching_env):
+    env = matching_env
+    index_item(env, "a", "red backpack")
+    index_item(env, "b", "blue backpack")
+    report = new_report(env)
+    path = f"/v1/lost-reports/{report['id']}/candidates"
+    search = env.client.post("/v1/search", json={"text": "red backpack"}, headers=headers())
+    first = env.client.get(path + "?limit=1", headers=headers())
+    second = env.client.get(path + "?limit=1&offset=1", headers=headers())
+    assert first.status_code == second.status_code == 200
+    assert first.json()["has_more"] and not second.json()["has_more"]
+    items = first.json()["items"] + second.json()["items"]
+    assert [x["item_id"] for x in items] == [x["item_id"] for x in search.json()["items"]]
+    assert env.client.get(path, headers=headers("other")).status_code == 404
+    with env.db["matching_worker"].context() as session:
+        assert session.scalar(select(func.count()).select_from(Match)) == 0
+    closed = env.client.post(
+        f"/v1/lost-reports/{report['id']}/close",
+        headers=headers(**{"Idempotency-Key": uuid4().hex, "If-Match": '"1"'}),
+        json={},
+    )
+    assert closed.status_code == 200
+    assert env.client.get(path, headers=headers()).json()["items"] == []

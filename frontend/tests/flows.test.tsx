@@ -37,9 +37,10 @@ it('venue loads private answers, sends If-Match and waits for approval completio
   fireEvent.click(await screen.findByRole('link', { name: /Claims to review/ }));
   fireEvent.click(await screen.findByRole('button', { name: 'Review Blue bag' }));
   await screen.findByText('Notebook');
+  fireEvent.change(screen.getByLabelText('Venue contact name'), { target: { value: 'Campus counter' } });
   fireEvent.click(screen.getByRole('button', { name: 'Approve claim' }));
   await waitFor(() => expect(api).toHaveBeenCalledWith('claim', '/v1/claim-operations/op1'));
-  expect(api).toHaveBeenCalledWith('claim', '/v1/venue/claims/c1/approve', expect.objectContaining({ version: 4 }));
+  expect(api).toHaveBeenCalledWith('claim', '/v1/venue/claims/c1/approve', expect.objectContaining({ version: 4, body: { contact: { name: 'Campus counter' } } }));
   await screen.findByText('Claim approved.');
 });
 

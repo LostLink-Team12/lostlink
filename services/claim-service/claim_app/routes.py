@@ -3,7 +3,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, Query, Request
+from fastapi import APIRouter, Body, Depends, Header, Query, Request
 from fastapi.responses import JSONResponse
 from lostlink_common.auth import Principal, get_principal
 from lostlink_common.errors import error_responses
@@ -319,17 +319,32 @@ def venue_detail(claim_id: UUID, request: Request, principal: Staff):
     responses=error_responses(404, 409, 412, 428),
 )
 def approve(
-    claim_id: UUID, request: Request, principal: Staff, key: Key = None, version: Version = None
+    claim_id: UUID,
+    request: Request,
+    principal: Staff,
+    key: Key = None,
+    version: Version = None,
+    body: Annotated[schemas.Approval | None, Body()] = None,
 ):
+    body = body or schemas.Approval()
+    operation = f"POST /v1/venue/claims/{claim_id}/approve"
+    payload = body.model_dump(mode="json", exclude_none=True)
+    # Preserve legacy empty-body replay hashes and avoid identity calls on replay.
+    scope, request_hash = identity(principal, operation, key, payload, version)
+    with staff_session(request, principal) as session:
+        previous = stored(session, scope, request_hash)
+    if previous:
+        return result(previous)
+    contact = verified_venue_contact(request, principal, body.contact) if body.contact else None
     return write(
         request,
         principal,
         staff_session,
-        f"POST /v1/venue/claims/{claim_id}/approve",
+        operation,
         key,
-        {},
+        payload,
         version,
-        lambda svc: svc.approve(principal, claim_id, version),
+        lambda svc: svc.approve(principal, claim_id, version, contact),
     )
 
 
@@ -398,9 +413,76 @@ def venue_contact(claim_id: UUID, request: Request, principal: Staff):
     with staff_session(request, principal) as session:
         svc = service(session, principal, request)
         claim = svc.get(claim_id, tenant_id=principal.tenant_id)
-        if claim.state not in {"approved", "handover_pending"}:
-            fail(403, "contact_not_available", "Contact is shared only for a pending handover")
-        return svc.contact(claim, "contact.venue_viewed")
+        if claim.state not in {"submitted", "approval_pending", "approved", "handover_pending"}:
+            fail(403, "contact_not_available", "Contact is shared only for an active claim")
+        return JSONResponse(
+            svc.contact(claim, "contact.venue_viewed"), headers={"Cache-Control": "no-store"}
+        )
+
+
+@router.get(
+    "/v1/claims/{claim_id}/venue-contact",
+    response_model=schemas.ContactView,
+    tags=["Claims"],
+    responses=error_responses(404),
+)
+def owner_venue_contact(claim_id: UUID, request: Request, principal: Owner):
+    dependency(request, "cipher", "encryption_unavailable")
+    with owner_session(request, principal) as session:
+        svc = service(session, principal, request)
+        claim = svc.get(claim_id, owner_sub=principal.subject)
+        if claim.state not in {"approved", "handover_pending", "handed_over"}:
+            fail(403, "contact_not_available", "Venue contact requires an approved claim")
+        return JSONResponse(
+            svc.contact(claim, "contact.venue_viewed_by_owner", venue=True),
+            headers={"Cache-Control": "no-store"},
+        )
+
+
+def verified_venue_contact(request, principal, contact):
+    dependency(request, "cipher", "encryption_unavailable")
+    directory = dependency(request, "identity_directory", "identity_unavailable")
+    try:
+        email = directory.resolve_verified_email(principal.subject).email
+    except (IdentityNotFound, EmailNotVerified):
+        fail(409, "email_not_verified", "Verify your account email before sharing venue contact")
+    except IdentityDirectoryUnavailable:
+        fail(503, "identity_unavailable", "Venue contact email could not be checked")
+    return {**contact.model_dump(), "email": email}
+
+
+@router.put(
+    "/v1/venue/claims/{claim_id}/reply-contact",
+    response_model=schemas.VenueClaimDetail,
+    tags=["Venue"],
+    responses=error_responses(404, 409, 412, 428),
+)
+def share_venue_contact(
+    claim_id: UUID,
+    body: schemas.ContactInput,
+    request: Request,
+    principal: Staff,
+    key: Key = None,
+    version: Version = None,
+):
+    operation = f"PUT /v1/venue/claims/{claim_id}/reply-contact"
+    payload = body.model_dump(mode="json")
+    scope, request_hash = identity(principal, operation, key, payload, version)
+    with staff_session(request, principal) as session:
+        previous = stored(session, scope, request_hash)
+    if previous:
+        return result(previous)
+    contact = verified_venue_contact(request, principal, body)
+    return write(
+        request,
+        principal,
+        staff_session,
+        operation,
+        key,
+        payload,
+        version,
+        lambda svc: svc.share_venue_contact(principal, claim_id, version, contact),
+    )
 
 
 def operation_view(row, claim):

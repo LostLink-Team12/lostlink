@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ItemPhoto } from './ItemPhoto';
+import { ClaimContact, VenueContactFields } from './ClaimContact';
 import { ReportClaimMarker } from './ReportClaimMarker';
 import { RecordTimes } from './RecordTimes';
 import { StatusBadge } from './StatusBadge';
@@ -35,15 +36,33 @@ function Photo({ required = false }: { required?: boolean }) {
   return <label>Photo (JPEG, PNG or WebP)<input name="photo" type="file" accept="image/jpeg,image/png,image/webp" required={required} /></label>;
 }
 
-export function PageList({ api, service, path, revision = 0, children }: { api: Api; service: string; path: string; revision?: number; children: (rows: any[]) => React.ReactNode }) {
-  const [page, setPage] = useState({ items: [] as any[], has_more: false, source: '' }), [offset, setOffset] = useState(0), [error, setError] = useState(''), [loading, setLoading] = useState(true);
-  const source = `${service}:${path}`;
+type PageListProps = { api: Api; service: string; path: string; revision?: number; label?: string; children: (rows: any[]) => React.ReactNode };
+
+export function PageList(props: PageListProps) {
+  // A new resource starts on page one; refreshing the same resource retains operation details.
+  return <ListPage key={`${props.service}:${props.path}`} {...props} />;
+}
+
+function ListPage({ api, service, path, revision = 0, label = 'Record pages', children }: PageListProps) {
+  const [page, setPage] = useState({ items: [] as any[], has_more: false, source: '', offset: 0, candidate_limit: 0, potentially_truncated: false });
+  const [offset, setOffset] = useState(0), [attempt, setAttempt] = useState(0), [error, setError] = useState(''), [loading, setLoading] = useState(true);
+  const source = `${service}:${path}`, size = 20;
+  const requestPage = (next: number) => { setOffset(next); setAttempt(value => value + 1); };
   useEffect(() => {
     let current = true; setLoading(true); setError('');
-    api(service, `${path}${path.includes('?') ? '&' : '?'}limit=20&offset=${offset}`).then(value => { if (current) setPage({ ...value, source }); }).catch(e => { if (current) setError(e.message); }).finally(() => { if (current) setLoading(false); });
+    api(service, `${path}${path.includes('?') ? '&' : '?'}limit=${size}&offset=${offset}`).then(value => { if (current) setPage({ ...value, source, offset }); }).catch(e => { if (current) setError(e.message); }).finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
-  }, [api, service, path, offset, revision]);
-  return <>{loading && <p role="status">{page.source === source ? 'Refreshing…' : 'Loading…'}</p>}{error && <p role="alert">{error}</p>}{page.source === source && <>{page.items.length ? children(page.items) : <p>No records yet.</p>}<div className="pagination"><button disabled={!offset} onClick={() => setOffset(x => x - 20)}>Previous</button><span>Page {offset / 20 + 1}</span><button disabled={!page.has_more} onClick={() => setOffset(x => x + 20)}>Next</button></div></>}</>;
+  }, [api, service, path, offset, revision, attempt]);
+  return <>{loading && <p role="status">{page.source === source && page.offset === offset ? 'Refreshing…' : 'Loading…'}</p>}{error && <><p role="alert">{error}</p><button type="button" className="secondary" onClick={() => requestPage(offset)}>Retry loading records</button></>}{page.source === source && <>
+    {page.items.length ? children(page.items) : <p>No records yet.</p>}
+    {page.potentially_truncated && <p>The candidate window is limited to {page.candidate_limit} items. Use more specific filters in Search to narrow the results.</p>}
+    <nav className="pagination" aria-label={label} aria-busy={loading}>
+      <button disabled={loading || page.offset === 0} title={loading ? 'Loading records' : page.offset === 0 ? 'This is the first page' : 'Previous page'} onClick={() => requestPage(Math.max(0, page.offset - size))}>Previous</button>
+      <span>Page {page.offset / size + 1}</span>
+      {page.items.length > 0 && <span className="page-range">Showing {page.offset + 1}–{page.offset + page.items.length}</span>}
+      <button disabled={loading || !page.has_more} title={loading ? 'Loading records' : page.has_more ? 'Next page' : 'No more results'} onClick={() => requestPage(page.offset + size)}>Next</button>
+    </nav>
+  </>}</>;
 }
 
 export function ItemCards({ items, choose, busy = false, api }: { items: Item[]; choose?: (item: Item, reportId?: string) => void; busy?: boolean; api?: Api }) {
@@ -73,6 +92,7 @@ export function OwnerApp({ api }: { api: Api }) {
   const [results, setResults] = useState<Item[] | null>(null), [truncated, setTruncated] = useState(false), [revision, setRevision] = useState(0);
   const [claim, setClaim] = useState<{ item_id: string; title: string; questions: Question[] } | null>(null);
   const [matches, setMatches] = useState<string | null>(null), [claimReport, setClaimReport] = useState<string | null>(null);
+  const [closedReports, setClosedReports] = useState<string[]>([]);
   const query = async (data: FormData) => {
     const photo = file(data), dates = foundDateRange(text(data, 'from'), text(data, 'until'));
     return { ...(text(data, 'description') ? { text: text(data, 'description') } : {}), ...(photo ? { photo_base64: await photoBase64(photo) } : {}), ...(text(data, 'category') ? { category: text(data, 'category') } : {}), ...(text(data, 'venue') ? { venue_id: text(data, 'venue') } : {}), ...dates };
@@ -112,24 +132,25 @@ export function OwnerApp({ api }: { api: Api }) {
     {results && <section><h2>Search results</h2>{!results.length && <p>No matches. Try another description or save a lost report.</p>}{truncated && <p>Results may be incomplete. Narrow your filters.</p>}<ItemCards api={api} items={results} choose={choose} busy={claimAction.busy || action.busy} /></section>}
     </div>
     {page === 'claim' && claimItem && <div className="claim-layout"><div className="claim-item"><p className="eyebrow">SELECTED ITEM</p><ItemCards api={api} items={[claimItem]} /></div><section aria-labelledby="claim-heading">
-      <h1 id="claim-heading" ref={claimHeading} tabIndex={-1}>Claim {claimItem.title}</h1>
+      <h1 id="claim-heading" className="content-focus-target" ref={claimHeading} tabIndex={-1}>Claim {claimItem.title}</h1>
       {claimAction.status}
       {claim && <><p>Tell the venue details only the owner would know.</p><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void claimAction.run(async () => {
         const contact = { ...(text(data, 'name') ? { name: text(data, 'name') } : {}), ...(text(data, 'phone') ? { phone: text(data, 'phone') } : {}) };
         await api('claim', '/v1/claims', { body: { item_id: claim.item_id, ...(claimReport ? { lost_report_id: claimReport } : {}), answers: claim.questions.map(q => ({ question_id: q.id, version: q.version, answer: text(data, q.id) })), ...(Object.keys(contact).length ? { contact } : {}) } });
         setClaim(null); setClaimSubmitted(true); setRevision(x => x + 1); claimAction.setMessage('Claim submitted. The venue will review your answers.');
       }); }}>{claim.questions.map(q => <Field key={q.id} label={q.prompt} name={q.id} maxLength={1000} />)}<Field label="Contact name" name="name" required={false} maxLength={120} /><Field label="Phone" name="phone" type="tel" required={false} maxLength={32} /><button disabled={claimAction.busy}>Submit claim</button></form></>}
-      {!claim && !claimSubmitted && !claimAction.busy && <button onClick={() => void choose(claimItem)}>Retry loading questions</button>}
+      {!claim && !claimSubmitted && !claimAction.busy && <button onClick={() => void choose(claimItem, claimReport || undefined)}>Retry loading questions</button>}
       <button type="button" disabled={claimAction.busy} className="secondary" onClick={() => { setClaimItem(null); setClaim(null); navigate('search'); }}>{claimSubmitted ? 'Close' : 'Cancel'}</button>
     </section></div>}
     {page === 'claim' && !claimItem && <section><h1>Select an item to claim</h1><p>Return to Search and choose an item to see its current details and verification questions.</p><button onClick={() => navigate('search')}>Back to Search</button></section>}
-    {page === 'reports' && <><section><h1>My lost reports</h1><p>Save a report from Search, then check for new matches here.</p>{action.status}<button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh records</button><PageList api={api} service="matching" path="/v1/lost-reports" revision={revision}>{rows => rows.map(report => <article key={report.id}><h3>{report.description}</h3><p><StatusBadge state={report.state} /></p><RecordTimes entries={[{ label: 'Reported', value: report.created_at }]} /><ReportClaimMarker api={api} reportId={report.id} revision={revision} /><button onClick={() => setMatches(report.id)}>View matches</button>{report.state === 'open' && <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
+    {page === 'reports' && <><section><h1>My lost reports</h1><p>Save a report from Search, then check for new matches here.</p>{action.status}<button className="secondary" onClick={() => { setMatches(null); setRevision(x => x + 1); }}>Refresh records</button><PageList api={api} service="matching" path="/v1/lost-reports" label="Lost report pages" revision={revision}>{rows => rows.map(report => <article key={report.id} aria-label={`Lost report: ${report.description}`}><h3>{report.description}</h3><p><StatusBadge state={closedReports.includes(report.id) ? 'closed' : report.state} /></p><RecordTimes entries={[{ label: 'Reported', value: report.created_at }]} /><ReportClaimMarker api={api} reportId={report.id} revision={revision} /><button disabled={action.busy || report.state !== 'open' || closedReports.includes(report.id)} onClick={() => setMatches(report.id)}>View matches</button>{(report.state !== 'open' || closedReports.includes(report.id)) && <p>Matching has stopped for this closed report.</p>}{report.state === 'open' && !closedReports.includes(report.id) && <form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
       await api('matching', '/v1/lost-reports/' + id(report.id) + '/close', { body: { reason: text(data, 'reason') }, version: report.version });
+      setClosedReports(current => [...current, report.id]); setMatches(current => current === report.id ? null : current);
       setRevision(x => x + 1); action.setMessage('Lost report closed.');
     }); }}><label>Closure reason<select name="reason"><option value="found">Found my item</option><option value="no_longer_needed">No longer needed</option></select></label><button disabled={action.busy}>Close lost report</button></form>}</article>)}</PageList></section>
-    {matches && <section><h2>Report matches</h2><PageList api={api} service="matching" path={`/v1/lost-reports/${id(matches)}/matches`} revision={revision}>{rows => <ItemCards api={api} items={rows.map(row => row.item)} choose={item => void choose(item, matches)} busy={claimAction.busy || action.busy} />}</PageList></section>}
+    {matches && <section aria-labelledby="report-matches-heading"><h2 id="report-matches-heading">Report matches</h2><p>Browse similar items using your saved description, photo and filters, ranked like Search. Automatic email matches use a stricter confidence threshold.</p><PageList api={api} service="matching" path={`/v1/lost-reports/${id(matches)}/candidates`} label="Similar item pages" revision={revision}>{rows => <ItemCards api={api} items={rows} choose={item => void choose(item, matches)} busy={claimAction.busy || action.busy} />}</PageList></section>}
     </>}
-    {page === 'claims' && <section><h1>My claims</h1><p>View your requests, collect an approved item, or withdraw a request you no longer need.</p><button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh claims</button><PageList api={api} service="claim" path="/v1/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue={false} refresh={() => setRevision(x => x + 1)} />}</PageList></section>}
+    {page === 'claims' && <section><h1>My claims</h1><p>View your requests, collect an approved item, or withdraw a request you no longer need.</p><button className="secondary" onClick={() => setRevision(x => x + 1)}>Refresh claims</button><PageList api={api} service="claim" path="/v1/claims" label="My claim pages" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue={false} refresh={() => setRevision(x => x + 1)} />}</PageList></section>}
   </PortalLayout>;
 }
 
@@ -138,8 +159,8 @@ function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; ven
   const details = useRef<HTMLDivElement>(null);
   useEffect(() => { details.current?.focus({ preventScroll: true }); }, [selected?.id]);
   const path = `/v1/${venue ? 'venue/claims' : 'claims'}`;
-  const approve = () => action.run(async () => {
-    const result = await api('claim', `${path}/${id(selected!.id)}/approve`, { body: {}, version: selected!.version });
+  const approve = (contact: { name: string; phone?: string }) => action.run(async () => {
+    const result = await api('claim', `${path}/${id(selected!.id)}/approve`, { body: { contact }, version: selected!.version });
     const done = await waitOperation(api, 'claim', result.operation_id);
     if (done.claim_state !== 'approved') throw Error(`Approval ended with state ${done.claim_state}. Refresh before continuing.`);
     setSelected(null); refresh(); action.setMessage('Claim approved.');
@@ -154,13 +175,18 @@ function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; ven
         setExpandedId(row.id); setSelected(null); setQr(''); setWithdrawing(false);
         setSelected(await api('claim', `${path}/${id(row.id)}`));
       })}>{venue ? 'Review claim' : 'View claim'}</button> : <button className="secondary" disabled={action.busy} aria-expanded="true" aria-controls={`claim-details-${row.id}`} onClick={() => { setExpandedId(null); setSelected(null); setQr(''); setWithdrawing(false); }}>Hide details</button>}
-      {loaded && selected && <div id={`claim-details-${row.id}`} ref={details} tabIndex={-1}>
+      {loaded && selected && <div id={`claim-details-${row.id}`} className="content-focus-target" ref={details} tabIndex={-1}>
 <button disabled={action.busy} onClick={() => void action.run(async () => { setQr(''); setSelected(await api('claim', path + '/' + id(selected.id))); })}>Refresh claim details</button>{selected.answers?.map(answer => <div key={answer.question_id}><strong>{answer.prompt}</strong><p>{answer.answer}</p></div>)}
+      <ClaimContact key={`${selected.id}:${selected.state}:${selected.version}`} api={api} claimId={selected.id} venue={venue} state={selected.state} version={selected.version} />
       {selected.active_operation_id && <button disabled={action.busy} onClick={() => void action.run(async () => { const done = await waitOperation(api, 'claim', selected.active_operation_id!); if (selected.state === 'cancellation_pending' && done.claim_state !== 'cancelled') throw Error('Withdrawal not completed. Refresh before continuing.'); if (selected.state === 'handover_pending' && done.claim_state !== 'handed_over') throw Error('Handover not completed. Refresh before continuing.'); setSelected(await api('claim', `${path}/${id(selected.id)}`)); refresh(); action.setMessage('Operation completed.'); })}>Check pending operation</button>}
-      {venue && selected.state === 'submitted' && <><button disabled={action.busy} onClick={() => void approve()}>Approve claim</button><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
+      {venue && selected.state === 'submitted' && <><form aria-label="Approve claim" onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void approve({ name: text(data, 'venue_name'), ...(text(data, 'venue_phone') ? { phone: text(data, 'venue_phone') } : {}) }); }}><VenueContactFields /><button disabled={action.busy}>Approve claim</button></form><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
         const value = await api('claim', path + '/' + id(selected.id) + '/reject', { body: { reason_code: text(data, 'reason_code') }, version: selected.version });
         setSelected(value); refresh(); action.setMessage('Claim rejected.');
       }); }}><label>Rejection reason<select name="reason_code"><option value="answers_incorrect">Answers incorrect</option><option value="insufficient_detail">Insufficient detail</option><option value="duplicate">Duplicate</option><option value="other">Other</option></select></label><button disabled={action.busy}>Reject claim</button></form></>}
+      {venue && ['approved', 'handover_pending'].includes(selected.state) && <form aria-label="Update venue contact" onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
+        setSelected(await api('claim', `${path}/${id(selected.id)}/reply-contact`, { method: 'PUT', version: selected.version, body: { name: text(data, 'venue_name'), ...(text(data, 'venue_phone') ? { phone: text(data, 'venue_phone') } : {}) } }));
+        refresh(); action.setMessage('Venue contact shared with the owner.');
+      }); }}><VenueContactFields /><button disabled={action.busy}>Save venue contact</button></form>}
       {venue && selected.state === 'approved' && <ScanToken busy={action.busy} submit={token => action.run(async () => {
         const result = await api('claim', path + '/' + id(selected.id) + '/handover', { body: { token }, version: selected.version });
         setSelected({ ...selected, state: 'handover_pending', active_operation_id: result.operation_id });
@@ -243,8 +269,8 @@ export function VenueApp({ api, goToOwner }: { api: Api; goToOwner?: () => void 
       <button disabled={action.busy}>{lockedForm ? 'Retry registration' : 'Register item'}</button>
     </form>{lockedForm && <p>Registration started. Keep this page open and retry with the same photo if the connection fails.</p>}{action.status}</section>
     </div>}
-    {staff && page === 'items' && <section><h2 data-page-heading>Found items</h2><PageList api={api} service="item" path="/v1/items" revision={revision}>{rows => <ItemCards items={rows} />}</PageList></section>}
-    {staff && page === 'reviews' && <section><h2 data-page-heading>Claims to review</h2><PageList api={api} service="claim" path="/v1/venue/claims" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue refresh={refresh} />}</PageList></section>}
+    {staff && page === 'items' && <section><h2 data-page-heading>Found items</h2><PageList api={api} service="item" path="/v1/items" label="Found item pages" revision={revision}>{rows => <ItemCards items={rows} />}</PageList></section>}
+    {staff && page === 'reviews' && <section><h2 data-page-heading>Claims to review</h2><PageList api={api} service="claim" path="/v1/venue/claims" label="Claim review pages" revision={revision}>{rows => <ClaimList rows={rows} api={api} venue refresh={refresh} />}</PageList></section>}
     {administrator && page === 'members' && <Members api={api} expanded />}
     {platform && page === 'onboarding' && <section><h2 data-page-heading>Venue onboarding (platform administrators)</h2><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void onboardingAction.run(async () => {
       await api('venue', '/v1/admin/venues', { body: { name: text(data, 'name'), slug: text(data, 'slug'), initial_admin_sub: text(data, 'admin') } }); onboardingAction.setMessage('Venue created. The initial administrator must sign in again after identity sync.');
