@@ -55,8 +55,8 @@ Cognito token to S3. Workers and embedding consumers must be running.
 
 The apps exchange the code directly at Cognito. Only PKCE state/verifier is held in
 sessionStorage during login; access tokens stay in memory and expire automatically.
-Reloading requires sign-in again (Cognito can reuse its login session). Sign-out
-clears local state and redirects through Cognito logout. No password/token entry box,
+Reloading discards the in-memory session. The single sign-in screen always starts in Owner; portal navigation reuses the current token when client IDs match, or automatically starts a fresh PKCE authorization for the destination client using the Cognito login cookie. A valid Cognito session avoids another credential prompt. Expired or revoked Cognito sessions still require authentication. Sign-out
+clears all in-memory sessions and redirects through Cognito logout to `/owner-app/`. Register that sign-out URL for both clients. No password/token entry box,
 ID token authentication, refresh token storage or caller-selected tenant is used.
 
 ## Implemented flows

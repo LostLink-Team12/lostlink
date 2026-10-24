@@ -28,3 +28,9 @@ main{max-width:1320px}
 .account-email{font-size:13px;color:#5b7067;overflow-wrap:anywhere;max-width:260px;user-select:text}
 header>nav{justify-content:flex-end;flex-wrap:wrap}
 @media(max-width:600px){header{padding:18px 5%}.account-email{flex-basis:100%;max-width:none;text-align:right}}
+
+.sign-in{display:grid;grid-template-columns:1.15fr .85fr;gap:40px;padding:clamp(28px,5vw,64px);align-items:center;min-height:430px}
+.sign-in>div>p{max-width:460px;color:#526e62}.sign-in h1{font-size:clamp(36px,5vw,60px);max-width:480px}
+.sign-in-note{font-size:13px;margin-top:20px}.sign-in-story{background:#eaf1e6;padding:38px;border-radius:60px 12px 60px 12px;color:#215e50}
+.sign-in-story>span{font-weight:700;letter-spacing:4px;font-size:14px}.sign-in-line{height:60px;border-left:2px dashed #87a391;margin:14px 0 14px 20px}.sign-in-story p{font-size:22px;line-height:1.4}
+@media(max-width:650px){.sign-in{grid-template-columns:1fr;min-height:0}.sign-in-story{display:none}}

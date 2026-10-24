@@ -32,3 +32,14 @@ it('keeps a valid login usable if profile lookup is unavailable', async () => {
   expect(session.accessToken).toBe('access');
   expect(session.email).toBe('');
 });
+
+it('binds the PKCE exchange to its initiating client and callback', async () => {
+  const store = storage(), url = new URL(await beginLogin(config, store)), fetcher = () => { throw Error('Must not exchange'); };
+  await expect(finishLogin({ ...config, clientId: 'another-client' }, `?code=abc&state=${url.searchParams.get('state')}`, store, fetcher)).rejects.toThrow(/state/i);
+});
+
+it.each(['/venue-portal/', '/matches/match-1', 'https://evil.example/', '//evil.example/'])('restricts the post-login destination %s', async returnPath => {
+  const store = storage(), url = new URL(await beginLogin({ ...config, returnPath }, store));
+  const session = await finishLogin(config, `?code=abc&state=${url.searchParams.get('state')}`, store, async () => new Response(JSON.stringify({ access_token: 'access', expires_in: 3600 })));
+  expect(session.returnPath).toBe(returnPath.startsWith('/venue-portal') || returnPath.startsWith('/matches/') ? returnPath : undefined);
+});
