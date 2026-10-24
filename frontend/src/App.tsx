@@ -130,7 +130,7 @@ export function OwnerApp({ api }: { api: Api }) {
     {results && <section><h2>Search results</h2>{!results.length && <p>No matches. Try another description or save a lost report.</p>}{truncated && <p>Results may be incomplete. Narrow your filters.</p>}<ItemCards api={api} items={results} choose={choose} busy={claimAction.busy || action.busy} /></section>}
     </div>
     {page === 'claim' && claimItem && <div className="claim-layout"><div className="claim-item"><p className="eyebrow">SELECTED ITEM</p><ItemCards api={api} items={[claimItem]} /></div><section aria-labelledby="claim-heading">
-      <h1 id="claim-heading" ref={claimHeading} tabIndex={-1}>Claim {claimItem.title}</h1>
+      <h1 id="claim-heading" className="content-focus-target" ref={claimHeading} tabIndex={-1}>Claim {claimItem.title}</h1>
       {claimAction.status}
       {claim && <><p>Tell the venue details only the owner would know.</p><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void claimAction.run(async () => {
         const contact = { ...(text(data, 'name') ? { name: text(data, 'name') } : {}), ...(text(data, 'phone') ? { phone: text(data, 'phone') } : {}) };
@@ -173,7 +173,7 @@ function ClaimList({ rows, api, venue, refresh }: { rows: Claim[]; api: Api; ven
         setExpandedId(row.id); setSelected(null); setQr(''); setWithdrawing(false);
         setSelected(await api('claim', `${path}/${id(row.id)}`));
       })}>{venue ? 'Review claim' : 'View claim'}</button> : <button className="secondary" disabled={action.busy} aria-expanded="true" aria-controls={`claim-details-${row.id}`} onClick={() => { setExpandedId(null); setSelected(null); setQr(''); setWithdrawing(false); }}>Hide details</button>}
-      {loaded && selected && <div id={`claim-details-${row.id}`} ref={details} tabIndex={-1}>
+      {loaded && selected && <div id={`claim-details-${row.id}`} className="content-focus-target" ref={details} tabIndex={-1}>
 <button disabled={action.busy} onClick={() => void action.run(async () => { setQr(''); setSelected(await api('claim', path + '/' + id(selected.id))); })}>Refresh claim details</button>{selected.answers?.map(answer => <div key={answer.question_id}><strong>{answer.prompt}</strong><p>{answer.answer}</p></div>)}
       {selected.active_operation_id && <button disabled={action.busy} onClick={() => void action.run(async () => { const done = await waitOperation(api, 'claim', selected.active_operation_id!); if (selected.state === 'cancellation_pending' && done.claim_state !== 'cancelled') throw Error('Withdrawal not completed. Refresh before continuing.'); if (selected.state === 'handover_pending' && done.claim_state !== 'handed_over') throw Error('Handover not completed. Refresh before continuing.'); setSelected(await api('claim', `${path}/${id(selected.id)}`)); refresh(); action.setMessage('Operation completed.'); })}>Check pending operation</button>}
       {venue && selected.state === 'submitted' && <><button disabled={action.busy} onClick={() => void approve()}>Approve claim</button><form onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void action.run(async () => {
