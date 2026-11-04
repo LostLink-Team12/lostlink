@@ -3,6 +3,7 @@
 import argparse
 import base64
 import json
+import os
 import re
 import secrets
 import subprocess
@@ -164,6 +165,7 @@ def configuration(private, public, tag):
         "identity": {
             "image": images["venue"],
             "command": ["python", "/dast/identity.py"],
+            "healthcheck": {"disable": True},
             "volumes": [
                 mount(private, "/private"),
                 mount(authority, "/authority"),
@@ -172,6 +174,10 @@ def configuration(private, public, tag):
         },
         "probe": {
             "image": images["venue"],
+            # The Linux runner owns public/. Match it instead of relying on
+            # Windows bind mounts' permissive ownership semantics.
+            "user": f"{getattr(os, 'getuid', lambda: 1000)()}:{getattr(os, 'getgid', lambda: 1000)()}",
+            "healthcheck": {"disable": True},
             "environment": {"SSL_CERT_FILE": "/private/ca.pem"},
             "volumes": [
                 mount(private, "/private"),
@@ -244,6 +250,7 @@ def configuration(private, public, tag):
         services[service] = {
             "image": images[service],
             "environment": env,
+            "healthcheck": {"disable": True},
             "command": [
                 "uvicorn",
                 f"{service}_app.main:app",
@@ -260,9 +267,6 @@ def configuration(private, public, tag):
             "networks": {"default": {"aliases": [f"{service}-api.lostlink.svc.cluster.local"]}},
             "volumes": [
                 mount(private, "/private"),
-                mount(FIXTURES, "/dast"),
-                mount(public, "/evidence", False),
-                mount(ROOT / "docs/api", "/contracts"),
             ],
         }
     return {"services": services, "networks": {"default": {"internal": True}}}

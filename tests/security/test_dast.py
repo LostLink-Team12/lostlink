@@ -58,6 +58,7 @@ def test_private_stack_has_no_published_ports_or_cloud_identity(tmp_path):
     for name in host.SERVICES:
         mounts = config["services"][name]["volumes"]
         assert not any(v["target"] == "/authority" for v in mounts)
+        assert not any(v["target"] == "/evidence" for v in mounts)
         assert all(v["source"] != str(tmp_path / "private") for v in mounts)
     assert any(v["target"] == "/authority" for v in config["services"]["probe"]["volumes"])
 
