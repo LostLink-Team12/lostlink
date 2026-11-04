@@ -1,0 +1,74 @@
+name: Trivy scan and quality gate
+description: Collect the full inventory, enforce coverage and risk policy, and upload redacted evidence.
+inputs:
+  name:
+    description: Unique artifact suffix for this scan target.
+    required: true
+  profile:
+    description: Coverage profile (repository, python-image, matching-image, frontend-image, lambda, kubernetes).
+    required: true
+  scan-type:
+    description: Trivy target type.
+    default: fs
+  scan-ref:
+    description: Filesystem target.
+    default: .
+  image-ref:
+    description: Locally built image to scan.
+    default: ''
+  scanners:
+    description: Enabled scanners.
+    default: vuln,secret,misconfig
+runs:
+  using: composite
+  steps:
+    - name: Allocate private scan directory
+      id: directory
+      shell: bash
+      run: echo "path=$(mktemp -d "$RUNNER_TEMP/trivy.XXXXXX")" >> "$GITHUB_OUTPUT"
+    - name: Collect full Trivy JSON inventory
+      id: scan
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+      env:
+        TRIVY_MISCONFIG_SCANNERS: ${{ inputs.profile == 'kubernetes' && 'kubernetes' || 'terraform,dockerfile' }}
+      with:
+        version: v0.76.0
+        scan-type: ${{ inputs.scan-type }}
+        scan-ref: ${{ inputs.scan-ref }}
+        image-ref: ${{ inputs.image-ref }}
+        scanners: ${{ inputs.scanners }}
+        trivy-config: .github/trivy.yaml
+        format: json
+        output: ${{ steps.directory.outputs.path }}/raw.json
+        list-all-pkgs: 'true'
+        severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+        ignore-unfixed: 'false'
+        # Findings are evaluated below. Execution errors still fail this step.
+        exit-code: '0'
+        timeout: 10m
+    - name: Enforce inventory coverage and security policy
+      if: always() && steps.directory.outcome == 'success'
+      shell: bash
+      env:
+        REPORT_DIR: ${{ steps.directory.outputs.path }}
+        SCAN_PROFILE: ${{ inputs.profile }}
+        SCAN_REF: ${{ inputs.scan-ref }}
+        SCANNER_OUTCOME: ${{ steps.scan.outcome }}
+      run: |
+        python3 scripts/trivy_gate.py "$REPORT_DIR/raw.json" \
+          --profile "$SCAN_PROFILE" --scan-ref "$SCAN_REF" \
+          --scanner-outcome "$SCANNER_OUTCOME" --output-dir "$REPORT_DIR/public"
+    - name: Upload redacted Trivy evidence even on failure
+      if: always() && steps.directory.outcome == 'success'
+      uses: actions/upload-artifact@v7
+      with:
+        name: trivy-${{ inputs.name }}
+        path: ${{ steps.directory.outputs.path }}/public/
+        if-no-files-found: error
+        retention-days: 30
+    - name: Remove private raw report
+      if: always() && steps.directory.outcome == 'success'
+      shell: bash
+      env:
+        REPORT_DIR: ${{ steps.directory.outputs.path }}
+      run: rm -f -- "$REPORT_DIR/raw.json"
