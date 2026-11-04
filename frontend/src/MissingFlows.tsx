@@ -35,7 +35,7 @@ export function ScanToken({ busy, submit }: { busy: boolean; submit: (token: str
   return <form onSubmit={e => { e.preventDefault(); void submit(token); }}>
     <p>Scan the owner's QR code or paste the exact handover payload. Confirm the item before completing handover.</p>
     <button type="button" disabled={busy} onClick={() => { setError(''); setScanning(s => !s); }}>{scanning ? 'Stop scanning' : 'Scan QR code'}</button>
-    {scanning && <video ref={video} muted playsInline aria-label="QR camera preview" style={{ width: '100%', maxWidth: 400 }} />}
+    {scanning && <video ref={video} muted playsInline aria-label="QR camera preview" className="qr-camera-preview" />}
     {error && <p role="alert">{error}</p>}
     <label>Handover payload<input required minLength={20} maxLength={200} value={token} onChange={e => setToken(e.target.value)} autoComplete="off" /></label>
     <button disabled={busy || scanning}>Complete handover</button>
@@ -92,5 +92,5 @@ export function HandoverCode({ payload }: { payload: string }) {
     void QRCode.toDataURL(payload, { width: 280, margin: 4, errorCorrectionLevel: 'M' }).then(value => { if (active) setUrl(value); }).catch(() => { if (active) setError('Could not render QR code. Show the original payload below.'); });
     return () => { active = false; };
   }, [payload]);
-  return <div>{url && <img src={url} alt="Handover QR code" style={{ width: 280, height: 280 }} />}{error && <p role="alert">{error}</p>}<p className="code">{payload}</p></div>;
+  return <div>{url && <img src={url} alt="Handover QR code" className="handover-qr" />}{error && <p role="alert">{error}</p>}<p className="code">{payload}</p></div>;
 }

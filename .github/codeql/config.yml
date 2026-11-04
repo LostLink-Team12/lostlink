@@ -1,0 +1,16 @@
+name: LostLink application security
+queries:
+  - uses: security-extended
+paths:
+  - libs/src
+  - services
+  - frontend/src
+  - scripts
+  - infra/deploy
+  - infra/terraform/token-trigger
+paths-ignore:
+  - '**/tests/**'
+  - '**/test_*.py'
+  - '**/node_modules/**'
+  - '**/build/**'
+  - '**/dist/**'

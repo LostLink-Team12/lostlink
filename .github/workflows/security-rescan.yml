@@ -1,0 +1,112 @@
+name: Scheduled security rescan
+
+on:
+  schedule:
+    - cron: '0 1 * * *' # 09:00 Asia/Singapore
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-rescan-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sast:
+    permissions:
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/sast.yml
+
+  repository:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/trivy-scan
+        with:
+          name: scheduled-repository
+          profile: repository
+
+  dast:
+    uses: ./.github/workflows/dast.yml
+
+  deployed-manifest:
+    # Optional until the read-only role is applied and the first CD record exists.
+    if: github.ref == 'refs/heads/main' && vars.AWS_SECURITY_SCAN_ROLE_ARN != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      images: ${{ steps.validate.outputs.images }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Find latest non-expired main deployment record
+        id: latest
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const {data: repo} = await github.rest.repos.get(context.repo);
+            const artifacts = await github.paginate(github.rest.actions.listArtifactsForRepo,
+              {...context.repo, name: 'deployed-images', per_page: 100});
+            const record = artifacts.filter(a => !a.expired &&
+              a.workflow_run?.head_branch === 'main' &&
+              a.workflow_run?.repository_id === repo.id)
+              .sort((a,b) => b.id-a.id)[0];
+            if (!record) throw new Error('No main deployment record; complete a successful CI deployment first.');
+            core.setOutput('id', record.id);
+            core.setOutput('run', record.workflow_run.id);
+            core.setOutput('sha', record.workflow_run.head_sha);
+      - uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ steps.latest.outputs.id }}
+          run-id: ${{ steps.latest.outputs.run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/deployed
+          merge-multiple: true
+      - name: Validate registry, repositories, digest pins and source
+        id: validate
+        env:
+          ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
+          REGION: ${{ vars.AWS_REGION }}
+          SOURCE: ${{ steps.latest.outputs.sha }}
+        run: |
+          python3 scripts/deployment_manifest.py "$RUNNER_TEMP/deployed/deployed-images.json" \
+            --account "$ACCOUNT" --region "$REGION" --source "$SOURCE" --matrix-output
+
+  deployed-images:
+    needs: deployed-manifest
+    if: github.ref == 'refs/heads/main' && vars.AWS_SECURITY_SCAN_ROLE_ARN != ''
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.deployed-manifest.outputs.images) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        with:
+          role-to-assume: ${{ vars.AWS_SECURITY_SCAN_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          allowed-account-ids: ${{ vars.AWS_ACCOUNT_ID }}
+      - uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd
+      - uses: ./.github/actions/trivy-scan
+        with:
+          name: deployed-${{ matrix.name }}
+          profile: ${{ matrix.profile }}
+          scan-type: image
+          image-ref: ${{ matrix.image }}
+          scanners: vuln

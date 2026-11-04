@@ -1,0 +1,44 @@
+# Collect the full inventory once; scripts/trivy_gate.py enforces the policy.
+format: json
+exit-code: 0
+list-all-pkgs: true
+severity: [UNKNOWN, LOW, MEDIUM, HIGH, CRITICAL]
+vulnerability:
+  ignore-unfixed: false
+pkg:
+  include-dev-deps: true
+misconfiguration:
+  include-non-failures: true
+  # Kubernetes is checked separately after rendering with complete CI inputs.
+  # Parsing Go templates as raw Kubernetes YAML can silently skip workloads.
+  scanners: [terraform, dockerfile]
+scan:
+  disable-telemetry: true
+  skip-version-check: true
+  # These are pip-compile text files, not uv.lock files. Preserve normal pip
+  # detection and additionally parse the actual pinned dependency manifests.
+  file-patterns:
+    - 'pip:(^|/)requirements([-.][^/]*)?\.lock$'
+  skip-dirs:
+    - .git
+    - '**/.git'
+    - .venv
+    - '**/.venv'
+    - .venv-c3
+    - '**/.venv-c3'
+    - .terraform
+    - '**/.terraform'
+    - node_modules
+    - '**/node_modules'
+    - .models
+    - .tools
+    - build
+    - dist
+    - '**/dist'
+    - .cache
+    - '**/.cache'
+    - .pytest_cache
+    - '**/.pytest_cache'
+    - .ruff_cache
+    - '**/.ruff_cache'
+    - '**/__pycache__'

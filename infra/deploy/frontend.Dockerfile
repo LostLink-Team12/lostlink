@@ -8,5 +8,6 @@ RUN npm run build
 FROM nginxinc/nginx-unprivileged:1.30.6-alpine-slim@sha256:07783a7bd042ac2229183c0660aca15fcdf9a006bb4e37c7efd78482bc3900b9
 COPY --from=build /frontend/dist/ /usr/share/nginx/html/
 COPY infra/deploy/gateway.conf /etc/nginx/conf.d/default.conf
+COPY infra/deploy/security-headers.conf /etc/nginx/security-headers.conf
 USER 1000
 EXPOSE 8080

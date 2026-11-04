@@ -1,9 +1,7 @@
 name: Cognito trigger package
 
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_call:
   workflow_dispatch:
 
 permissions:
@@ -44,15 +42,12 @@ jobs:
       - name: Extract the final ZIP for dependency scanning
         run: python -m zipfile -e build/cognito-token-trigger.zip build/cognito-scan
       - name: Scan the extracted function dependencies
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        uses: ./.github/actions/trivy-scan
         with:
-          version: v0.76.0
-          scan-type: fs
+          name: cognito-trigger
+          profile: lambda
           scan-ref: build/cognito-scan
           scanners: vuln,secret
-          severity: CRITICAL,HIGH
-          exit-code: "1"
-          ignore-unfixed: true
       - name: Upload verified deployment ZIP and checksums
         uses: actions/upload-artifact@v7
         with:

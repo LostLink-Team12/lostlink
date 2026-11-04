@@ -1,10 +1,10 @@
 # Continuous integration and ECR publishing (C2)
 
-Owner: LU JINGXING. Workflow: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
+Workflow: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
 
-Scans use Trivy 0.76.0 explicitly. The service template pins FastAPI 0.150.0 and
-Starlette 1.6.0 because its previous FastAPI pin pulled in Starlette 0.38.6, which
-failed the image gate on CVE-2024-47874, CVE-2026-48818 and CVE-2026-54283.
+Scans use Trivy 0.76.0 explicitly. Runtime versions come from the committed lock
+files. The frontend uses Vitest 4.1.12 or a compatible 4.x update; this removes the
+old Tinypool dependency affected by CVE-2026-104848 and CVE-2026-104849.
 
 ## Pipeline
 
@@ -13,14 +13,20 @@ failed the image gate on CVE-2024-47874, CVE-2026-48818 and CVE-2026-54283.
 2. Run each service's tests on Python 3.12, shared-library tests, Ruff, and
    `python scripts/export_contracts.py --check` to reject stale API/event contracts.
    Run a repository-wide Trivy scan
-   for HIGH/CRITICAL vulnerabilities with fixes available, secrets and IaC issues.
+   for vulnerabilities, secrets and IaC issues. Include all pinned Python lock
+   files and npm development dependencies; verify the actual package inventory.
+   Render and scan the five per-service charts, platform, umbrella variants and
+   static CD RBAC with synthetic CI inputs, without AWS credentials.
 3. After both gates pass, build each service's Linux image and scan its OS and
    application dependencies with Trivy (HIGH/CRITICAL with fixes available).
    Matching is built with `INSTALL_ML=true` and must pass an offline CLIP inference
    check inside the built image before it can be scanned and published.
 4. On `main`, save the scanned images as gzip-compressed artifacts, retained for
    one day. Artifact upload compression is disabled to avoid compressing twice.
-5. Only after **all** service builds and scans pass, a separate publishing job
+5. `Security gate` runs even when dependencies fail or are skipped. It requires
+   the repository scan, all image builds/scans, rendered Kubernetes checks and
+   the reusable Cognito ZIP package/test/scan workflow to succeed.
+6. Only after **all** service builds and scans and this gate pass, a separate publishing job
    assumes an AWS role through GitHub OIDC, downloads the images from the same
    workflow run and pushes them to ECR. It does not rebuild the images.
 
@@ -43,6 +49,161 @@ for deployment. On `main`, publishing now leads to `Deploy dev EKS`; see the
 identity patches existing application workloads; PR runs never deploy.
 The frontend gateway is also built, tested, scanned and published by this CI run,
 so its image and the backend images share the deployed source SHA.
+
+## Trivy policy and evidence
+
+All scan targets use [the local composite action](../.github/actions/trivy-scan/action.yml)
+and [the shared configuration](../.github/trivy.yaml). The Linux binary is
+downloaded directly from the fixed GitHub release and checked
+against a committed SHA256; the action's mutable upstream installer is disabled.
+This avoids its unavailable download-tracking endpoint without relaxing scans.
+Trivy collects a full JSON inventory with all severities, including unfixed
+vulnerabilities. Its findings exit code is zero only for collection; scanner execution
+errors still fail. The mandatory [report gate](../scripts/trivy_gate.py) then
+fails the job for:
+
+- HIGH/CRITICAL vulnerabilities with a non-empty fixed version;
+- failed HIGH/CRITICAL misconfiguration checks;
+- any detected secret, regardless of severity;
+- missing/malformed reports, unsuccessful scanner execution or incomplete
+  package/configuration inventory.
+
+LOW/MEDIUM and unfixed vulnerabilities remain visible in the report. Existing
+resource-local Terraform ignores remain scoped to their original resources;
+see [the exception review ledger](../.github/trivy-exceptions.md). No blanket
+dependency or source-directory exceptions are added.
+
+Python `requirements*.lock` files use an explicit pip file pattern because
+Trivy does not follow the `-r` references in the service `requirements.txt`
+files. The gate compares every pinned package/version in the three Python
+and two npm locks against the report, including npm dev dependencies. Image
+profiles require an OS inventory and the expected Python runtime packages;
+Matching also requires Torch. Lambda requires its actual Python dependencies.
+Every rendered Kubernetes file must have scan results. Source Helm templates
+are still checked for secrets; Kubernetes misconfiguration checks use their
+fully rendered output rather than incomplete default chart inputs.
+
+Each target uploads a distinct `trivy-*` artifact for 30 days, including on
+gate failure. `report.json` is a redacted inventory/findings report with the
+source SHA, scanner outcome, coverage and gate result; `summary.md` gives its
+verdict. Raw JSON stays in a private runner temporary directory and is removed
+after evaluation. Secret matches, source snippets and arbitrary metadata are
+never uploaded. An invalid report produces a safe failure report rather than a
+green empty result. Image-transfer artifacts still expire after one day.
+
+Useful local checks (use a fresh ignored output directory for chart rendering):
+
+```bash
+python -m pytest -q tests/security
+python infra/deploy/security_charts.py build/security-charts --helm helm
+trivy fs --config .github/trivy.yaml --scanners vuln,secret,misconfig \
+  --output build/trivy-raw.json .
+python scripts/trivy_gate.py build/trivy-raw.json --profile repository \
+  --output-dir build/trivy-public
+trivy fs --config .github/trivy.yaml --scanners misconfig \
+  --misconfig-scanners kubernetes --output build/kubernetes-raw.json build/security-charts
+python scripts/trivy_gate.py build/kubernetes-raw.json --profile kubernetes \
+  --scan-ref build/security-charts --output-dir build/kubernetes-public
+```
+
+## SAST
+
+CodeQL runs Python and JavaScript/TypeScript with the security-extended suite on
+every CI candidate. Builds and `Security gate` require both languages to succeed.
+The explicit SARIF evaluator blocks scores >= 7.0 (HIGH/CRITICAL), unclassified
+error-level findings and incomplete/failed analysis. GitHub alert dismissals and
+SARIF suppressions do not bypass this gate. The action is pinned to a commit;
+SARIF goes to Code scanning and a separate source-free JSON verdict is retained
+for 30 days. If Default setup is already enabled, switch it to Advanced setup
+before accepting this workflow's uploads.
+
+Implementation milestones are in [the rollout plan](security-ci-plan.md).
+
+## Candidate DAST
+
+`DAST candidate` builds this checkout with the production Dockerfiles and runs
+ZAP 2.17.0 pinned by digest. Five APIs, frontend, PostgreSQL/pgvector, LocalStack
+S3, an ephemeral HTTPS JWKS server and ZAP share a unique internal Docker
+network. No ports, cloud identity or production credentials are exposed. Migrations
+use the disposable database admin; runtime processes retain their distinct
+non-owner RLS roles. The production gateway is reused with only local DNS,
+TLS termination and backend port substitutions.
+
+The passive scan exercises explicit frontend entries and discovered same-origin
+JS/CSS assets, all five unauthenticated API boundaries, and private-route denial.
+ZAP Medium/High alerts fail the job; lower alerts remain in the redacted verdict.
+Missing traffic, missing results, startup errors, timeout or cleanup failure
+also fail. This is bounded passive HTTP coverage, not a full active or DOM scan.
+Matching uses its normal API image without the optional ML install: DAST does
+not call model inference, which remains separately verified in the full ML build.
+General API `/ready` is not used to claim those external/inference workflows ran.
+
+The finalizer removes this stack and private signing/compose files; an `always()`
+step retries only its recorded `ll-dast-*` project cleanup. Only `public/` is
+uploaded for 30 days: path/status coverage, alert rule/risk/path, image IDs, SHA
+and verdict. Tokens, HTTP bodies, query strings and ZAP session history are absent.
+`Security gate` depends on this job for every PR and for main before publishing.
+
+```bash
+python scripts/dast.py --sha "$(git rev-parse HEAD)" --output build/dast
+python scripts/dast.py --cleanup --output build/dast
+```
+
+Local retries may use `--skip-build` for the same already-built candidate; CI
+always builds. Production headers now include a restrictive CSP and are repeated
+in the config.json location so Nginx header inheritance cannot drop them. The QR
+camera/image styles use CSS classes to avoid requiring inline-style permission.
+
+Authenticated traffic uses fresh RS256 access tokens and the application's real
+`CognitoVerifier` over HTTPS JWKS, with audience/client/issuer/expiry checks.
+The private signing authority is mounted only into the identity service and
+probe, not application containers. Two fixture venues, memberships, items and
+owner reports exercise current membership checks and the real PostgreSQL RLS
+roles. Owner and Staff reads across all five services must succeed; wrong-role,
+wrong-tenant, cross-owner/tenant detail access and malformed token claims must
+be denied. GET operations are validated against the generated public OpenAPI
+contracts; writes and internal contract paths are not imported for scanning.
+
+These are isolated authentication/authorization fixtures, not real Cognito
+Hosted UI/PKCE or mailbox acceptance. No notification workers, SES sending,
+real-user data, upload side effects or active attacks run in this stack.
+
+## Periodic scans and independent retries
+
+`Scheduled security rescan` runs daily at 09:00 Asia/Singapore (01:00 UTC),
+or manually. It reuses the same SAST and candidate DAST workflows and runs the
+repository Trivy gate. It has no publishing or application deployment jobs.
+`Candidate DAST` and `SAST` also accept independent manual runs after their
+workflow files reach the default branch; retrying them never pushes ECR tags.
+
+Optional private-image rescanning activates only when
+`AWS_SECURITY_SCAN_ROLE_ARN` is configured. Apply the reviewed
+[`security-scan.tf`](../infra/terraform/environments/dev/security-scan.tf) using
+the existing operator procedure, then set that variable to the output
+`github_security_scan_role_arn`. This dedicated main-only role can read only
+the six deployed ECR repositories; it cannot push, deploy or read secrets.
+No long-lived AWS keys or EKS access are required.
+
+After successful CD, CI captures the actual `lostlink-cd-state` image digest
+set, verifies its source SHA, and uploads a non-secret `deployed-images`
+artifact for 90 days. The periodic job accepts only a non-expired record from
+this repository's main branch, verifies its source against the artifact's run,
+and checks every image's exact account/region/repository/digest before scanning.
+Missing records or invalid evidence fail once image rescanning is enabled.
+
+This records the last CI-managed deployment; operator changes made outside CD
+are not automatically observed. Refresh the trusted deployment record through
+the normal CD flow after such changes. Before the role is configured, private
+image jobs are explicitly skipped; source and candidate scans still run.
+The first deployment record becomes available only after this change is merged
+and CD succeeds. These activation steps do not weaken PR image scanning.
+
+Repository permissions were checked during implementation: the available Git
+identity has push permission but no admin/maintain permission; Rulesets returned
+no configured entries, while the branch-protection and CodeQL setup endpoints
+were unavailable to this identity. An administrator must still require
+`Security gate` for main and resolve any Default setup conflict. A failing check
+alone does not guarantee GitHub prohibits merging until that setting is applied.
 
 ## Matching inference image
 
@@ -146,9 +307,12 @@ and [AWS credentials action](https://github.com/aws-actions/configure-aws-creden
 
 - Open a PR: tests, repository scan, image builds and image scans must pass;
   publishing must be skipped, including for fork PRs.
-- Require the test matrix, `security-scan` and build matrix as branch-protection
-  checks for `main`, plus the one review required by `CONTRIBUTING.md`. Update
-  required matrix check names when adding services.
+- Require `Security gate` for `main` in Rulesets/branch protection, plus the
+  existing test/review requirements. The gate includes all Trivy targets, so a
+  failed/cancelled/skipped matrix or Cognito scan cannot leave it green. Workflow
+  code cannot enable this repository setting; an administrator must configure it
+  after the check has run. Add SAST and candidate DAST to its dependencies as they
+  are implemented. Do not require a post-merge-only DAST check on PRs.
 - After the AWS setup and merge, confirm all publishing jobs succeed and verify
   the full commit-SHA tag exists in each ECR repository:
 
