@@ -53,9 +53,12 @@ so its image and the backend images share the deployed source SHA.
 ## Trivy policy and evidence
 
 All scan targets use [the local composite action](../.github/actions/trivy-scan/action.yml)
-and [the shared configuration](../.github/trivy.yaml). Trivy first collects a
-full JSON report with all severities, including unfixed vulnerabilities. Its
-findings exit code is zero only for this collection step; scanner execution
+and [the shared configuration](../.github/trivy.yaml). The Linux binary is
+downloaded directly from the fixed GitHub release and checked
+against a committed SHA256; the action's mutable upstream installer is disabled.
+This avoids its unavailable download-tracking endpoint without relaxing scans.
+Trivy collects a full JSON inventory with all severities, including unfixed
+vulnerabilities. Its findings exit code is zero only for collection; scanner execution
 errors still fail. The mandatory [report gate](../scripts/trivy_gate.py) then
 fails the job for:
 

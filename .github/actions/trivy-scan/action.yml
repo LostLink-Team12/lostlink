@@ -26,6 +26,18 @@ runs:
       id: directory
       shell: bash
       run: echo "path=$(mktemp -d "$RUNNER_TEMP/trivy.XXXXXX")" >> "$GITHUB_OUTPUT"
+    - name: Install checksum-pinned Trivy release
+      shell: bash
+      env:
+        REPORT_DIR: ${{ steps.directory.outputs.path }}
+      run: |
+        mkdir -p "$REPORT_DIR/bin"
+        curl --fail --location --retry 3 --retry-all-errors \
+          https://github.com/aquasecurity/trivy/releases/download/v0.76.0/trivy_0.76.0_Linux-64bit.tar.gz \
+          --output "$REPORT_DIR/trivy.tar.gz"
+        echo "e24b1c51293c1b15e4ba8d45bbc7891ba053f90278ec2698f3562c993e145fe7  $REPORT_DIR/trivy.tar.gz" | sha256sum --check
+        tar -xzf "$REPORT_DIR/trivy.tar.gz" -C "$REPORT_DIR/bin" trivy
+        echo "$REPORT_DIR/bin" >> "$GITHUB_PATH"
     - name: Collect full Trivy JSON inventory
       id: scan
       uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -33,6 +45,7 @@ runs:
         TRIVY_MISCONFIG_SCANNERS: ${{ inputs.profile == 'kubernetes' && 'kubernetes' || 'terraform,dockerfile' }}
       with:
         version: v0.76.0
+        skip-setup-trivy: 'true'
         scan-type: ${{ inputs.scan-type }}
         scan-ref: ${{ inputs.scan-ref }}
         image-ref: ${{ inputs.image-ref }}
