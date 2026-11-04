@@ -192,6 +192,59 @@ jobs:
         working-directory: infra/helm/tests/pgx_tls
         run: go test -mod=readonly -count=1 -v ./...
 
+  sast:
+    name: SAST (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, javascript-typescript]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@1fc58d04a4d4374f921bdac573c3811c240f9c26 # v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          config-file: .github/codeql/config.yml
+      - name: Analyze candidate source
+        id: analyze
+        uses: github/codeql-action/analyze@1fc58d04a4d4374f921bdac573c3811c240f9c26
+        with:
+          output: ${{ runner.temp }}/codeql-sarif
+          upload: never
+          upload-database: false
+      - name: Enforce SAST findings policy
+        if: always()
+        env:
+          ANALYSIS_OUTCOME: ${{ steps.analyze.outcome }}
+        run: |
+          python scripts/sast_gate.py "$RUNNER_TEMP/codeql-sarif" \
+            --language '${{ matrix.language }}' --analysis-outcome "$ANALYSIS_OUTCOME" \
+            --output-dir "$RUNNER_TEMP/sast-public"
+      - name: Publish Code scanning results
+        if: always() && steps.analyze.outcome == 'success'
+        uses: github/codeql-action/upload-sarif@1fc58d04a4d4374f921bdac573c3811c240f9c26
+        with:
+          sarif_file: ${{ runner.temp }}/codeql-sarif
+          category: sast-${{ matrix.language }}
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: sast-${{ matrix.language }}
+          path: ${{ runner.temp }}/sast-public/
+          retention-days: 30
+          if-no-files-found: error
+
   security-scan:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -206,7 +259,7 @@ jobs:
           profile: repository
 
   build-image:
-    needs: [discover, test, shared-library, integration, security-scan]
+    needs: [discover, test, shared-library, integration, security-scan, sast]
     runs-on: ubuntu-24.04
     timeout-minutes: ${{ matrix.service == 'matching-service' && 60 || 30 }}
     strategy:
@@ -271,7 +324,7 @@ jobs:
           overwrite: true
 
   build-frontend:
-    needs: [security-scan]
+    needs: [security-scan, sast]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -327,7 +380,7 @@ jobs:
   security-gate:
     name: Security gate
     if: always()
-    needs: [security-scan, helm-chart, build-image, build-frontend, cognito-trigger]
+    needs: [security-scan, sast, helm-chart, build-image, build-frontend, cognito-trigger]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

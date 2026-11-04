@@ -101,4 +101,4 @@ flowchart TD
 | 云端 preview、只读 ECR OIDC role、Terraform apply | 选择相应方案时；本地 runner DAST 不强制需要 |
 | 主动扫描的可写范围、通知隔离与清理 | 启用主动扫描时 |
 
-当前进度：第一步代码已实现并进行本地验证；SAST 与候选版本 DAST 留给后续 commit，尚未实现。
+当前进度：Trivy 和 CodeQL SAST 已实现；SAST 已接入构建和汇总门禁。后续 commit 完成候选版本 DAST、认证覆盖和定期复扫。

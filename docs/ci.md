@@ -103,9 +103,18 @@ python scripts/trivy_gate.py build/kubernetes-raw.json --profile kubernetes \
   --scan-ref build/security-charts --output-dir build/kubernetes-public
 ```
 
-This is step 1 of [the security rollout plan](security-ci-plan.md). SAST and
-PR-candidate DAST will join the same required gate in subsequent commits on the
-same branch. They are not implemented or represented by passing placeholder jobs.
+## SAST
+
+CodeQL runs Python and JavaScript/TypeScript with the security-extended suite on
+every CI candidate. Builds and `Security gate` require both languages to succeed.
+The explicit SARIF evaluator blocks scores >= 7.0 (HIGH/CRITICAL), unclassified
+error-level findings and incomplete/failed analysis. GitHub alert dismissals and
+SARIF suppressions do not bypass this gate. The action is pinned to a commit;
+SARIF goes to Code scanning and a separate source-free JSON verdict is retained
+for 30 days. If Default setup is already enabled, switch it to Advanced setup
+before accepting this workflow's uploads.
+
+Progress and the remaining candidate DAST work are in [the rollout plan](security-ci-plan.md).
 
 ## Matching inference image
 
