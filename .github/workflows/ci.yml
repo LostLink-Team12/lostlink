@@ -377,10 +377,39 @@ jobs:
           if-no-files-found: error
           overwrite: true
 
+  dast-pr:
+    name: DAST candidate
+    needs: [security-scan, sast]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-dev.lock
+      - run: python -m pip install -r requirements-dev.lock ./libs
+      - name: Build and scan isolated candidate with ZAP
+        run: python scripts/dast.py --sha "$GITHUB_SHA" --output "$RUNNER_TEMP/dast"
+      - name: Ensure isolated candidate is removed
+        if: always()
+        run: python scripts/dast.py --cleanup --output "$RUNNER_TEMP/dast"
+      - name: Upload redacted candidate DAST verdict
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dast-candidate
+          path: ${{ runner.temp }}/dast/public/
+          retention-days: 30
+          if-no-files-found: error
+
   security-gate:
     name: Security gate
     if: always()
-    needs: [security-scan, sast, helm-chart, build-image, build-frontend, cognito-trigger]
+    needs: [security-scan, sast, dast-pr, helm-chart, build-image, build-frontend, cognito-trigger]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

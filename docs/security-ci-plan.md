@@ -31,7 +31,7 @@
 
 验收：运行真实 Trivy 仓库与渲染配置扫描；测试高危/Secret 命中、缺失包清单、缺失报告、错误退出和 skipped/cancelled 不能放行；运行受影响 Python / 前端回归检查。
 
-本地 Docker daemon 当前不可用，真实镜像和 Linux Lambda ZIP 的构建/扫描需要最终 PR 的 GitHub Actions 验证；不得把本地辅助判定测试称作完成了所有镜像扫描。仓库管理员将 `Security gate` 设为 required check 后，第一步的 Trivy 失败才会在 GitHub 上实际禁止合并。
+第一步实施时未访问 Docker；后续已确认 Docker 可用，并运行真实隔离候选栈与 ZAP。完整 ML / Lambda 仍需相应构建验证。仓库管理员将 `Security gate` 设为 required check 后，检查失败才会在 GitHub 上实际禁止合并。
 
 ## 3. Commit 2：SAST 进入同一个 PR 门禁
 
@@ -101,4 +101,4 @@ flowchart TD
 | 云端 preview、只读 ECR OIDC role、Terraform apply | 选择相应方案时；本地 runner DAST 不强制需要 |
 | 主动扫描的可写范围、通知隔离与清理 | 启用主动扫描时 |
 
-当前进度：Trivy 和 CodeQL SAST 已实现；SAST 已接入构建和汇总门禁。后续 commit 完成候选版本 DAST、认证覆盖和定期复扫。
+当前进度：Trivy、CodeQL SAST、PR 候选被动 DAST 已实现并接入汇总门禁。真实 Docker/ZAP 已通过 14 个匿名入口/资产/API/私有路由检查，环境成功清理；后续 commit 完成认证覆盖和定期复扫。

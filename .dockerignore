@@ -1,4 +1,6 @@
 .git
+.tools
+.cache
 **/.venv
 **/.venv-c3
 **/.terraform

@@ -116,6 +116,41 @@ before accepting this workflow's uploads.
 
 Progress and the remaining candidate DAST work are in [the rollout plan](security-ci-plan.md).
 
+## Candidate DAST
+
+`DAST candidate` builds this checkout with the production Dockerfiles and runs
+ZAP 2.17.0 pinned by digest. Five APIs, frontend, PostgreSQL/pgvector, LocalStack
+S3, an ephemeral HTTPS JWKS server and ZAP share a unique internal Docker
+network. No ports, cloud identity or production credentials are exposed. Migrations
+use the disposable database admin; runtime processes retain their distinct
+non-owner RLS roles. The production gateway is reused with only local DNS,
+TLS termination and backend port substitutions.
+
+The passive scan exercises explicit frontend entries and discovered same-origin
+JS/CSS assets, all five unauthenticated API boundaries, and private-route denial.
+ZAP Medium/High alerts fail the job; lower alerts remain in the redacted verdict.
+Missing traffic, missing results, startup errors, timeout or cleanup failure
+also fail. This is bounded passive HTTP coverage, not a full active or DOM scan.
+Matching uses its normal API image without the optional ML install: DAST does
+not call model inference, which remains separately verified in the full ML build.
+General API `/ready` is not used to claim those external/inference workflows ran.
+
+The finalizer removes this stack and private signing/compose files; an `always()`
+step retries only its recorded `ll-dast-*` project cleanup. Only `public/` is
+uploaded for 30 days: path/status coverage, alert rule/risk/path, image IDs, SHA
+and verdict. Tokens, HTTP bodies, query strings and ZAP session history are absent.
+`Security gate` depends on this job for every PR and for main before publishing.
+
+```bash
+python scripts/dast.py --sha "$(git rev-parse HEAD)" --output build/dast
+python scripts/dast.py --cleanup --output build/dast
+```
+
+Local retries may use `--skip-build` for the same already-built candidate; CI
+always builds. Production headers now include a restrictive CSP and are repeated
+in the config.json location so Nginx header inheritance cannot drop them. The QR
+camera/image styles use CSS classes to avoid requiring inline-style permission.
+
 ## Matching inference image
 
 CI publishes one inference-capable `lostlink/matching-service:<GITHUB_SHA>` image
