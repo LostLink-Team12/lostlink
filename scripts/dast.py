@@ -116,6 +116,8 @@ def configuration(private, public, tag):
         return {"type": "bind", "source": str(src), "target": dest, "read_only": readonly}
 
     images = {s: f"lostlink/{s}-service:{tag}" for s in SERVICES}
+    runner_uid = getattr(os, "getuid", lambda: 1000)()
+    runner_gid = getattr(os, "getgid", lambda: 1000)()
     authority = private / "authority"
     private = private / "transport"
     common = {
@@ -176,7 +178,7 @@ def configuration(private, public, tag):
             "image": images["venue"],
             # The Linux runner owns public/. Match it instead of relying on
             # Windows bind mounts' permissive ownership semantics.
-            "user": f"{getattr(os, 'getuid', lambda: 1000)()}:{getattr(os, 'getgid', lambda: 1000)()}",
+            "user": f"{runner_uid}:{runner_gid}",
             "healthcheck": {"disable": True},
             "environment": {"SSL_CERT_FILE": "/private/ca.pem"},
             "volumes": [
