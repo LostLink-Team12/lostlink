@@ -101,4 +101,4 @@ flowchart TD
 | 云端 preview、只读 ECR OIDC role、Terraform apply | 选择相应方案时；本地 runner DAST 不强制需要 |
 | 主动扫描的可写范围、通知隔离与清理 | 启用主动扫描时 |
 
-当前进度：Trivy、CodeQL SAST、PR 候选被动 DAST 已实现并接入汇总门禁。真实 Docker/ZAP 已通过 14 个匿名入口/资产/API/私有路由检查，环境成功清理；后续 commit 完成认证覆盖和定期复扫。
+当前进度：Trivy、CodeQL SAST、候选被动 DAST 和真实签名/角色/租户验证均已实现并接入汇总门禁。匿名及认证请求已在 Docker/ZAP 中实际运行通过，私钥和临时环境清理已验证。后续 commit 完成定期复扫与最终 GitHub 验收；真实 Cognito/主动扫描仍为按需补充，不作为已完成能力宣称。

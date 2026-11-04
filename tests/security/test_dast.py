@@ -55,6 +55,18 @@ def test_private_stack_has_no_published_ports_or_cloud_identity(tmp_path):
         assert all("docker.sock" not in str(v) for v in service.get("volumes", []))
     assert config["services"]["item"]["environment"]["ENVIRONMENT"] == "test"
     assert "lostlink_item_api:" in config["services"]["item"]["environment"]["DATABASE_URL"]
+    for name in host.SERVICES:
+        mounts = config["services"][name]["volumes"]
+        assert not any(v["target"] == "/authority" for v in mounts)
+        assert all(v["source"] != str(tmp_path / "private") for v in mounts)
+    assert any(v["target"] == "/authority" for v in config["services"]["probe"]["volumes"])
+
+
+def test_write_requests_and_header_injection_cannot_enter_passive_scan():
+    with pytest.raises(ValueError):
+        probe.request("/api/item/v1/items", method="POST")
+    with pytest.raises(ValueError):
+        probe.request("/api/item/v1/items", token="token\r\nX-Injected: true")
 
 
 def test_required_dast_is_candidate_code_with_no_skipping_condition():

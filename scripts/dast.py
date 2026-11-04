@@ -41,6 +41,10 @@ def command(args, *, check=True, timeout=1800):
 
 def prepare(private):
     private.mkdir(parents=True, exist_ok=True)
+    authority = private / "authority"
+    authority.mkdir(exist_ok=True)
+    private = private / "transport"
+    private.mkdir(exist_ok=True)
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "Ephemeral DAST CA")])
     now = datetime.now(UTC)
@@ -79,7 +83,8 @@ def prepare(private):
             serialization.NoEncryption(),
         )
     )
-    (private / "jwk.json").write_text(RSAAlgorithm.to_jwk(key), encoding="utf-8")
+    signing_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    (authority / "jwk.json").write_text(RSAAlgorithm.to_jwk(signing_key), encoding="utf-8")
     gateway = (ROOT / "infra/deploy/gateway.conf").read_text(encoding="utf-8")
     gateway = gateway.replace(
         "listen 8080;",
@@ -110,9 +115,12 @@ def configuration(private, public, tag):
         return {"type": "bind", "source": str(src), "target": dest, "read_only": readonly}
 
     images = {s: f"lostlink/{s}-service:{tag}" for s in SERVICES}
+    authority = private / "authority"
+    private = private / "transport"
     common = {
         "ENVIRONMENT": "test",
         "COGNITO_ISSUER": "https://identity:8443",
+        "COGNITO_AUDIENCE": "dast-api",
         "COGNITO_CLIENT_IDS": json.dumps(
             ["dast-owner", "dast-staff", "dast-platform", "dast-machine"]
         ),
@@ -156,7 +164,22 @@ def configuration(private, public, tag):
         "identity": {
             "image": images["venue"],
             "command": ["python", "/dast/identity.py"],
-            "volumes": [mount(private, "/private"), mount(FIXTURES, "/dast")],
+            "volumes": [
+                mount(private, "/private"),
+                mount(authority, "/authority"),
+                mount(FIXTURES, "/dast"),
+            ],
+        },
+        "probe": {
+            "image": images["venue"],
+            "environment": {"SSL_CERT_FILE": "/private/ca.pem"},
+            "volumes": [
+                mount(private, "/private"),
+                mount(authority, "/authority"),
+                mount(FIXTURES, "/dast"),
+                mount(public, "/evidence", False),
+                mount(ROOT / "docs/api", "/contracts"),
+            ],
         },
         "zap": {
             "image": ZAP_IMAGE,
@@ -206,6 +229,8 @@ def configuration(private, public, tag):
             )
         if service in {"item", "matching"}:
             env["INTERNAL_DATABASE_URL"] = database(service + "_internal")
+        if service in {"matching", "notification"}:
+            env["USER_CLIENT_IDS"] = '["dast-owner"]'
         if service == "item":
             env.update(PHOTO_BUCKET="dast-media", AWS_ENDPOINT_URL="http://localstack:4566")
         if service == "claim":
@@ -237,6 +262,7 @@ def configuration(private, public, tag):
                 mount(private, "/private"),
                 mount(FIXTURES, "/dast"),
                 mount(public, "/evidence", False),
+                mount(ROOT / "docs/api", "/contracts"),
             ],
         }
     return {"services": services, "networks": {"default": {"internal": True}}}
@@ -267,7 +293,7 @@ def cleanup(base):
     )
     if result.returncode:
         return False
-    for name in ("jwk.json", "server.key", "compose.json", "state.json"):
+    for name in ("authority/jwk.json", "transport/server.key", "compose.json", "state.json"):
         (private / name).unlink(missing_ok=True)
     return True
 
@@ -344,12 +370,25 @@ def main(argv=None):
                 ]
             )
         command(
-            [*compose, "run", "--rm", "--no-deps", "venue", "python", "/dast/probe.py", "bootstrap"]
+            [*compose, "run", "--rm", "--no-deps", "probe", "python", "/dast/probe.py", "bootstrap"]
+        )
+        command(
+            [
+                *compose,
+                "run",
+                "--rm",
+                "--no-deps",
+                "-e",
+                f"DAST_ADMIN_DSN=postgresql://lostlink:{admin}@postgres:5432/lostlink",
+                "probe",
+                "python",
+                "/dast/seed.py",
+            ]
         )
         command([*compose, "up", "-d", "identity", "frontend", "zap", *SERVICES])
         print("Scanning isolated candidate through ZAP", flush=True)
         result = command(
-            [*compose, "run", "--rm", "--no-deps", "venue", "python", "/dast/probe.py"],
+            [*compose, "run", "--rm", "--no-deps", "probe", "python", "/dast/probe.py"],
             check=False,
             timeout=900,
         )

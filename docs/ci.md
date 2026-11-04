@@ -151,6 +151,20 @@ always builds. Production headers now include a restrictive CSP and are repeated
 in the config.json location so Nginx header inheritance cannot drop them. The QR
 camera/image styles use CSS classes to avoid requiring inline-style permission.
 
+Authenticated traffic uses fresh RS256 access tokens and the application's real
+`CognitoVerifier` over HTTPS JWKS, with audience/client/issuer/expiry checks.
+The private signing authority is mounted only into the identity service and
+probe, not application containers. Two fixture venues, memberships, items and
+owner reports exercise current membership checks and the real PostgreSQL RLS
+roles. Owner and Staff reads across all five services must succeed; wrong-role,
+wrong-tenant, cross-owner/tenant detail access and malformed token claims must
+be denied. GET operations are validated against the generated public OpenAPI
+contracts; writes and internal contract paths are not imported for scanning.
+
+These are isolated authentication/authorization fixtures, not real Cognito
+Hosted UI/PKCE or mailbox acceptance. No notification workers, SES sending,
+real-user data, upload side effects or active attacks run in this stack.
+
 ## Matching inference image
 
 CI publishes one inference-capable `lostlink/matching-service:<GITHUB_SHA>` image
