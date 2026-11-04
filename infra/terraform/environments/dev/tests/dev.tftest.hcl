@@ -405,3 +405,53 @@ run "cd_trust_accepts_only_immutable_main_subject" {
     error_message = "CD must trust only this repository's immutable main subject and STS audience, without wildcard or PR access."
   }
 }
+
+run "security_scan_identity_is_main_only_and_read_only" {
+  command = plan
+  variables {
+    c3_enabled = true
+  }
+  override_resource {
+    target          = aws_ecr_repository.services["venue-service"]
+    override_during = plan
+    values          = { arn = "arn:aws:ecr:ap-southeast-1:123456789012:repository/lostlink/venue-service" }
+  }
+  override_resource {
+    target          = aws_ecr_repository.services["item-service"]
+    override_during = plan
+    values          = { arn = "arn:aws:ecr:ap-southeast-1:123456789012:repository/lostlink/item-service" }
+  }
+  override_resource {
+    target          = aws_ecr_repository.services["matching-service"]
+    override_during = plan
+    values          = { arn = "arn:aws:ecr:ap-southeast-1:123456789012:repository/lostlink/matching-service" }
+  }
+  override_resource {
+    target          = aws_ecr_repository.services["claim-service"]
+    override_during = plan
+    values          = { arn = "arn:aws:ecr:ap-southeast-1:123456789012:repository/lostlink/claim-service" }
+  }
+  override_resource {
+    target          = aws_ecr_repository.services["notification-service"]
+    override_during = plan
+    values          = { arn = "arn:aws:ecr:ap-southeast-1:123456789012:repository/lostlink/notification-service" }
+  }
+  override_resource {
+    target          = aws_ecr_repository.frontend[0]
+    override_during = plan
+    values          = { arn = "arn:aws:ecr:ap-southeast-1:123456789012:repository/lostlink/frontend" }
+  }
+  assert {
+    condition = (
+      jsondecode(aws_iam_role.github_security_scan[0].assume_role_policy).Statement[0].Condition ==
+      jsondecode(aws_iam_role.github_deploy[0].assume_role_policy).Statement[0].Condition &&
+      length(jsondecode(aws_iam_role_policy.github_security_scan[0].policy).Statement) == 2 &&
+      jsondecode(aws_iam_role_policy.github_security_scan[0].policy).Statement[0].Action == ["ecr:GetAuthorizationToken"] &&
+      toset(jsondecode(aws_iam_role_policy.github_security_scan[0].policy).Statement[1].Action) == toset([
+        "ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer", "ecr:BatchCheckLayerAvailability", "ecr:DescribeImages"
+      ]) &&
+      length(jsondecode(aws_iam_role_policy.github_security_scan[0].policy).Statement[1].Resource) == 6
+    )
+    error_message = "Periodic scanning must be main-only, read-only and limited to the six deployed image repositories."
+  }
+}

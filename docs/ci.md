@@ -114,7 +114,7 @@ SARIF goes to Code scanning and a separate source-free JSON verdict is retained
 for 30 days. If Default setup is already enabled, switch it to Advanced setup
 before accepting this workflow's uploads.
 
-Progress and the remaining candidate DAST work are in [the rollout plan](security-ci-plan.md).
+Implementation milestones are in [the rollout plan](security-ci-plan.md).
 
 ## Candidate DAST
 
@@ -164,6 +164,43 @@ contracts; writes and internal contract paths are not imported for scanning.
 These are isolated authentication/authorization fixtures, not real Cognito
 Hosted UI/PKCE or mailbox acceptance. No notification workers, SES sending,
 real-user data, upload side effects or active attacks run in this stack.
+
+## Periodic scans and independent retries
+
+`Scheduled security rescan` runs daily at 09:00 Asia/Singapore (01:00 UTC),
+or manually. It reuses the same SAST and candidate DAST workflows and runs the
+repository Trivy gate. It has no publishing or application deployment jobs.
+`Candidate DAST` and `SAST` also accept independent manual runs after their
+workflow files reach the default branch; retrying them never pushes ECR tags.
+
+Optional private-image rescanning activates only when
+`AWS_SECURITY_SCAN_ROLE_ARN` is configured. Apply the reviewed
+[`security-scan.tf`](../infra/terraform/environments/dev/security-scan.tf) using
+the existing operator procedure, then set that variable to the output
+`github_security_scan_role_arn`. This dedicated main-only role can read only
+the six deployed ECR repositories; it cannot push, deploy or read secrets.
+No long-lived AWS keys or EKS access are required.
+
+After successful CD, CI captures the actual `lostlink-cd-state` image digest
+set, verifies its source SHA, and uploads a non-secret `deployed-images`
+artifact for 90 days. The periodic job accepts only a non-expired record from
+this repository's main branch, verifies its source against the artifact's run,
+and checks every image's exact account/region/repository/digest before scanning.
+Missing records or invalid evidence fail once image rescanning is enabled.
+
+This records the last CI-managed deployment; operator changes made outside CD
+are not automatically observed. Refresh the trusted deployment record through
+the normal CD flow after such changes. Before the role is configured, private
+image jobs are explicitly skipped; source and candidate scans still run.
+The first deployment record becomes available only after this change is merged
+and CD succeeds. These activation steps do not weaken PR image scanning.
+
+Repository permissions were checked during implementation: the available Git
+identity has push permission but no admin/maintain permission; Rulesets returned
+no configured entries, while the branch-protection and CodeQL setup endpoints
+were unavailable to this identity. An administrator must still require
+`Security gate` for main and resolve any Default setup conflict. A failing check
+alone does not guarantee GitHub prohibits merging until that setting is applied.
 
 ## Matching inference image
 

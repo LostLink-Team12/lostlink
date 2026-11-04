@@ -103,4 +103,5 @@ def test_sast_is_required_by_builds_and_final_pr_gate():
     jobs = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())["jobs"]
     for name in ("build-image", "build-frontend", "security-gate"):
         assert "sast" in jobs[name]["needs"]
-    assert jobs["sast"]["strategy"]["matrix"]["language"] == ["python", "javascript-typescript"]
+    analysis = yaml.safe_load((ROOT / ".github/workflows/sast.yml").read_text())["jobs"]["analyze"]
+    assert analysis["strategy"]["matrix"]["language"] == ["python", "javascript-typescript"]

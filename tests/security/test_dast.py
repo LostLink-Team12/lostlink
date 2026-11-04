@@ -74,7 +74,8 @@ def test_required_dast_is_candidate_code_with_no_skipping_condition():
     assert "dast-pr" in jobs["security-gate"]["needs"]
     assert not jobs["dast-pr"].get("if")
     assert not jobs["dast-pr"].get("permissions", {}).get("id-token")
-    assert any("--sha" in s.get("run", "") for s in jobs["dast-pr"]["steps"])
+    scan = yaml.safe_load((ROOT / ".github/workflows/dast.yml").read_text())["jobs"]["scan"]
+    assert any("--sha" in s.get("run", "") for s in scan["steps"])
 
 
 def test_cleanup_refuses_unrelated_project(tmp_path):
